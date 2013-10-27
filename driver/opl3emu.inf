@@ -1,0 +1,32 @@
+[version]
+Signature="$WINDOWS NT$"
+Class=MEDIA
+ClassGUID="{4d36e96c-e325-11ce-bfc1-08002be10318}"
+Provider=Unknown
+[Manufacturer]
+Unknown=OldDrvs
+[OldDrvs]
+%opl3emu%=opl3emu
+[opl3emu.NT]
+DriverVer = 1/1/1998, 4.0.0.0
+AddReg=opl3emu.AddReg
+CopyFiles=opl3emu.CopyFiles.User,opl3emu.CopyFiles.Kern
+Reboot
+[opl3emu.NT.Services]
+AddService=,0x2
+[opl3emu.AddReg]
+HKR,Drivers,SubClasses,,"MIDI"
+HKR,"Drivers\MIDI\opl3emu.dll", Driver,,opl3emu.dll
+HKR,"Drivers\MIDI\opl3emu.dll", Description,,%opl3emu%
+[opl3emu.CopyFiles.User]
+opl3emu.dll
+[opl3emu.CopyFiles.Kern]
+[DestinationDirs]
+opl3emu.CopyFiles.User = 11
+opl3emu.CopyFiles.Kern = 12
+[SourceDisksNames]
+1 = "YMF262 Synth Emulator Files","",1
+[SourceDisksFiles]
+opl3emu.dll=1
+[Strings]
+opl3emu="YMF262 Synth Emulator"
