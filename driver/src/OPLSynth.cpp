@@ -8,7 +8,8 @@
 // ==============================================================================
 
 #include "OPLSynth.h"
-#include "patch.h"
+//#include "patch.h"
+#include "mauipatch.h"
 
 BYTE gbVelocityAtten[64] = 
 {
@@ -80,7 +81,9 @@ void
       {
       case 7:
          /* change channel volume */
-         Opl3_ChannelVolume(bChannel,gbVelocityAtten[bVelocity >> 1]);
+         //Opl3_ChannelVolume(bChannel,gbVelocityAtten[bVelocity >> 1]);
+         m_curVol[bChannel] = bVelocity;
+         Opl3_ChannelVolume(bChannel,gbVelocityAtten[(BYTE)((bVelocity >> 1) * ((float)m_iExpThres[bChannel]/0x7F))]);
          break;
 
       case 6: // Data Entry (CC98-101 dependent)
@@ -102,7 +105,9 @@ void
          break;
          
       case 11: 
-         /* TODO: set expression threshold. should influence bChannel.gbVelocityAtten[bVelocity>>1] range */
+         m_iExpThres[bChannel] = bVelocity;
+         /* set expression threshold. should influence bChannel.gbVelocityAtten[curVol>>1] range */
+         Opl3_ChannelVolume(bChannel,gbVelocityAtten[(BYTE)((m_curVol[bChannel] >> 1) * ((float)m_iExpThres[bChannel]/0x7F))]);
          break;
 
       case 64:
@@ -738,7 +743,7 @@ void
    // the correct channel.  Anything with the
    // correct channel gets its pitch bent...
    for (i = 0; i < NUM2VOICES; i++)
-      if (m_Voice[ i ].bChannel == bChannel)
+      if (m_Voice[ i ].bChannel == bChannel && (m_Voice [ i ].bOn || m_Voice [ i ].bSusHeld))
       {
          j = 0 ;
          dwNew = Opl3_CalcBend( m_Voice[ i ].dwOrigPitch[ j ], iBend ) ;
@@ -955,6 +960,8 @@ bool
       m_bStereoMask[i] = 0xff;  // center
       m_iBendRange[i] = 2;      // -/+ 2 semitones
       memset(m_RPN[i], -1, sizeof(WORD));  
+      m_iExpThres[i] = 0x7F;
+      m_curVol[i] = 100;
    };
    m_Miniport.adlib_init();
    Opl3_BoardReset();

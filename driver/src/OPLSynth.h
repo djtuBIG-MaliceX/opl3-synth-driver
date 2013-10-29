@@ -185,7 +185,8 @@ private:
 
    //short   m_iBend[16];    /* bend for each channel */
    long    m_iBend[16];    /* bend for each channel */
-   
+   BYTE    m_iExpThres[16];   /* 0 to 127 expression value */
+   BYTE    m_curVol[16];      /* Volume control */
    BYTE    m_RPN[16][2];      /* RPN WORD */
 
    /* Bend range as dictated by CC100=0, CC101=0, CC6=n, where n= +/- range of semitones */

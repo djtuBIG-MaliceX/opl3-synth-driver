@@ -3,5 +3,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
     <RemoteDebuggerAttach>true</RemoteDebuggerAttach>
+    <LocalDebuggerCommand>wjpro.exe</LocalDebuggerCommand>
+    <LocalDebuggerAttach>true</LocalDebuggerAttach>
   </PropertyGroup>
 </Project>

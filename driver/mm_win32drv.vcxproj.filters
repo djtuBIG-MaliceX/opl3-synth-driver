@@ -43,6 +43,9 @@
     <ClInclude Include="src\MidiSynth.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\mauipatch.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="src\winmm_drv.def">
