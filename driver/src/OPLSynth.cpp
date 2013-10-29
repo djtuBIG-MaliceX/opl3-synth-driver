@@ -8,7 +8,8 @@
 // ==============================================================================
 
 #include "OPLSynth.h"
-#include "patch.h"
+//#include "patch.h"
+#include "mauipatch.h"
 
 BYTE gbVelocityAtten[64] = 
 {
@@ -80,7 +81,9 @@ void
       {
       case 7:
          /* change channel volume */
-         Opl3_ChannelVolume(bChannel,gbVelocityAtten[bVelocity >> 1]);
+         //Opl3_ChannelVolume(bChannel,gbVelocityAtten[bVelocity >> 1]);
+         m_curVol[bChannel] = bVelocity;
+         Opl3_ChannelVolume(bChannel,gbVelocityAtten[(BYTE)((bVelocity >> 1) * ((float)m_iExpThres[bChannel]/0x7F))]);
          break;
 
       case 6: // Data Entry (CC98-101 dependent)
@@ -102,7 +105,9 @@ void
          break;
          
       case 11: 
-         /* TODO: set expression threshold. should influence bChannel.gbVelocityAtten[bVelocity>>1] range */
+         m_iExpThres[bChannel] = bVelocity;
+         /* set expression threshold. should influence bChannel.gbVelocityAtten[curVol>>1] range */
+         Opl3_ChannelVolume(bChannel,gbVelocityAtten[(BYTE)((m_curVol[bChannel] >> 1) * ((float)m_iExpThres[bChannel]/0x7F))]);
          break;
 
       case 64:
@@ -139,7 +144,7 @@ void
       dwTemp = ((WORD)bNote << 0) | ((WORD)bVelocity << 7);
 		dwTemp -= 0x2000;
       //dwTemp += 0x8000;
-      dwTemp *= (m_iBendRange[bChannel] << 1);
+      dwTemp *= (m_iBendRange[bChannel]);
       //dwTemp *= (12<<1);
       m_iBend[bChannel] = (long) (dwTemp);
       
@@ -375,9 +380,9 @@ void
    Opl3_NoteOn(BYTE bPatch, BYTE bNote, BYTE bChannel, BYTE bVelocity, long iBend)
 {
    WORD             wTemp, i, j ;
-   BYTE             b4Op, bTemp, bMode, bStereo ;
+   BYTE             b4Op, /*bTemp, */bMode, bStereo ;
    patchStruct      *lpPS ;
-   DWORD            dwBasicPitch, dwPitch[ 2 ] ;
+   DWORD            /*dwBasicPitch, */dwPitch[ 2 ] ;
    noteStruct       NS;
 
    // Get a pointer to the patch
@@ -386,12 +391,12 @@ void
    // note value.  This may be adjusted because of
    // pitch bends or special qualities for the note.
 
-   dwBasicPitch = gdwPitch[ bNote % 12 ] ;
+   /*dwBasicPitch = gdwPitch[ bNote % 12 ] ;
    bTemp = bNote / (BYTE) 12 ;
    if (bTemp > (BYTE) (60 / 12))
       dwBasicPitch = AsLSHL( dwBasicPitch, (BYTE)(bTemp - (BYTE)(60/12)) ) ;
    else if (bTemp < (BYTE) (60/12))
-      dwBasicPitch = AsULSHR( dwBasicPitch, (BYTE)((BYTE) (60/12) - bTemp) ) ;
+      dwBasicPitch = AsULSHR( dwBasicPitch, (BYTE)((BYTE) (60/12) - bTemp) ) ;*/
 
    // Copy the note information over and modify
    // the total level and pitch according to
@@ -403,14 +408,15 @@ void
    for (j = 0; j < 2; j++)
    {
       // modify pitch
-      dwPitch[ j ] = dwBasicPitch ;
-      bTemp = (BYTE)((NS.bAtB0[ j ] >> 2) & 0x07) ;
+      /*dwPitch[ j ] = dwBasicPitch ;*/
+      /*bTemp = (BYTE)((NS.bAtB0[ j ] >> 2) & 0x07) ;
       if (bTemp > 4)
          dwPitch[ j ] = AsLSHL( dwPitch[ j ], (BYTE)(bTemp - (BYTE)4) ) ;
       else if (bTemp < 4)
-         dwPitch[ j ] = AsULSHR( dwPitch[ j ], (BYTE)((BYTE)4 - bTemp) ) ;
+         dwPitch[ j ] = AsULSHR( dwPitch[ j ], (BYTE)((BYTE)4 - bTemp) ) ;*/
 
-      wTemp = Opl3_CalcFAndB( Opl3_CalcBend( dwPitch[ j ], iBend ) ) ;
+      //wTemp = Opl3_CalcFAndB( Opl3_CalcBend( dwPitch[ j ], iBend ) ) ;
+      wTemp = Opl3_MIDINote2FNum(bNote, bChannel);
       NS.bAtA0[ j ] = (BYTE) wTemp ;
       NS.bAtB0[ j ] = (BYTE) 0x20 | (BYTE) (wTemp >> 8) ;
    }
@@ -738,11 +744,11 @@ void
    // the correct channel.  Anything with the
    // correct channel gets its pitch bent...
    for (i = 0; i < NUM2VOICES; i++)
-      if (m_Voice[ i ].bChannel == bChannel)
+      if (m_Voice[ i ].bChannel == bChannel && (m_Voice [ i ].bOn || m_bSustain[bChannel]))
       {
          j = 0 ;
-         dwNew = Opl3_CalcBend( m_Voice[ i ].dwOrigPitch[ j ], iBend ) ;
-         wTemp[ j ] = Opl3_CalcFAndB( dwNew ) ;
+         //wTemp[ j ] = Opl3_CalcFAndB( Opl3_CalcBend( m_Voice[ i ].dwOrigPitch[ j ], iBend ) ) ;
+         wTemp[ j ] = Opl3_MIDINote2FNum(m_Voice[ i ].bNote, bChannel);
          m_Voice[ i ].bBlock[ j ] =
             (m_Voice[ i ].bBlock[ j ] & (BYTE) 0xe0) |
             (BYTE) (wTemp[ j ] >> 8) ;
@@ -755,6 +761,51 @@ void
          m_Miniport.adlib_write(AD_FNUMBER + wOffset, (BYTE) wTemp[ 0 ] ) ;
       }
 } // end of Opl3_PitchBend
+
+// ===========================================================================
+//  void Opl3_MIDINote2FNum
+//
+//  Description:
+//     This pitch bends a channel.
+//
+//  Parameters:
+//     BYTE note     - MIDI note number
+//     BYTE bChannel - channel
+//     
+//
+//     short iBend
+//        values from -32768 to 32767, being -2 to +2 half steps
+//
+//  Return Value:
+//     Nothing.
+// ===========================================================================
+
+WORD
+   OPLSynth::
+   Opl3_MIDINote2FNum(BYTE note, BYTE bChannel)
+{
+	double freqVal, curNote;
+	signed char BlockVal;
+	WORD keyVal;
+	signed long int CurPitch;
+	
+	//CurPitch = m_//MMstTuning + TempMid->TunePb + TempMid->Pitch + TempMid->ModPb;
+	
+	curNote = (double)(note + m_iBend[bChannel] / 8192.0); //Note + CurPitch / 8192.0;
+	freqVal = 440.0 * pow(2.0, (curNote - 69) / 12.0);
+	//BlockVal = ((signed short int)CurNote / 12) - 1;
+	BlockVal = ((signed short int)(curNote + 6) / 12) - 2;
+	if (BlockVal < 0x00)
+		BlockVal = 0x00;
+	else if (BlockVal > 0x07)
+		BlockVal = 0x07;
+	//KeyVal = (unsigned short int)(FreqVal * pow(2, 20 - BlockVal) / CHIP_RATE + 0.5);
+	keyVal = (WORD)(freqVal * (1 << (20 - BlockVal)) / FSAMP + 0.5);
+	if (keyVal > 0x03FF)
+		keyVal = 0x03FF;
+	
+	return (BlockVal << 10) | keyVal;	// << (8+2)
+}
 
 
 // ===========================================================================
@@ -955,6 +1006,8 @@ bool
       m_bStereoMask[i] = 0xff;  // center
       m_iBendRange[i] = 2;      // -/+ 2 semitones
       memset(m_RPN[i], -1, sizeof(WORD));  
+      m_iExpThres[i] = 0x7F;
+      m_curVol[i] = 100;
    };
    m_Miniport.adlib_init();
    Opl3_BoardReset();

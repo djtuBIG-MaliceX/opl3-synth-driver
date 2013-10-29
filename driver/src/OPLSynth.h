@@ -112,7 +112,8 @@ typedef struct _voiceStruct {
 
 
 /* a bit of tuning information */
-#define FSAMP                           (50000.0)     /* sampling frequency */
+#define FSAMP                           (49716) //(3579545.0 / 72.0
+                                        //(50000.0)     /* sampling frequency */
 #define PITCH(x)                        ((DWORD)((x) * (double) (1L << 19) / FSAMP))
 /* x is the desired frequency,
 == FNUM at b=1 */
@@ -184,12 +185,12 @@ private:
    BYTE    m_bStereoMask[16];      /* mask for left/right for stereo midi files */
 
    //short   m_iBend[16];    /* bend for each channel */
-   long    m_iBend[16];    /* bend for each channel */
-   
+   long    m_iBend[16];       /* bend for each channel */
+   BYTE    m_iExpThres[16];   /* 0 to 127 expression value */
+   BYTE    m_curVol[16];      /* Volume control */
    BYTE    m_RPN[16][2];      /* RPN WORD */
-
-   /* Bend range as dictated by CC100=0, CC101=0, CC6=n, where n= +/- range of semitones */
-   BYTE    m_iBendRange[16];
+   BYTE    m_iBendRange[16];  /* Bend range as dictated by CC100=0, CC101=0, CC6=n, where n= +/- range of semitones */
+   
 
    BYTE    m_bPatch[16];   /* patch number mapped to */
    BYTE    m_bSustain[16];   /* Is sustain in effect on this channel? */
@@ -205,6 +206,7 @@ private:
    void Opl3_ChannelNotesOff(BYTE bChannel);
    WORD Opl3_FindFullSlot(BYTE bNote, BYTE bChannel);
    WORD Opl3_CalcFAndB (DWORD dwPitch);
+   WORD Opl3_MIDINote2FNum(BYTE note, BYTE bChannel);
    //DWORD Opl3_CalcBend (DWORD dwOrig, short iBend);
    DWORD Opl3_CalcBend (DWORD dwOrig, long iBend);
    BYTE Opl3_CalcVolume (BYTE bOrigAtten, BYTE bChannel,BYTE bVelocity, BYTE bOper, BYTE bMode);
