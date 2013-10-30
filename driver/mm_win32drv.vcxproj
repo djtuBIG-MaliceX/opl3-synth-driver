@@ -183,6 +183,7 @@
     <None Include="src\winmm_drv.def" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\testpatch.h" />
     <ClInclude Include="src\mauipatch.h" />
     <ClInclude Include="src\MidiSynth.h" />
     <ClInclude Include="src\opl.h" />

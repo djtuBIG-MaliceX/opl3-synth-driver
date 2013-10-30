@@ -10,8 +10,9 @@
 #include "OPLSynth.h"
 
 // TODO - Determine way to read configuration for existing bank file before playback
-#include "patch.h"
+//#include "patch.h"
 //#include "mauipatch.h"
+#include "fmsynthpatch.h"
 
 BYTE gbVelocityAtten[64] = 
 {
@@ -739,7 +740,7 @@ void
    Opl3_PitchBend(BYTE bChannel, long iBend)
 {
    WORD   i, wTemp[ 2 ], wOffset, j ;
-   DWORD  dwNew ;
+//   DWORD  dwNew ;
 
    // Remember the current bend..
    m_iBend[ bChannel ] = iBend ;
@@ -787,7 +788,7 @@ WORD
 	double freqVal, curNote;
 	signed char BlockVal;
 	WORD keyVal;
-	signed long CurPitch;
+//	signed long CurPitch;
 	
    /*TODO: keep for later, may add other features */
 	//CurPitch = //MMstTuning + TempMid->TunePb + TempMid->Pitch + TempMid->ModPb;
