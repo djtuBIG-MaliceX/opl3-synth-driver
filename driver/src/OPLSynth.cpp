@@ -471,22 +471,22 @@ void
 //                        block and fNum, and the low byte contains the
 //                        0xa0 section of the fNumber
 //=======================================================================
-WORD
-   OPLSynth::
-   Opl3_CalcFAndB(DWORD dwPitch)
-{
-   BYTE    bBlock;
-
-   /* bBlock is like an exponential to dwPitch (or FNumber) */
-   for (bBlock = 1; dwPitch >= 0x400; dwPitch >>= 1, bBlock++)
-      ;
-
-   if (bBlock > 0x07)
-      bBlock = 0x07;  /* we cant do anything about this */
-
-   /* put in high two bits of F-num into bBlock */
-   return ((WORD) bBlock << 10) | (WORD) dwPitch;
-}
+//WORD
+//   OPLSynth::
+//   Opl3_CalcFAndB(DWORD dwPitch)
+//{
+//   BYTE    bBlock;
+//
+//   /* bBlock is like an exponential to dwPitch (or FNumber) */
+//   for (bBlock = 1; dwPitch >= 0x400; dwPitch >>= 1, bBlock++)
+//      ;
+//
+//   if (bBlock > 0x07)
+//      bBlock = 0x07;  /* we cant do anything about this */
+//
+//   /* put in high two bits of F-num into bBlock */
+//   return ((WORD) bBlock << 10) | (WORD) dwPitch;
+//}
 
 //=======================================================================
 //Opl3_CalcBend - This calculates the effects of pitch bend
@@ -498,26 +498,27 @@ WORD
 //returns
 //        DWORD - new frequency
 //=======================================================================
-DWORD
-   OPLSynth::
-   Opl3_CalcBend (DWORD dwOrig, long iBend)
-{
-   /* do different things depending upon positive or
-   negative bend */
-   DWORD dw;
-   if (iBend > 0)
-   {
-      dw = (DWORD)((iBend * (LONG)(256.0 * (EQUAL * EQUAL - 1.0))) >> 8);
-      dwOrig += (DWORD)(AsULMUL(dw, dwOrig) >> 15);
-   }
-   else if (iBend < 0)
-   {
-      dw = (DWORD)(((-iBend) * (LONG)(256.0 * (1.0 - 1.0 / EQUAL / EQUAL))) >> 8);
-      dwOrig -= (DWORD)(AsULMUL(dw, dwOrig) >> 15);
-   }
-
-   return dwOrig;
-}
+//DWORD
+//   OPLSynth::
+//   Opl3_CalcBend (DWORD dwOrig, long iBend)
+//{
+//   /* do different things depending upon positive or
+//   negative bend */
+//   DWORD dw;
+//
+//   if (iBend > 0)
+//   {
+//      dw = (DWORD)((iBend * (LONG)(256.0 * (EQUAL * EQUAL - 1.0))) >> 8);
+//      dwOrig += (DWORD)(AsULMUL(dw, dwOrig) >> 15);
+//   }
+//   else if (iBend < 0)
+//   {
+//      dw = (DWORD)(((-iBend) * (LONG)(256.0 * (1.0 - 1.0 / EQUAL / EQUAL))) >> 8);
+//      dwOrig -= (DWORD)(AsULMUL(dw, dwOrig) >> 15);
+//   }
+//
+//   return dwOrig;
+//}
 
 //=======================================================================
 // Opl3_CalcVolume - This calculates the attenuation for an operator.
@@ -766,20 +767,16 @@ void
 //  void Opl3_MIDINote2FNum
 //
 //  Description:
-//     This pitch bends a channel.
+//     Obtains FNumber from MIDI note + current bend values
+//     Special thanks to ValleyBell for MidiPlay sources for adaption
 //
 //  Parameters:
 //     BYTE note     - MIDI note number
 //     BYTE bChannel - channel
-//     
-//
-//     short iBend
-//        values from -32768 to 32767, being -2 to +2 half steps
 //
 //  Return Value:
-//     Nothing.
+//     ((WORD) BlockVal << 10) | (WORD) keyVal;
 // ===========================================================================
-
 WORD
    OPLSynth::
    Opl3_MIDINote2FNum(BYTE note, BYTE bChannel)
@@ -787,9 +784,10 @@ WORD
 	double freqVal, curNote;
 	signed char BlockVal;
 	WORD keyVal;
-	signed long int CurPitch;
+	signed long CurPitch;
 	
-	//CurPitch = m_//MMstTuning + TempMid->TunePb + TempMid->Pitch + TempMid->ModPb;
+   /*TODO: keep for later, may add other features */
+	//CurPitch = //MMstTuning + TempMid->TunePb + TempMid->Pitch + TempMid->ModPb;
 	
 	curNote = (double)(note + m_iBend[bChannel] / 8192.0); //Note + CurPitch / 8192.0;
 	freqVal = 440.0 * pow(2.0, (curNote - 69) / 12.0);
