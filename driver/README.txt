@@ -1,5 +1,60 @@
+OPL3 software synthesizer WinMM driver
+======================================
+
+Original code (C) 2011-2013 Sergey V. Mikayev
+Additions (C) 2013 dj.tuBIG/MaliceX (http://www.codingchords.com)
+Distributed under LGPL
+
+
+Git Repository: https://bitbucket.org/djtubig-malicex/opl3-synth-driver
+
+
+Changelog
+---------
+[30-OCT-2013]
+ * Adapted ValleyBell's Pitch Bend range extender support from MidiPlay (thanks!)
+ * Added CC11 Expression support
+ * Reorganised patch.h to also include percussion bank mapping
+ * Included a conversion of mauifm.ibk+mauiperc.ibk -> mauipatch.h (you can always change it back to the original patch.h Fat Man bank)
+
+
+TODO
+----
+ * Bank switching (eg: changing patch banks, something Jamie O'Connell's custom driver could do)
+ * Support for 4-op patch banks (eg: Voyetra Super SAPI!)
+ * Patch editor or more patch converters (looking at .SBI and Freq Monster 801)
+ * Considering special build for channel-fixed support (may be necessary for true 4op)
+ * VGM logging?
+ 
+
+Special Thanks
+---------------
+- ValleyBell, for significant assistance and allowing me to see the source code 
+  of MidiPlay.
+  
+- DJBouche, for advice in handling MIDI pitch bend calculations.
+
+- khokh2001, for creating the original OPL3 windows driver code base.
+
+- DOSBox team, for creating an excellent emulator, with an excellent OPL3 chip
+  emulation engine.
+
+
+Note
+----
+
+Use either install-fatman.bat or install-maui.bat to install.
+Alternatively, if using XP or earlier, rename either to opl3emu.dll and
+install via Add New Hardware.
+
+
+(Below instructions from Sergey V. Mikayev)
+
+
+
 OPL3 WinMM Driver. Based on Munt WinMM Driver.
 ********************************
+
 
 First-time Installation
 -----------------------

@@ -8,6 +8,8 @@
 // ==============================================================================
 
 #include "OPLSynth.h"
+
+// TODO - Determine way to read configuration for existing bank file before playback
 //#include "patch.h"
 #include "mauipatch.h"
 
