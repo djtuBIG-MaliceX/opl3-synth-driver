@@ -990,7 +990,7 @@ bool
    int i;
 
    // init some members
-   m_dwCurTime = 1;    /* for note on/off */
+   m_dwCurTime = 1;    /* for note on/off */ 
    /* volume */
    m_wSynthAttenL = 0;        /* in 1.5dB steps */
    m_wSynthAttenR = 0;        /* in 1.5dB steps */
