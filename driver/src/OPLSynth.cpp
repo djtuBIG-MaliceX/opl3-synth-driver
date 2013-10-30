@@ -10,9 +10,9 @@
 #include "OPLSynth.h"
 
 // TODO - Determine way to read configuration for existing bank file before playback
-//#include "patch.h"
+#include "patch.h"
 //#include "mauipatch.h"
-#include "fmsynthpatch.h"
+//#include "fmsynthpatch.h"
 
 BYTE gbVelocityAtten[64] = 
 {
@@ -90,16 +90,7 @@ void
          break;
 
       case 6: // Data Entry (CC98-101 dependent)
-         /* TODO: Write stuff based on preceeding N/RPN commands received */
-         {
-            WORD rpn = (WORD)(m_RPN[bChannel][0])|(m_RPN[bChannel][1] << 8) & (WORD)(0xFF);
-
-            //if (m_RPN[bChannel] == (WORD)0x0000)
-            if (rpn == (WORD)0x0000)
-            {
-               m_iBendRange[bChannel] = bVelocity;
-            }
-         }
+         Opl3_ProcessDataEntry(bVelocity, bChannel);
          break;
 
       case 8:
@@ -464,6 +455,28 @@ void
 
 
 } // end of Opl3_NoteOn()
+
+
+void
+   OPLSynth::
+   Opl3_ProcessDataEntry(BYTE val, BYTE bChannel)
+{
+   WORD rpn = (WORD)(m_RPN[bChannel][0])|(m_RPN[bChannel][1] << 8) & (WORD)(0xFF);
+   DWORD dwTemp;
+
+   // Pitch Bend Range extension
+   if (rpn == (WORD)0x0000)
+   {
+      // Calculate base bend value then apply
+      dwTemp = ((long)m_iBend[bChannel] / m_iBendRange[bChannel]);
+      m_iBendRange[bChannel] = val & 0x7f;
+      dwTemp *= m_iBendRange[bChannel];
+      m_iBend[bChannel] = (long) (dwTemp);
+
+      Opl3_PitchBend(bChannel, m_iBend[bChannel]);
+   }
+         
+}
 
 //=======================================================================
 //Opl3_CalcFAndB - Calculates the FNumber and Block given a frequency.

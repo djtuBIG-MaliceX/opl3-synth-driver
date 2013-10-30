@@ -98,8 +98,8 @@ HRESULT modGetCaps(PVOID capsPtr, DWORD capsSize) {
 	MIDIOUTCAPS2A * myCaps2A;
 	MIDIOUTCAPS2W * myCaps2W;
 
-	CHAR synthName[] = "YMF262 Synth Emulator\0";
-	WCHAR synthNameW[] = L"YMF262 Synth Emulator\0";
+	CHAR synthName[] = "YMF262 Software Synth (2op)\0";
+	WCHAR synthNameW[] = L"YMF262 Software Synth (2op)\0";
 
 	switch (capsSize) {
 	case (sizeof(MIDIOUTCAPSA)):

@@ -207,6 +207,7 @@ private:
    WORD Opl3_FindFullSlot(BYTE bNote, BYTE bChannel);
    //WORD Opl3_CalcFAndB (DWORD dwPitch);
    WORD Opl3_MIDINote2FNum(BYTE note, BYTE bChannel);
+   void Opl3_ProcessDataEntry(BYTE bVal, BYTE bChannel);
    //DWORD Opl3_CalcBend (DWORD dwOrig, short iBend);
    //DWORD Opl3_CalcBend (DWORD dwOrig, long iBend);
    BYTE Opl3_CalcVolume (BYTE bOrigAtten, BYTE bChannel,BYTE bVelocity, BYTE bOper, BYTE bMode);
