@@ -10,8 +10,8 @@
 #include "OPLSynth.h"
 
 // TODO - Determine way to read configuration for existing bank file before playback
-//#include "patch.h"
-#include "mauipatch.h"
+#include "patch.h"
+//#include "mauipatch.h"
 
 BYTE gbVelocityAtten[64] = 
 {
@@ -94,6 +94,7 @@ void
             WORD rpn = (WORD)(m_RPN[bChannel][0])|(m_RPN[bChannel][1] << 8) & (WORD)(0xFF);
 
             //if (m_RPN[bChannel] == (WORD)0x0000)
+            if (rpn == (WORD)0x0000)
             {
                m_iBendRange[bChannel] = bVelocity;
             }
