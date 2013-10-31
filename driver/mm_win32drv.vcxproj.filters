@@ -49,6 +49,9 @@
     <ClInclude Include="src\testpatch.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\mmddk.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <None Include="src\winmm_drv.def">

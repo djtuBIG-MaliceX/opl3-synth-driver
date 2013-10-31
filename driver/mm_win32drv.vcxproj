@@ -184,6 +184,7 @@
     <None Include="src\winmm_drv.def" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\mmddk.h" />
     <ClInclude Include="src\testpatch.h" />
     <ClInclude Include="src\mauipatch.h" />
     <ClInclude Include="src\MidiSynth.h" />
