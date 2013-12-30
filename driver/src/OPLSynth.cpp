@@ -28,6 +28,7 @@ BYTE offsetSlot[] =
    8, 9, 10, 11, 12, 13,
    16, 17, 18, 19, 20, 21
 };
+
 void
    OPLSynth::
    WriteMidiData(DWORD dwData)
@@ -178,7 +179,10 @@ void
 
    for (i = 0; i < NUM2VOICES; i++)
    {
-      Opl3_NoteOff(m_Voice[i].bPatch, m_Voice[i].bNote, m_Voice[i].bChannel, 0);
+      if (m_Voice[i].bSusHeld)
+         Opl3_CutVoice(i, FALSE);
+      else
+         Opl3_NoteOff(m_Voice[i].bPatch, m_Voice[i].bNote, m_Voice[i].bChannel, 0);
    }
 }
 
@@ -216,7 +220,7 @@ void
 {
 
    //patchStruct      *lpPS ;
-   WORD             wOffset, wTemp ;
+   WORD               wTemp ;
 
    // Find the note slot
    wTemp = Opl3_FindFullSlot( bNote, bChannel ) ;
@@ -238,18 +242,7 @@ void
 
       // shut off the note portion
       // we have the note slot, turn it off.
-      wOffset = wTemp;
-      if (wTemp >= (NUM2VOICES / 2))
-         wOffset += (0x100 - (NUM2VOICES / 2));
-
-      m_Miniport.adlib_write(AD_BLOCK + wOffset,
-         (BYTE)(m_Voice[ wTemp ].bBlock[ 0 ] & 0x1f) ) ;
-
-      // Note this...
-      m_Voice[ wTemp ].bOn = FALSE ;
-      m_Voice[ wTemp ].bBlock[ 0 ] &= 0x1f ;
-      m_Voice[ wTemp ].bBlock[ 1 ] &= 0x1f ;
-      m_Voice[ wTemp ].dwTime = m_dwCurTime ;
+      Opl3_CutVoice((BYTE)wTemp, FALSE);
    }
 }
 
@@ -459,8 +452,8 @@ void
    bStereo = Opl3_CalcStereoMask( bChannel ) ;
    NS.bAtC0[ 0 ] &= bStereo ;
 
-   wTemp = 0;
    // Check if mono mode is set.
+   wTemp = 0;
    if ((m_bMonoMode & (1<<bChannel)) > 0)
    {
       // Is last voice used if it indeed is used by this channel
@@ -648,7 +641,8 @@ void
    {
       if ((m_Voice[ i ].bOn) && (m_Voice[ i ].bChannel == bChannel))
       {
-         Opl3_NoteOff(m_Voice[i].bPatch, m_Voice[i].bNote,m_Voice[i].bChannel, 0) ;
+         //Opl3_NoteOff(m_Voice[i].bPatch, m_Voice[i].bNote,m_Voice[i].bChannel, 0) ;
+         Opl3_CutVoice(i, TRUE);
       }
    }
 }
@@ -799,7 +793,7 @@ void
    // the correct channel.  Anything with the
    // correct channel gets its pitch bent...
    for (i = 0; i < NUM2VOICES; i++)
-      if (m_Voice[ i ].bChannel == bChannel && (m_Voice [ i ].bOn || m_bSustain[bChannel]))
+      if (m_Voice[ i ].bChannel == bChannel/* && (m_Voice [ i ].bOn || m_bSustain[bChannel])*/)
       {
          j = 0 ;
          //wTemp[ j ] = Opl3_CalcFAndB( Opl3_CalcBend( m_Voice[ i ].dwOrigPitch[ j ], iBend ) ) ;
@@ -981,7 +975,7 @@ void
    OPLSynth::
    Opl3_SetSustain(BYTE bChannel,BYTE bSusLevel)
 {
-   WORD i, wOffset;
+   BYTE i;
 
    if (m_bSustain[ bChannel ] && !bSusLevel)
    {
@@ -996,19 +990,7 @@ void
             // this is not guaranteed to cut repeated sustained notes
             //Opl3_NoteOff(m_Voice[i].bPatch, m_Voice[i].bNote, m_Voice[i].bChannel, 0);
 
-            wOffset = i;
-            if (i >= (NUM2VOICES / 2))
-               wOffset += (0x100 - (NUM2VOICES / 2));
-
-            m_Miniport.adlib_write(AD_BLOCK + wOffset,
-               (BYTE)(m_Voice[ i ].bBlock[ 0 ] & 0x1f) ) ;
-
-            // Note this...
-            m_Voice[ i ].bOn = FALSE ;
-            m_Voice[ i ].bBlock[ 0 ] &= 0x1f ;
-            m_Voice[ i ].bBlock[ 1 ] &= 0x1f ;
-            m_Voice[ i ].dwTime = m_dwCurTime ;
-            m_Voice[ i ].bSusHeld = FALSE ;
+            Opl3_CutVoice(i, FALSE);
          }
       }
    }
@@ -1050,6 +1032,49 @@ void
       m_Miniport.adlib_write(AD_BLOCK2 + i, 0x00);
    };
 }
+
+//------------------------------------------------------------------------
+//  void Opl3_CutNote
+//
+//  Description:
+//     Routine to note off or note cut the FM voice channel
+//
+//  Parameters:
+//     BYTE bVoice
+//        The selected FM voice
+//     
+//     BYTE bIsInstantCut
+//        Flag to indicate whether the note-off should be instant.
+//
+//------------------------------------------------------------------------
+void 
+   OPLSynth::
+   Opl3_CutVoice(BYTE bVoice, BYTE bIsInstantCut)
+{
+   WORD wOffset = bVoice, wOpOffset;
+
+   if (bVoice >= (NUM2VOICES / 2))
+      wOffset += (0x100 - (NUM2VOICES / 2));
+
+   // set op1 sustain (2OP).
+   // TODO: 4op mode, determine operators to cut
+   if (bIsInstantCut)
+   {
+      wOpOffset = gw2OpOffset[ bVoice ][ 1 ] ; // assuming 2op
+      m_Miniport.adlib_write( 0x80 + wOpOffset, 0xFF) ; // set SR to high
+   }
+
+   m_Miniport.adlib_write(AD_BLOCK + wOffset,
+      (BYTE)(m_Voice[ bVoice ].bBlock[ 0 ] & 0x1f) ) ;
+
+   // Note this...
+   m_Voice[ bVoice ].bOn = FALSE ;
+   m_Voice[ bVoice ].bBlock[ 0 ] &= 0x1f ;
+   m_Voice[ bVoice ].bBlock[ 1 ] &= 0x1f ;
+   m_Voice[ bVoice ].dwTime = m_dwCurTime ;
+   m_Voice[ bVoice ].bSusHeld = FALSE ;
+}
+
 bool
    OPLSynth::
    Init()

@@ -7,6 +7,7 @@
 #ifndef OPL3SYNTH_H
 #define OPL3SYNTH_H
 #include "opl.h"
+
 typedef unsigned char	BYTE;
 typedef unsigned short  WORD;
 typedef unsigned long	DWORD,ULONG;
@@ -218,6 +219,7 @@ private:
    void Opl3_SetVolume(BYTE bChannel);
    void Opl3_FMNote(WORD wNote, noteStruct *lpSN, BYTE bChannel);
    void Opl3_SetSustain(BYTE bChannel, BYTE bSusLevel);
+   void Opl3_CutVoice(BYTE bVoice, BYTE bIsInstantCut);
    void Opl3_BoardReset(void);
 public:
    void WriteMidiData(DWORD dwData);

@@ -1,7 +1,7 @@
 OPL3 software synthesizer WinMM driver
 ======================================
 
-Original code (C) 2011-2013 Sergey V. Mikayev
+Original code (C) 2011-2013 Alex Khokolov
 Additions (C) 2013 dj.tuBIG/MaliceX (http://www.codingchords.com)
 Distributed under LGPL
 
@@ -16,6 +16,8 @@ Changelog
  * Implemented Mono Legato mode (CC126) and Poly switch (CC127)
  * Tweaked converted banks to use pitch offsets (still doesn't sound right due to patches being designed for the OPL Rhythm Mode channels)
  * Fixed sustain bug where it was not releasing repeated sustained notes.
+ * Fixed long-release pitch bend behaviour
+ * Refactored note off functionality to allow for instant voice cut.
  
 [31-OCT-2013]
  * Recompiled binaries to Release w/ XP compatibility (project solution upgrade changed default target)
