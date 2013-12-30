@@ -15,6 +15,7 @@ Changelog
  * Added ARM target to project solution (for jailbroken Windows RT 8.0)
  * Implemented Mono Legato mode (CC126) and Poly switch (CC127)
  * Tweaked converted banks to use pitch offsets (still doesn't sound right due to patches being designed for the OPL Rhythm Mode channels)
+ * Fixed sustain bug where it was not releasing repeated sustained notes.
  
 [31-OCT-2013]
  * Recompiled binaries to Release w/ XP compatibility (project solution upgrade changed default target)

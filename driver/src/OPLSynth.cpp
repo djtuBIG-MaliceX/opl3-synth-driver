@@ -215,7 +215,7 @@ void
    )
 {
 
-   patchStruct      *lpPS ;
+   //patchStruct      *lpPS ;
    WORD             wOffset, wTemp ;
 
    // Find the note slot
@@ -234,7 +234,7 @@ void
       }
 
       // get a pointer to the patch
-      lpPS = glpPatch + (BYTE) m_Voice[ wTemp ].bPatch ;
+      //lpPS = glpPatch + (BYTE) m_Voice[ wTemp ].bPatch ;
 
       // shut off the note portion
       // we have the note slot, turn it off.
@@ -287,7 +287,8 @@ WORD
    {
       if ((bChannel == m_Voice[ i ].bChannel)
          && (bNote == m_Voice[ i ].bNote)
-         && (m_Voice[ i ].bOn))
+         && (m_Voice[ i ].bOn)
+         && !(m_Voice[ i ].bSusHeld))
       {
          return ( i ) ;
       }
@@ -980,7 +981,7 @@ void
    OPLSynth::
    Opl3_SetSustain(BYTE bChannel,BYTE bSusLevel)
 {
-   WORD            i;
+   WORD i, wOffset;
 
    if (m_bSustain[ bChannel ] && !bSusLevel)
    {
@@ -992,7 +993,22 @@ void
          if ((bChannel == m_Voice[ i ].bChannel) &&
             m_Voice[ i ].bSusHeld)
          {
-            Opl3_NoteOff(m_Voice[i].bPatch, m_Voice[i].bNote, m_Voice[i].bChannel, 0);
+            // this is not guaranteed to cut repeated sustained notes
+            //Opl3_NoteOff(m_Voice[i].bPatch, m_Voice[i].bNote, m_Voice[i].bChannel, 0);
+
+            wOffset = i;
+            if (i >= (NUM2VOICES / 2))
+               wOffset += (0x100 - (NUM2VOICES / 2));
+
+            m_Miniport.adlib_write(AD_BLOCK + wOffset,
+               (BYTE)(m_Voice[ i ].bBlock[ 0 ] & 0x1f) ) ;
+
+            // Note this...
+            m_Voice[ i ].bOn = FALSE ;
+            m_Voice[ i ].bBlock[ 0 ] &= 0x1f ;
+            m_Voice[ i ].bBlock[ 1 ] &= 0x1f ;
+            m_Voice[ i ].dwTime = m_dwCurTime ;
+            m_Voice[ i ].bSusHeld = FALSE ;
          }
       }
    }
