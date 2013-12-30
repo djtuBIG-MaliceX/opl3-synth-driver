@@ -11,6 +11,18 @@ Git Repository: https://bitbucket.org/djtubig-malicex/opl3-synth-driver
 
 Changelog
 ---------
+[30-DEC-2013]
+ * Added ARM target to project solution (for jailbroken Windows RT 8.0)
+ * Implemented Mono Legato mode (CC126) and Poly switch (CC127)
+ * Tweaked converted banks to use pitch offsets (still doesn't sound right due to patches being designed for the OPL Rhythm Mode channels)
+ 
+[31-OCT-2013]
+ * Recompiled binaries to Release w/ XP compatibility (project solution upgrade changed default target)
+ * Added Jamie O'Connell's FMSynth default bank
+ * Tweaked pitch bend range handling to update freq based on semitone range change (exists in EMU10k-based MIDI synths)
+ * Changed driver's MIDI Mapper name  (future-proofing consideration)
+
+
 [30-OCT-2013]
  * Adapted ValleyBell's Pitch Bend range extender support from MidiPlay (thanks!)
  * Added CC11 Expression support

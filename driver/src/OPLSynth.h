@@ -191,6 +191,8 @@ private:
    BYTE    m_RPN[16][2];      /* RPN WORD */
    BYTE    m_iBendRange[16];  /* Bend range as dictated by CC100=0, CC101=0, CC6=n, where n= +/- range of semitones */
    
+   short   m_bMonoMode;    /* Flag for bend mode, bitmasked (LSB=ch1) */
+   BYTE    m_bLastVoiceUsed[16]; /* Needed for legato in mono mode */
 
    BYTE    m_bPatch[16];   /* patch number mapped to */
    BYTE    m_bSustain[16];   /* Is sustain in effect on this channel? */
@@ -214,7 +216,7 @@ private:
    BYTE Opl3_CalcStereoMask (BYTE bChannel);
    WORD Opl3_FindEmptySlot(BYTE bPatch);
    void Opl3_SetVolume(BYTE bChannel);
-   void Opl3_FMNote(WORD wNote, noteStruct *lpSN);
+   void Opl3_FMNote(WORD wNote, noteStruct *lpSN, BYTE bChannel);
    void Opl3_SetSustain(BYTE bChannel, BYTE bSusLevel);
    void Opl3_BoardReset(void);
 public:

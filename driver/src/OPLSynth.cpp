@@ -45,7 +45,7 @@ void
    case 0x90:      /* turn key on, or key off if volume == 0 */
       if (bVelocity)
       {
-         if (bChannel == DRUMCHANNEL)
+         if (bChannel == DRUMCHANNEL) // TODO: change to dynamically assignable drum channels
          {
             //if(bNote>=35 && bNote<88)
             {
@@ -112,11 +112,24 @@ void
 
       case 98:  // NRPN LSB
       case 99:  // NRPN MSB
+         break;
+
       case 100: // RPN LSB
          m_RPN[bChannel][0] = bVelocity;
          break;
       case 101: // RPN MSB
          m_RPN[bChannel][1] = bVelocity;
+         break;
+
+      case 126: // Mono mode on
+         Opl3_ChannelNotesOff(bChannel);
+         m_bMonoMode |= (1<<bChannel);
+         m_bLastVoiceUsed[bChannel] = bChannel; // Assign to midi-voice channel 1:1; last two channels only used if overflow for poly mode.
+         break;
+
+      case 127: // Poly mode on
+         Opl3_ChannelNotesOff(bChannel);
+         m_bMonoMode &= ~(1<<bChannel);
          break;
 
       default:
@@ -297,24 +310,30 @@ WORD
 //        structure containing information about what
 //        is to be played.
 //
+//     BYTE bChannel
+//        Current MIDI channel of note (needed for mono legato mode)
+//
 //  Return Value:
 //     Nothing.
 //------------------------------------------------------------------------
 void
    OPLSynth::
-   Opl3_FMNote(WORD wNote, noteStruct * lpSN)
+   Opl3_FMNote(WORD wNote, noteStruct * lpSN, BYTE bChannel)
 {
    WORD            i ;
    WORD            wOffset ;
    operStruct      *lpOS ;
 
-   // write out a note off, just to make sure...
+   // Do not send note off to allow for mono mode legato
+   if ( !(m_bMonoMode & (1<<bChannel)) )
+   {
+      // write out a note off, just to make sure...
+      wOffset = wNote;
+      if (wNote >= (NUM2VOICES / 2))
+         wOffset += (0x100 - (NUM2VOICES / 2));
 
-   wOffset = wNote;
-   if (wNote >= (NUM2VOICES / 2))
-      wOffset += (0x100 - (NUM2VOICES / 2));
-
-   m_Miniport.adlib_write(AD_BLOCK + wOffset, 0 ) ;
+      m_Miniport.adlib_write(AD_BLOCK + wOffset, 0 ) ;
+   }
 
    // writing the operator information
 
@@ -398,6 +417,8 @@ void
    // the velocity, midi volume, and tuning.
 
    RtlCopyMemory( (LPSTR) &NS, (LPSTR) &lpPS -> note, sizeof( noteStruct ) ) ;
+
+   // TODO: 4op patch mode
    b4Op = (BYTE)(NS.bOp != PATCH_1_2OP) ;
 
    for (j = 0; j < 2; j++)
@@ -437,10 +458,25 @@ void
    bStereo = Opl3_CalcStereoMask( bChannel ) ;
    NS.bAtC0[ 0 ] &= bStereo ;
 
-   // Find an empty slot, and use it...
-   wTemp = Opl3_FindEmptySlot( bPatch ) ;
+   wTemp = 0;
+   // Check if mono mode is set.
+   if ((m_bMonoMode & (1<<bChannel)) > 0)
+   {
+      // Is last voice used if it indeed is used by this channel
+      // else find a new slot.
+      wTemp = m_Voice[ m_bLastVoiceUsed[bChannel]].bChannel;
+      wTemp = (wTemp == bChannel) ? wTemp : Opl3_FindEmptySlot( bPatch );
 
-   Opl3_FMNote(wTemp, &NS ) ;
+      // TODO: configuration flag for locking to 1:1 channel mapping.
+   } 
+   
+   else
+   {
+      // Find an empty slot, and use it...
+      wTemp = Opl3_FindEmptySlot( bPatch );
+   }
+   
+   Opl3_FMNote(wTemp, &NS, bChannel ) ;
    m_Voice[ wTemp ].bNote = bNote ;
    m_Voice[ wTemp ].bChannel = bChannel ;
    m_Voice[ wTemp ].bPatch = bPatch ;
@@ -1013,6 +1049,8 @@ bool
    m_MinVolValue  = 0xFFD0C000;    //  minimum -47.25(dB) * 0x10000
    m_MaxVolValue  = 0x00000000;    //  maximum  0    (dB) * 0x10000
    m_VolStepDelta = 0x0000C000;    //  steps of 0.75 (dB) * 0x10000
+
+   m_bMonoMode = 0;  // Set all channels to polyphonic mode
 
    /* start attenuations at -3 dB, which is 90 MIDI level */
    for (i = 0; i < 16; i++)
