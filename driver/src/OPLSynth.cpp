@@ -96,35 +96,73 @@ void
          Opl3_SetSustain(bChannel, bVelocity);
          break;
 
-      case 72:  // Attack
-         // TODO: read adjustment depending on algorithm
-         m_bAttack[bChannel] = bVelocity;
-         break;
-      
-      case 73:  // Release
+      case 72:  // Release
          // TODO: read adjustment depending on algorithm
          m_bRelease[bChannel] = bVelocity;
+         for (int i = 0; i < NUM2VOICES; ++i)
+         {
+            if (m_Voice[i].bChannel == bChannel)
+            {
+               char bOffset = (char)lin_intp(m_bRelease[bChannel], 0, 127, (-8), 8);
+               WORD wOffset = gw2OpOffset[ i ][ 1 ] ;
+               BYTE bInst = glpPatch[m_Voice[i].bPatch].note.op[1].bAt80;
+               char bTemp = bInst & 0xF;
+               
+               if (!bOffset) 
+                  continue;
+
+               bInst &= ~0xF;
+               bTemp -= bOffset;
+               bInst |= (bTemp > 0xF) ? 0xF : (bTemp >= 0) ? bTemp : 0;
+               printf("DEBUG: %d\n", (int)bTemp);
+               m_Miniport.adlib_write( 0x80 + wOffset, bInst) ;
+            }
+         }
+         break;
+      
+      case 73:  // Attack
+         // TODO: read adjustment depending on algorithm
+         m_bAttack[bChannel] = bVelocity;
+         for (int i = 0; i < NUM2VOICES; ++i)
+         {
+            if (m_Voice[i].bChannel == bChannel)
+            {
+               char bOffset = (char)lin_intp(m_bAttack[bChannel], 0, 127, (-16), 16);
+               WORD wOffset = gw2OpOffset[ i ][ 1 ] ;
+               BYTE bInst = glpPatch[m_Voice[i].bPatch].note.op[1].bAt60;
+               char bTemp = ((bInst & 0xF0)>>4);
+               
+               if (!bOffset) 
+                  continue;
+
+               bInst &= ~0xF0;
+               bTemp -= bOffset;
+               bInst |= (bTemp > 0xF) ? 0xF : (bTemp >= 0) ? (bTemp<<4) : 0;
+               printf("DEBUG: %d\n", (int)bTemp);
+               m_Miniport.adlib_write( 0x60 + wOffset, bInst) ;
+            }
+         }
          break;
       
       case 74:  // "brightness"
+         // TODO: read adjustment depending on algorithm (?)
+         m_bBrightness[bChannel] = bVelocity;
+         for (int i = 0; i < NUM2VOICES; ++i)
          {
-            // TODO: read adjustment depending on algorithm (?)
-            m_bBrightness[bChannel] = bVelocity;
-            for (int i = 0; i < NUM2VOICES; ++i)
-               if (m_Voice[i].bChannel == bChannel)
-               {
-                  WORD wOffset = gw2OpOffset[ i ][ 0 ] ;
-                  BYTE bInst = glpPatch[m_Voice[i].bPatch].note.op[0].bAt40;
-                  char bTemp = bInst & 0x3F;
-                  char bOffset = (char)lin_intp(m_bBrightness[bChannel], 0, 127, (-32), 32);
-                  bInst &= ~0x3F;
-                  bTemp -= bOffset;
-                  bInst |= (bTemp > 0x3F) ? 0x3F : (bTemp >= 0) ? bTemp : 0;
-                  printf("DEBUG: %d\n", (int)bTemp);
-                  m_Miniport.adlib_write( 0x40 + wOffset, bInst) ;
-               }
-            //Opl3_UpdateBrightness(bChannel, bVelocity);
+            if (m_Voice[i].bChannel == bChannel)
+            {
+               WORD wOffset = gw2OpOffset[ i ][ 0 ] ;
+               BYTE bInst = glpPatch[m_Voice[i].bPatch].note.op[0].bAt40;
+               char bTemp = bInst & 0x3F;
+               char bOffset = (char)lin_intp(m_bBrightness[bChannel], 0, 127, (-64), 64);
+               bInst &= ~0x3F;
+               bTemp -= bOffset;
+               bInst |= (bTemp > 0x3F) ? 0x3F : (bTemp >= 0) ? bTemp : 0;
+               printf("DEBUG: %d\n", (int)bTemp);
+               m_Miniport.adlib_write( 0x40 + wOffset, bInst) ;
+            }
          }
+         //Opl3_UpdateBrightness(bChannel, bVelocity);
          break;
 
       case 98:  // NRPN LSB
@@ -511,15 +549,34 @@ void
    char bOffset;
 
    //Attack
+   bOffset = (char)lin_intp(m_bAttack[bChannel], 0, 127, (-16), 16);
+   if (bOffset)
+   {
+      bTemp = ((lpSN->op[1].bAt60 & 0xF0)>>4);  // retain output level (0 = loud, 0x3f = quiet)
+      lpSN->op[1].bAt60 &= ~0xF0;        // clear old output level
+      bTemp = (char)bTemp + bOffset;
+      lpSN->op[1].bAt60 |= (bTemp > 0xF) ? 0xF0 : (bTemp > 0) ? (bTemp<<4) : 0;
+   }
 
    //Release
+   bOffset = (char)lin_intp(m_bRelease[bChannel], 0, 127, (-16), 16);
+   if (bOffset)
+   {
+      bTemp = lpSN->op[1].bAt80 & 0xF;  // retain output level (0 = loud, 0x3f = quiet)
+      lpSN->op[1].bAt80 &= ~0xF;        // clear old output level
+      bTemp = (char)bTemp + bOffset;
+      lpSN->op[1].bAt80 |= (bTemp > 0xF) ? 0xF : (bTemp > 0) ? bTemp : 0;
+   }
 
    //Brightness
-   bOffset = (char)lin_intp(m_bBrightness[bChannel], 0, 127, (-32), 32);
-   bTemp = lpSN->op[0].bAt40 & 0x3F;  // retain output level (0 = loud, 0x3f = quiet)
-   lpSN->op[0].bAt40 &= ~0x3F;        // clear old output level
-   bTemp = (char)bTemp - bOffset;
-   lpSN->op[0].bAt40 |= (bTemp > 0x3F) ? 0x3F : (bTemp > 0) ? bTemp : 0;
+   bOffset = (char)lin_intp(m_bBrightness[bChannel], 0, 127, (-64), 64);
+   if (bOffset)
+   {
+      bTemp = lpSN->op[0].bAt40 & 0x3F;  // retain output level (0 = loud, 0x3f = quiet)
+      lpSN->op[0].bAt40 &= ~0x3F;        // clear old output level
+      bTemp = (char)bTemp - bOffset;
+      lpSN->op[0].bAt40 |= (bTemp > 0x3F) ? 0x3F : (bTemp > 0) ? bTemp : 0;
+   }
 }
 
 void
@@ -1138,8 +1195,8 @@ bool
       m_iExpThres[i] = 0x7F;
       m_curVol[i] = 100;
       m_bAttack[i] = 64;
-	  m_bRelease[i] = 64;
-	  m_bBrightness[i] = 64;
+      m_bRelease[i] = 64;
+      m_bBrightness[i] = 64;
    };
 
    m_Miniport.adlib_init();
