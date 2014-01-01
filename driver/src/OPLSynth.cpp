@@ -104,18 +104,24 @@ void
             if (m_Voice[i].bChannel == bChannel)
             {
                char bOffset = (char)lin_intp(m_bRelease[bChannel], 0, 127, (-8), 8);
-               WORD wOffset = gw2OpOffset[ i ][ 1 ] ;
-               BYTE bInst = glpPatch[m_Voice[i].bPatch].note.op[1].bAt80;
-               char bTemp = bInst & 0xF;
                
                if (!bOffset) 
                   continue;
 
-               bInst &= ~0xF;
-               bTemp -= bOffset;
-               bInst |= (bTemp > 0xF) ? 0xF : (bTemp >= 0) ? bTemp : 0;
-               printf("DEBUG: %d\n", (int)bTemp);
-               m_Miniport.adlib_write( 0x80 + wOffset, bInst) ;
+               for (int j = 0; j < 2; ++j)
+               {
+                  WORD wOffset = gw2OpOffset[ i ][ j ] ;
+                  BYTE bInst = glpPatch[m_Voice[i].bPatch].note.op[j].bAt80;
+                  char bTemp = bInst & 0xF;
+                  
+                  if (glpPatch[m_Voice[i].bPatch].note.bAtC0[0] & 0x01)
+                     continue;
+
+                  bInst &= ~0xF;
+                  bTemp -= bOffset;
+                  bInst |= (bTemp > 0xF) ? 0xF : (bTemp >= 0) ? bTemp : 0;
+                  m_Miniport.adlib_write( 0x80 + wOffset, bInst);
+               }
             }
          }
          break;
@@ -127,7 +133,7 @@ void
          {
             if (m_Voice[i].bChannel == bChannel)
             {
-               char bOffset = (char)lin_intp(m_bAttack[bChannel], 0, 127, (-16), 16);
+               char bOffset = (char)lin_intp(m_bAttack[bChannel], 0, 127, (-8), 8);
                WORD wOffset = gw2OpOffset[ i ][ 1 ] ;
                BYTE bInst = glpPatch[m_Voice[i].bPatch].note.op[1].bAt60;
                char bTemp = ((bInst & 0xF0)>>4);
@@ -135,11 +141,17 @@ void
                if (!bOffset) 
                   continue;
 
-               bInst &= ~0xF0;
-               bTemp -= bOffset;
-               bInst |= (bTemp > 0xF) ? 0xF : (bTemp >= 0) ? (bTemp<<4) : 0;
-               printf("DEBUG: %d\n", (int)bTemp);
-               m_Miniport.adlib_write( 0x60 + wOffset, bInst) ;
+               for (int j = 0; j < 2; ++j)
+               {
+                  wOffset = gw2OpOffset[ i ][ j ] ;
+                  bInst = glpPatch[m_Voice[i].bPatch].note.op[j].bAt60;
+                  bTemp = ((bInst & 0xF0)>>4);
+               
+                  bInst &= ~0xF0;
+                  bTemp -= bOffset;
+                  bInst |= (bTemp > 0xF) ? 0xF : (bTemp >= 0) ? (bTemp<<4) : 0;
+                  m_Miniport.adlib_write( 0x60 + wOffset, bInst) ;
+               }
             }
          }
          break;
@@ -154,11 +166,10 @@ void
                WORD wOffset = gw2OpOffset[ i ][ 0 ] ;
                BYTE bInst = glpPatch[m_Voice[i].bPatch].note.op[0].bAt40;
                char bTemp = bInst & 0x3F;
-               char bOffset = (char)lin_intp(m_bBrightness[bChannel], 0, 127, (-64), 64);
+               char bOffset = (char)lin_intp(m_bBrightness[bChannel], 0, 127, (-32), 32);
                bInst &= ~0x3F;
                bTemp -= bOffset;
                bInst |= (bTemp > 0x3F) ? 0x3F : (bTemp >= 0) ? bTemp : 0;
-               printf("DEBUG: %d\n", (int)bTemp);
                m_Miniport.adlib_write( 0x40 + wOffset, bInst) ;
             }
          }
@@ -545,31 +556,43 @@ void
    OPLSynth::
    Opl3_CalcPatchModifiers(noteStruct *lpSN, BYTE bChannel)
 {
-   BYTE bTemp;
+   char bTemp;
    char bOffset;
 
    //Attack
-   bOffset = (char)lin_intp(m_bAttack[bChannel], 0, 127, (-16), 16);
+   bOffset = (char)lin_intp(m_bAttack[bChannel], 0, 127, (-8), 8);
    if (bOffset)
    {
-      bTemp = ((lpSN->op[1].bAt60 & 0xF0)>>4);  // retain output level (0 = loud, 0x3f = quiet)
-      lpSN->op[1].bAt60 &= ~0xF0;        // clear old output level
-      bTemp = (char)bTemp + bOffset;
+      bTemp = ((lpSN->op[1].bAt60 & 0xF0)>>4);
+      lpSN->op[1].bAt60 &= ~0xF0;
+      bTemp = (char)bTemp - bOffset;
       lpSN->op[1].bAt60 |= (bTemp > 0xF) ? 0xF0 : (bTemp > 0) ? (bTemp<<4) : 0;
+
+      // If FM mode (assuming 2op)
+      if (((lpSN->bAtC0[0]) & 0x1) == 0)
+      {
+         bTemp = ((lpSN->op[0].bAt60 & 0xF0)>>4);
+         lpSN->op[0].bAt60 &= ~0xF0;
+         bTemp = (char)bTemp - bOffset;
+         lpSN->op[0].bAt60 |= (bTemp > 0xF) ? 0xF0 : (bTemp > 0) ? (bTemp<<4) : 0;
+      }
    }
 
    //Release
-   bOffset = (char)lin_intp(m_bRelease[bChannel], 0, 127, (-16), 16);
+   bOffset = (char)lin_intp(m_bRelease[bChannel], 0, 127, (-8), 8);
    if (bOffset)
    {
-      bTemp = lpSN->op[1].bAt80 & 0xF;  // retain output level (0 = loud, 0x3f = quiet)
-      lpSN->op[1].bAt80 &= ~0xF;        // clear old output level
-      bTemp = (char)bTemp + bOffset;
-      lpSN->op[1].bAt80 |= (bTemp > 0xF) ? 0xF : (bTemp > 0) ? bTemp : 0;
+      for (int i = 0; i < 2; ++i)
+      {
+         bTemp = lpSN->op[i].bAt80 & 0xF;
+         lpSN->op[i].bAt80 &= ~0xF;
+         bTemp = (char)bTemp - bOffset;
+         lpSN->op[i].bAt80 |= (bTemp > 0xF) ? 0xF : (bTemp > 0) ? bTemp : 0;
+      }
    }
 
    //Brightness
-   bOffset = (char)lin_intp(m_bBrightness[bChannel], 0, 127, (-64), 64);
+   bOffset = (char)lin_intp(m_bBrightness[bChannel], 0, 127, (-32), 32);
    if (bOffset)
    {
       bTemp = lpSN->op[0].bAt40 & 0x3F;  // retain output level (0 = loud, 0x3f = quiet)
