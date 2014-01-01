@@ -31,7 +31,8 @@ void
    case 0x90:      /* turn key on, or key off if volume == 0 */
       if (bVelocity)
       {
-         if (bChannel == DRUMCHANNEL) // TODO: change to dynamically assignable drum channels
+         //if (bChannel == DRUMCHANNEL) // TODO: change to dynamically assignable drum channels
+         if (m_wDrumMode & (1<<bChannel))
          {
             //if(bNote>=35 && bNote<88)
             {
@@ -50,7 +51,8 @@ void
    case 0x80:
       /* turn key off */
       //  we don't care what the velocity is on note off
-      if (bChannel == DRUMCHANNEL)
+      //if (bChannel == DRUMCHANNEL)
+      if (m_wDrumMode & (1<<bChannel))
       {
          //if(bNote>=35 && bNote<88)
          {
@@ -68,6 +70,21 @@ void
       /* change control */
       switch (bNote)
       {
+
+      case 0: // Bank Select MSB
+         //only care for setting percussion for now
+         // TODO: dynamic selection for switchable patches
+
+         m_wDrumMode = (bVelocity == 0x7F) ?
+            m_wDrumMode | (1<<bChannel) :
+            m_wDrumMode &~(1<<bChannel) ;
+
+         break;
+         
+      case 6: // Data Entry (CC98-101 dependent)
+         Opl3_ProcessDataEntry(bVelocity, bChannel);
+         break;
+
       case 7:
          /* change channel volume */
          //Opl3_ChannelVolume(bChannel,gbVelocityAtten[bVelocity >> 1]);
@@ -75,11 +92,9 @@ void
          Opl3_ChannelVolume(bChannel,gbVelocityAtten[(BYTE)((bVelocity >> 1) * ((float)m_iExpThres[bChannel]/0x7F))]);
          break;
 
-      case 6: // Data Entry (CC98-101 dependent)
-         Opl3_ProcessDataEntry(bVelocity, bChannel);
+      case 8:
          break;
 
-      case 8:
       case 10:
          /* change the pan level */
          Opl3_SetPan(bChannel, bVelocity);
@@ -189,13 +204,13 @@ void
 
       case 126: // Mono mode on
          Opl3_ChannelNotesOff(bChannel);
-         m_bMonoMode |= (1<<bChannel);
+         m_wMonoMode |= (1<<bChannel);
          m_bLastVoiceUsed[bChannel] = bChannel; // Assign to midi-voice channel 1:1; last two channels only used if overflow for poly mode.
          break;
 
       case 127: // Poly mode on
          Opl3_ChannelNotesOff(bChannel);
-         m_bMonoMode &= ~(1<<bChannel);
+         m_wMonoMode &= ~(1<<bChannel);
          break;
 
       default:
@@ -208,7 +223,8 @@ void
       break;
 
    case 0xc0: // Program change
-      if (bChannel != DRUMCHANNEL)
+      //if (bChannel != DRUMCHANNEL)
+      if (!(m_wDrumMode & (1<<bChannel)))
       {
          m_bPatch[ bChannel ] = bNote ;
       }
@@ -384,7 +400,7 @@ void
    operStruct      *lpOS ;
 
    // Do not send note off to allow for mono mode legato
-   if ( !(m_bMonoMode & (1<<bChannel)) )
+   if ( !(m_wMonoMode & (1<<bChannel)) )
    {
       // write out a note off, just to make sure...
       wOffset = wNote;
@@ -519,7 +535,7 @@ void
 
    // Check if mono mode is set.
    wTemp = 0;
-   if ((m_bMonoMode & (1<<bChannel)) > 0)
+   if ((m_wMonoMode & (1<<bChannel)) > 0)
    {
       // Is last voice used if it indeed is used by this channel
       // else find a new slot.
@@ -1197,7 +1213,7 @@ bool
    int i;
 
    // init some members
-   m_dwCurTime = 1;    /* for note on/off */ 
+   m_dwCurTime = 1;    /* for note on/off * /
    /* volume */
    m_wSynthAttenL = 0;        /* in 1.5dB steps */
    m_wSynthAttenR = 0;        /* in 1.5dB steps */
@@ -1206,7 +1222,8 @@ bool
    m_MaxVolValue  = 0x00000000;    //  maximum  0    (dB) * 0x10000
    m_VolStepDelta = 0x0000C000;    //  steps of 0.75 (dB) * 0x10000
 
-   m_bMonoMode = 0;  // Set all channels to polyphonic mode
+   m_wMonoMode = 0;  // Set all channels to polyphonic mode
+   m_wDrumMode = (1<<9);  // Set ch10 to drum by default
 
    /* start attenuations at -3 dB, which is 90 MIDI level */
    for (i = 0; i < 16; i++)

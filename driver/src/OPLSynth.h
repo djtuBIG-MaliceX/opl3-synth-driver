@@ -210,7 +210,8 @@ private:
    BYTE    m_RPN[16][2];      /* RPN WORD */
    BYTE    m_iBendRange[16];  /* Bend range as dictated by CC100=0, CC101=0, CC6=n, where n= +/- range of semitones */
    
-   short   m_bMonoMode;    /* Flag for bend mode, bitmasked (LSB=ch1) */
+   WORD    m_wMonoMode;    /* Flag for bend mode, bitmasked (LSB=ch1) */
+   WORD    m_wDrumMode;    /* Flag for drum mode, bitmasked (LSB=ch1) */
    BYTE    m_bLastVoiceUsed[16]; /* Needed for legato in mono mode */
 
    BYTE    m_bPatch[16];   /* patch number mapped to */
