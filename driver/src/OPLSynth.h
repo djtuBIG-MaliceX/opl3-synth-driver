@@ -10,7 +10,7 @@
 
 typedef unsigned char	BYTE;
 typedef unsigned short  WORD;
-typedef unsigned long	DWORD,ULONG;
+typedef unsigned long	DWORD, ULONG;
 typedef signed long		LONG;
 
 #define NUMPATCHES                      (256)
@@ -25,6 +25,7 @@ typedef signed long		LONG;
 #define AsULMUL(a, b) ((DWORD)((DWORD)(a) * (DWORD)(b)))
 #define AsLSHL(a, b) ((DWORD)((DWORD)(a) << (DWORD)(b)))
 #define AsULSHR(a, b) ((DWORD)((DWORD)(a) >> (DWORD)(b)))
+#define lin_intp(x, xmin, xmax, ymin, ymax) (ymin+((double)(ymax-ymin)*((double)(x-xmin)/(double)(xmax-xmin))))
 
 #define AsMemCopy CopyMemory
 
@@ -65,10 +66,11 @@ logarithmic attenuation */
 #define PATCH_1_2OP             (2) /* use one 2-operator patch */
 
 #define NUM2VOICES   18
-//#define NUM4VOICES   9
+#define NUM4VOICES   9
 #define NUMOPS       4
 
-typedef struct _operStruct {
+typedef struct _operStruct 
+{
    BYTE    bAt20;              /* flags which are send to 0x20 on fm */
    BYTE    bAt40;              /* flags seet to 0x40 */
    /* the note velocity & midi velocity affect total level */
@@ -77,7 +79,8 @@ typedef struct _operStruct {
    BYTE    bAtE0;              /* flags send to 0xe0 */
 } operStruct;
 
-typedef struct _noteStruct {
+typedef struct _noteStruct 
+{
    operStruct op[NUMOPS];      /* operators */
    BYTE    bAtA0[2];           /* send to 0xA0, A3 */
    BYTE    bAtB0[2];           /* send to 0xB0, B3 */
@@ -157,6 +160,21 @@ static WORD BCODE gw2OpOffset[ NUM2VOICES ][ 2 ] =
    { 0x112,0x115 },
 } ;
 
+static BYTE gbVelocityAtten[64] = 
+{
+   40, 37, 35, 33, 31, 29, 27, 25, 24, 22, 21, 20, 19, 18, 17, 16,
+   16, 15, 14, 14, 13, 13, 12, 12, 11, 11, 10, 10, 9,  9,  8,  8,
+   7,  7,  6,  6,  6,  5,  5,  5,  4,  4,  4,  4,  3,  3,  3,  3,
+   2,  2,  2,  2,  2,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0,  0 
+};
+
+static BYTE offsetSlot[] =
+{
+   0, 1, 2, 3, 4, 5,
+   8, 9, 10, 11, 12, 13,
+   16, 17, 18, 19, 20, 21
+};
+
 /* pitch values, from middle c, to octave above it */
 static DWORD BCODE gdwPitch[12] = {
    PITCH(C), PITCH(CSHARP), PITCH(D), PITCH(DSHARP),
@@ -198,6 +216,12 @@ private:
    BYTE    m_bPatch[16];   /* patch number mapped to */
    BYTE    m_bSustain[16];   /* Is sustain in effect on this channel? */
 
+   /*ADSR modifiers*/
+   BYTE    m_bAttack[16];      /*Scaled to modify carrier instrument AT*/
+   //BYTE    m_bDecay[16];
+   BYTE    m_bRelease[16];     /*Scaled to modify carrier instrument RL*/
+   BYTE    m_bBrightness[16];  /*Scaled to modify modulator instrument TL*/
+
    void Opl3_ChannelVolume(BYTE bChannel, WORD wAtten);
    void Opl3_SetPan(BYTE bChannel, BYTE bPan);
    //void Opl3_PitchBend(BYTE bChannel, short iBend);
@@ -220,6 +244,7 @@ private:
    void Opl3_FMNote(WORD wNote, noteStruct *lpSN, BYTE bChannel);
    void Opl3_SetSustain(BYTE bChannel, BYTE bSusLevel);
    void Opl3_CutVoice(BYTE bVoice, BYTE bIsInstantCut);
+   void Opl3_CalcPatchModifiers(noteStruct *lpSN, BYTE bChannel);
    void Opl3_BoardReset(void);
 public:
    void WriteMidiData(DWORD dwData);

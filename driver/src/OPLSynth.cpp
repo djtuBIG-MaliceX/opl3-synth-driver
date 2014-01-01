@@ -14,21 +14,6 @@
 //#include "mauipatch.h"
 //#include "fmsynthpatch.h"
 
-BYTE gbVelocityAtten[64] = 
-{
-   40, 37, 35, 33, 31, 29, 27, 25, 24, 22, 21, 20, 19, 18, 17, 16,
-   16, 15, 14, 14, 13, 13, 12, 12, 11, 11, 10, 10, 9,  9,  8,  8,
-   7,  7,  6,  6,  6,  5,  5,  5,  4,  4,  4,  4,  3,  3,  3,  3,
-   2,  2,  2,  2,  2,  1,  1,  1,  1,  1,  0,  0,  0,  0,  0,  0 
-};
-
-BYTE offsetSlot[] =
-{
-   0, 1, 2, 3, 4, 5,
-   8, 9, 10, 11, 12, 13,
-   16, 17, 18, 19, 20, 21
-};
-
 void
    OPLSynth::
    WriteMidiData(DWORD dwData)
@@ -109,6 +94,37 @@ void
       case 64:
          /* Change the sustain level */
          Opl3_SetSustain(bChannel, bVelocity);
+         break;
+
+      case 72:  // Attack
+         // TODO: read adjustment depending on algorithm
+         m_bAttack[bChannel] = bVelocity;
+         break;
+      
+      case 73:  // Release
+         // TODO: read adjustment depending on algorithm
+         m_bRelease[bChannel] = bVelocity;
+         break;
+      
+      case 74:  // "brightness"
+         {
+            // TODO: read adjustment depending on algorithm (?)
+            m_bBrightness[bChannel] = bVelocity;
+            for (int i = 0; i < NUM2VOICES; ++i)
+               if (m_Voice[i].bChannel == bChannel)
+               {
+                  WORD wOffset = gw2OpOffset[ i ][ 0 ] ;
+                  BYTE bInst = glpPatch[m_Voice[i].bPatch].note.op[0].bAt40;
+                  char bTemp = bInst & 0x3F;
+                  char bOffset = (char)lin_intp(m_bBrightness[bChannel], 0, 127, (-32), 32);
+                  bInst &= ~0x3F;
+                  bTemp -= bOffset;
+                  bInst |= (bTemp > 0x3F) ? 0x3F : (bTemp >= 0) ? bTemp : 0;
+                  printf("DEBUG: %d\n", (int)bTemp);
+                  m_Miniport.adlib_write( 0x40 + wOffset, bInst) ;
+               }
+            //Opl3_UpdateBrightness(bChannel, bVelocity);
+         }
          break;
 
       case 98:  // NRPN LSB
@@ -470,6 +486,7 @@ void
       wTemp = Opl3_FindEmptySlot( bPatch );
    }
    
+   Opl3_CalcPatchModifiers(&NS, bChannel);
    Opl3_FMNote(wTemp, &NS, bChannel ) ;
    m_Voice[ wTemp ].bNote = bNote ;
    m_Voice[ wTemp ].bChannel = bChannel ;
@@ -486,6 +503,24 @@ void
 
 } // end of Opl3_NoteOn()
 
+void
+   OPLSynth::
+   Opl3_CalcPatchModifiers(noteStruct *lpSN, BYTE bChannel)
+{
+   BYTE bTemp;
+   char bOffset;
+
+   //Attack
+
+   //Release
+
+   //Brightness
+   bOffset = (char)lin_intp(m_bBrightness[bChannel], 0, 127, (-32), 32);
+   bTemp = lpSN->op[0].bAt40 & 0x3F;  // retain output level (0 = loud, 0x3f = quiet)
+   lpSN->op[0].bAt40 &= ~0x3F;        // clear old output level
+   bTemp = (char)bTemp - bOffset;
+   lpSN->op[0].bAt40 |= (bTemp > 0x3F) ? 0x3F : (bTemp > 0) ? bTemp : 0;
+}
 
 void
    OPLSynth::
@@ -1102,7 +1137,11 @@ bool
       memset(m_RPN[i], -1, sizeof(WORD));  
       m_iExpThres[i] = 0x7F;
       m_curVol[i] = 100;
+      m_bAttack[i] = 64;
+	  m_bRelease[i] = 64;
+	  m_bBrightness[i] = 64;
    };
+
    m_Miniport.adlib_init();
    Opl3_BoardReset();
    return true;
