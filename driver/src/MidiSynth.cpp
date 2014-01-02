@@ -400,7 +400,7 @@ namespace OPL3Emu {
 
    void MidiSynth::PlaySysex(Bit8u *bufpos, DWORD len) {
       synthEvent.Wait();
-      //synth->playSysex(bufpos, len);
+      synth->PlaySysex(bufpos, len);
       synthEvent.Release();
    }
 

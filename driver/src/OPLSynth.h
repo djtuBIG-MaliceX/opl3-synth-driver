@@ -251,6 +251,7 @@ public:
    void WriteMidiData(DWORD dwData);
    bool Init(void);
    void GetSample(short *samplem, int len);
+   void PlaySysex(Bit8u *bufpos, DWORD len);
 
 };
 #endif

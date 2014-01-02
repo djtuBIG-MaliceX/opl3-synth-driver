@@ -10,8 +10,8 @@
 #include "OPLSynth.h"
 
 // TODO - Determine way to read configuration for existing bank file before playback
-#include "patch.h"
-//#include "mauipatch.h"
+//#include "patch.h"
+#include "mauipatch.h"
 //#include "fmsynthpatch.h"
 
 void
@@ -32,7 +32,7 @@ void
       if (bVelocity)
       {
          //if (bChannel == DRUMCHANNEL) // TODO: change to dynamically assignable drum channels
-         if (m_wDrumMode & (1<<bChannel))
+         if ((m_wDrumMode & (1<<bChannel)) || bChannel == DRUMCHANNEL)
          {
             //if(bNote>=35 && bNote<88)
             {
@@ -1249,4 +1249,71 @@ void
    GetSample(short *sample, int len)
 {
    m_Miniport.adlib_getsample(sample,len);
+}
+
+
+void
+   OPLSynth::
+   PlaySysex(Bit8u *bufpos, DWORD len)
+{
+   bool IsResetSysex = false;
+   std::string SysExVal((char*)bufpos);
+
+   // For reference: http://homepage2.nifty.com/mkmk/midi_lab/exref.htm
+   //            and http://www.bandtrax.com.au/sysex.htm
+   //GM          F0 7E 7F 09 01 F7 
+   //GM-2        F0 7E 7F 09 02 F7
+   //GS          F0 41 10 42 12 40 00 7F 00 41 F7 
+   //SC88 Mode 1 F0 41 10 42 12 00 00 7F 00 01 F7
+   //SC88 Mode 2 F0 41 10 42 12 00 00 7F 01 00 F7
+   //XG          F0 43 10 4C 00 00 7E 00 F7 
+   //TG300B      (SAME AS GS RESET)
+
+
+
+   /*
+    * General MIDI System Exclusive
+    *  - Do not allow bank switching at all (melodic or drum)
+    *  - CC71-74 disabled
+    */
+
+   /*
+    * General MIDI Level 2 System Exclusive
+    *  - Allow bank switching
+    *  - CC71-74 enabled
+    *  - Drum bank select 127 disabled - must use NRPN
+    */
+
+   /*
+    * Rolands GS System Exclusive
+    *  - Allow bank switching
+    *  - Drum bank select 127 disabled - must use NRPN
+    *  - CC71-74 enabled (TG300b-mode compatibility)
+    *  - 
+    */
+
+   /*
+    * Yamaha XG System Exclusive
+    *  - Allow bank switching
+    *  - Allow bank-switchable MIDI channels for drum bank
+    *  - CC71-74 enabled
+    *  - Drum bank select via NRPN enabled
+    */
+   
+   //TODO: common reset routines to all channels
+   if (IsResetSysex)
+   {
+      for (int i = 0; i < NUM2VOICES; ++i)
+      {
+         Opl3_CutVoice(i, TRUE);
+         m_Voice[i].bPatch = 0;
+         m_Voice[i].dwTime = 0;
+      }
+
+      for (int i = 0; i < 16; ++i)
+      {
+         m_iBend[i] = 0;
+         m_iBendRange[i] = 2;
+      }
+   }
 }
