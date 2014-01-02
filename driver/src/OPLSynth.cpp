@@ -791,6 +791,10 @@ void
    if (rpn == (WORD)0x0000)
    {
       // Calculate base bend value then apply
+
+      // TODO determine what's wrong - how is it becoming 0 at all?
+      m_iBendRange[bChannel] = (!m_iBendRange[bChannel]) ? 2 : m_iBendRange[bChannel];
+
       dwTemp = ((long)m_iBend[bChannel] / m_iBendRange[bChannel]);
       m_iBendRange[bChannel] = val & 0x7f;
       dwTemp *= m_iBendRange[bChannel];
