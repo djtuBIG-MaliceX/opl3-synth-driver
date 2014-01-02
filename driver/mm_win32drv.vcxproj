@@ -263,6 +263,7 @@
     <None Include="src\winmm_drv.def" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="src\2x2patchtest.h" />
     <ClInclude Include="src\mmddk.h">
       <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">true</ExcludedFromBuild>
     </ClInclude>

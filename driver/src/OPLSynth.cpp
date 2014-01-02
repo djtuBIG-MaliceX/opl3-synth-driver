@@ -10,9 +10,10 @@
 #include "OPLSynth.h"
 
 // TODO - Determine way to read configuration for existing bank file before playback
-#include "patch.h"
+//#include "patch.h"
 //#include "mauipatch.h"
 //#include "fmsynthpatch.h"
+#include "2x2patchtest.h"
 
 void
    OPLSynth::
@@ -149,7 +150,7 @@ void
             if (m_Voice[i].bChannel == bChannel)
             {
                char bOffset = (char)lin_intp(m_bAttack[bChannel], 0, 127, (-8), 8);
-               WORD wOffset = gw2OpOffset[ i ][ 1 ] ;
+               WORD wOffset;
                BYTE bInst = glpPatch[m_Voice[i].bPatch].note.op[1].bAt60;
                char bTemp = ((bInst & 0xF0)>>4);
                
@@ -158,6 +159,9 @@ void
 
                for (int j = 0; j < 2; ++j)
                {
+                  if (j == 0 && !((bInst & 0xF0)>>4))
+                     continue;
+
                   wOffset = gw2OpOffset[ i ][ j ] ;
                   bInst = glpPatch[m_Voice[i].bPatch].note.op[j].bAt60;
                   bTemp = ((bInst & 0xF0)>>4);
@@ -295,7 +299,8 @@ void
 {
 
    patchStruct *lpPS = glpPatch + (BYTE)bPatch; ;
-   WORD         wTemp ;
+   WORD         wTemp, wTemp2 ;
+   BYTE         b4Op = (BYTE)(lpPS->note.bOp != PATCH_1_2OP);
 
    // Find the note slot
    wTemp = Opl3_FindFullSlot( bNote, bChannel ) ;
@@ -307,6 +312,12 @@ void
          // This channel is sustained, don't really turn the note off,
          // just flag it.
          m_Voice[wTemp].bSusHeld = 1;
+         if (b4Op)
+         {
+            wTemp2 = Opl3_FindSecondVoice(wTemp, m_Voice[wTemp].bVoiceID);
+            if (wTemp2 != (WORD)~0) 
+               m_Voice[wTemp2].bSusHeld = 1;
+         }
          return;
       }
 
@@ -449,6 +460,7 @@ void
    WORD            i ;
    WORD            wOffset ;
    operStruct      *lpOS ;
+   BYTE            b4Op = (BYTE)(lpSN->bOp != PATCH_1_2OP);
 
    // Do not send note off to allow for mono mode legato
    if ( !(m_wMonoMode & (1<<bChannel)) )
@@ -461,7 +473,7 @@ void
       m_Miniport.adlib_write(AD_BLOCK + wOffset, 0 ) ;
 
       // needed for 4op patches
-      if (lpSN->bOp != PATCH_1_2OP)
+      if (b4Op)
       {
          wOffset = wNote2;
          if (wNote2 >= (NUM2VOICES / 2))
@@ -478,7 +490,7 @@ void
    //for (i = 0; i < (WORD)((wNote < NUM4VOICES) ? NUMOPS : 2); i++)
    for (i = 0; i < NUMOPS; i++)
    {
-      if (i == 2 && lpSN->bOp == PATCH_1_2OP)
+      if (i == 2 && !b4Op)
          break;
 
       lpOS = &lpSN -> op[ i ] ;
@@ -502,6 +514,16 @@ void
    // Note on...
    m_Miniport.adlib_write(0xb0 + wOffset,
       (BYTE)(lpSN -> bAtB0[ 0 ] | 0x20) ) ;
+
+   if (b4Op)
+   {
+      wOffset = (wNote2 < 9) ? wNote2 : (wNote2 + 0x100 - 9) ;
+      m_Miniport.adlib_write(0xa0 + wOffset, lpSN -> bAtA0[ 0 ] ) ;
+      m_Miniport.adlib_write(0xc0 + wOffset, lpSN -> bAtC0[ 0 ] ) ;
+
+      m_Miniport.adlib_write(0xb0 + wOffset,
+         (BYTE)(lpSN -> bAtB0[ 0 ] | 0x20) ) ;
+   }
 
 } // end of Opl3_FMNote()
 
@@ -544,8 +566,7 @@ void
    noteStruct       NS;
   
    // Increment voice allocation ID (needed for pairing operator pairs for 2x2op patches)
-   static BYTE      bVoiceID = ~0;
-   ++bVoiceID;
+   static BYTE      bVoiceID = 0;
 
    // Get a pointer to the patch
    lpPS = glpPatch + bPatch ;
@@ -632,6 +653,19 @@ void
          Opl3_FindEmptySlot4Op(bPatch) : Opl3_FindEmptySlot( bPatch );
    }
 
+   m_Voice[ wTemp ].bNote = bNote ;
+   m_Voice[ wTemp ].bChannel = bChannel ;
+   m_Voice[ wTemp ].bPatch = bPatch ;
+   m_Voice[ wTemp ].bVelocity = bVelocity ;
+   m_Voice[ wTemp ].bOn = TRUE ;
+   m_Voice[ wTemp ].dwTime = m_dwCurTime++ ;
+   m_Voice[ wTemp ].dwOrigPitch[0] = dwPitch[ 0 ] ;  // not including bend
+   m_Voice[ wTemp ].dwOrigPitch[1] = dwPitch[ 1 ] ;  // not including bend
+   m_Voice[ wTemp ].bBlock[0] = NS.bAtB0[ 0 ] ;
+   m_Voice[ wTemp ].bBlock[1] = NS.bAtB0[ 1 ] ;
+   m_Voice[ wTemp ].bSusHeld = 0;
+   m_Voice[ wTemp ].bVoiceID = bVoiceID++;
+
    if (b4Op)
    {
       switch(lpPS->note.bOp)
@@ -647,22 +681,25 @@ void
             wTemp2 = wTemp + 3; // TODO check if correct voice distance
             break;
       }
+
+      m_Voice[ wTemp2 ].bNote = bNote ;
+      m_Voice[ wTemp2 ].bChannel = bChannel ;
+      m_Voice[ wTemp2 ].bPatch = bPatch ;
+      m_Voice[ wTemp2 ].bVelocity = bVelocity ;
+      m_Voice[ wTemp2 ].bOn = TRUE ;
+      m_Voice[ wTemp2 ].dwTime = m_dwCurTime ;
+      m_Voice[ wTemp2 ].dwOrigPitch[0] = dwPitch[ 0 ] ;  // not including bend
+      m_Voice[ wTemp2 ].dwOrigPitch[1] = dwPitch[ 1 ] ;  // not including bend
+      m_Voice[ wTemp2 ].bBlock[0] = NS.bAtB0[ 0 ] ;
+      m_Voice[ wTemp2 ].bBlock[1] = NS.bAtB0[ 1 ] ;
+      m_Voice[ wTemp2 ].bSusHeld = 0;
+      m_Voice[ wTemp2 ].bVoiceID = bVoiceID;
    }
    
+   // Send data
    Opl3_CalcPatchModifiers(&NS, bChannel);
    Opl3_FMNote(wTemp, &NS, bChannel, wTemp2 ) ; // TODO refactor functionality to insert second operator
-   m_Voice[ wTemp ].bNote = bNote ;
-   m_Voice[ wTemp ].bChannel = bChannel ;
-   m_Voice[ wTemp ].bPatch = bPatch ;
-   m_Voice[ wTemp ].bVelocity = bVelocity ;
-   m_Voice[ wTemp ].bOn = TRUE ;
-   m_Voice[ wTemp ].dwTime = m_dwCurTime++ ;
-   m_Voice[ wTemp ].dwOrigPitch[0] = dwPitch[ 0 ] ;  // not including bend
-   m_Voice[ wTemp ].dwOrigPitch[1] = dwPitch[ 1 ] ;  // not including bend
-   m_Voice[ wTemp ].bBlock[0] = NS.bAtB0[ 0 ] ;
-   m_Voice[ wTemp ].bBlock[1] = NS.bAtB0[ 1 ] ;
-   m_Voice[ wTemp ].bSusHeld = 0;
-
+   
 
 } // end of Opl3_NoteOn()
 
