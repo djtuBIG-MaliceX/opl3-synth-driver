@@ -328,11 +328,14 @@ void
          case PATCH_2_2OP:
          {
             // obtain voice with identical binding ID
-            BYTE bVoiceID = m_Voice[wTemp].bVoiceID;
-            WORD wTemp2 = Opl3_FindSecondVoice((BYTE)wTemp, bVoiceID);
+            wTemp2 = Opl3_FindSecondVoice((BYTE)wTemp, m_Voice[wTemp].bVoiceID);
             
-            if (wTemp2 != ~0)
+            if (wTemp2 != (WORD)~0)
+            {
+               Opl3_CutVoice((BYTE)wTemp, FALSE);
                Opl3_CutVoice((BYTE)wTemp2, FALSE);
+               break;
+            }
 
          } // fall through
 
@@ -643,6 +646,11 @@ void
               (NS.bOp == PATCH_1_4OP) ? Opl3_FindEmptySlot4Op(bPatch) :
               Opl3_FindEmptySlot(bPatch);
 
+      /*if (b4Op)
+      {
+         wTemp2 = Opl3_FindSecondVoice((BYTE)wTemp, m_Voice[m_bLastVoiceUsed[bChannel]].bVoiceID);
+         wTemp2 = (wTemp2 != (WORD)~0) ? wTemp2 : Opl3_FindEmptySlot( bPatch );
+      }*/
       // TODO: configuration flag for locking to 1:1 channel mapping.
    } 
    
@@ -664,7 +672,6 @@ void
    m_Voice[ wTemp ].bBlock[0] = NS.bAtB0[ 0 ] ;
    m_Voice[ wTemp ].bBlock[1] = NS.bAtB0[ 1 ] ;
    m_Voice[ wTemp ].bSusHeld = 0;
-   m_Voice[ wTemp ].bVoiceID = bVoiceID++;
 
    if (b4Op)
    {
@@ -672,7 +679,7 @@ void
       {
          case PATCH_2_2OP:
             wTemp2 = ((m_wMonoMode & (1<<bChannel)) > 0) ? // Get corresponding voice last used
-               Opl3_FindSecondVoice((BYTE)wTemp, m_Voice[m_bLastVoiceUsed[bChannel]].bChannel) : 
+               Opl3_FindSecondVoice((BYTE)wTemp, m_Voice[m_bLastVoiceUsed[bChannel]].bVoiceID) : 
                ~0;
             wTemp2 = (wTemp2 != (WORD)~0) ? wTemp2 : Opl3_FindEmptySlot( bPatch );
             break;
@@ -693,13 +700,14 @@ void
       m_Voice[ wTemp2 ].bBlock[0] = NS.bAtB0[ 0 ] ;
       m_Voice[ wTemp2 ].bBlock[1] = NS.bAtB0[ 1 ] ;
       m_Voice[ wTemp2 ].bSusHeld = 0;
-      m_Voice[ wTemp2 ].bVoiceID = bVoiceID;
    }
    
    // Send data
    Opl3_CalcPatchModifiers(&NS, bChannel);
    Opl3_FMNote(wTemp, &NS, bChannel, wTemp2 ) ; // TODO refactor functionality to insert second operator
-   
+   m_Voice[ wTemp ].bVoiceID = ++bVoiceID;
+   if (b4Op)
+      m_Voice[ wTemp2 ].bVoiceID = bVoiceID;
 
 } // end of Opl3_NoteOn()
 
