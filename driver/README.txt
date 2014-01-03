@@ -11,6 +11,12 @@ Git Repository: https://bitbucket.org/djtubig-malicex/opl3-synth-driver
 
 Changelog
 ---------
+[3-JAN-2013] - experimental release
+ * 2x2op bank support (custom bank included, basically fatman+maui+random patches I like. may change over time)
+ * [EXPERIMENTAL] CC72 (Release), CC73 (Attack), CC74 ("Brightness" via op0 TL) automation
+ * Yamaha XG-style Drum bank switching via CC0 = 127 (note: may reserve behaviour based on sysex reset in the future)
+Bug note: I am aware of polyphony issues with CANYON.MID since changes.  Investigating...
+ 
 [30-DEC-2013]
  * Added ARM target to project solution (for jailbroken Windows RT 8.0)
  * Implemented Mono Legato mode (CC126) and Poly switch (CC127)
