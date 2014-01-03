@@ -521,8 +521,8 @@ void
    if (b4Op)
    {
       wOffset = (wNote2 < 9) ? wNote2 : (wNote2 + 0x100 - 9) ;
-      m_Miniport.adlib_write(0xa0 + wOffset, lpSN -> bAtA0[ 0 ] ) ;
-      m_Miniport.adlib_write(0xc0 + wOffset, lpSN -> bAtC0[ 0 ] ) ;
+      m_Miniport.adlib_write(0xa0 + wOffset, lpSN -> bAtA0[ 1 ] ) ;
+      m_Miniport.adlib_write(0xc0 + wOffset, lpSN -> bAtC0[ 1 ] ) ;
 
       m_Miniport.adlib_write(0xb0 + wOffset,
          (BYTE)(lpSN -> bAtB0[ 0 ] | 0x20) ) ;
