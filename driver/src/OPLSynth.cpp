@@ -314,7 +314,7 @@ void
          m_Voice[wTemp].bSusHeld = 1;
          if (b4Op)
          {
-            wTemp2 = Opl3_FindSecondVoice(wTemp, m_Voice[wTemp].bVoiceID);
+            wTemp2 = Opl3_FindSecondVoice((BYTE)wTemp, m_Voice[wTemp].bVoiceID);
             if (wTemp2 != (WORD)~0) 
                m_Voice[wTemp2].bSusHeld = 1;
          }
@@ -584,12 +584,16 @@ void
    else if (bTemp < (BYTE) (60/12))
       dwBasicPitch = AsULSHR( dwBasicPitch, (BYTE)((BYTE) (60/12) - bTemp) ) ;*/
 
+   // if blank patch, ignore completely
+   if (Opl3_IsPatchEmpty(bPatch))
+      return;
+
    // Copy the note information over and modify
    // the total level and pitch according to
    // the velocity, midi volume, and tuning.
 
    RtlCopyMemory( (LPSTR) &NS, (LPSTR) &lpPS -> note, sizeof( noteStruct ) ) ;
-
+   
    // TODO: 4op patch mode
    b4Op = (BYTE)(NS.bOp != PATCH_1_2OP) ;
 
@@ -666,12 +670,12 @@ void
    m_Voice[ wTemp ].bPatch = bPatch ;
    m_Voice[ wTemp ].bVelocity = bVelocity ;
    m_Voice[ wTemp ].bOn = TRUE ;
-   m_Voice[ wTemp ].dwTime = m_dwCurTime++ ;
    m_Voice[ wTemp ].dwOrigPitch[0] = dwPitch[ 0 ] ;  // not including bend
    m_Voice[ wTemp ].dwOrigPitch[1] = dwPitch[ 1 ] ;  // not including bend
    m_Voice[ wTemp ].bBlock[0] = NS.bAtB0[ 0 ] ;
    m_Voice[ wTemp ].bBlock[1] = NS.bAtB0[ 1 ] ;
    m_Voice[ wTemp ].bSusHeld = 0;
+   m_Voice[ wTemp ].dwTime = ++m_dwCurTime ;
 
    if (b4Op)
    {
@@ -694,22 +698,45 @@ void
       m_Voice[ wTemp2 ].bPatch = bPatch ;
       m_Voice[ wTemp2 ].bVelocity = bVelocity ;
       m_Voice[ wTemp2 ].bOn = TRUE ;
-      m_Voice[ wTemp2 ].dwTime = m_dwCurTime ;
       m_Voice[ wTemp2 ].dwOrigPitch[0] = dwPitch[ 0 ] ;  // not including bend
       m_Voice[ wTemp2 ].dwOrigPitch[1] = dwPitch[ 1 ] ;  // not including bend
       m_Voice[ wTemp2 ].bBlock[0] = NS.bAtB0[ 0 ] ;
       m_Voice[ wTemp2 ].bBlock[1] = NS.bAtB0[ 1 ] ;
       m_Voice[ wTemp2 ].bSusHeld = 0;
+      m_Voice[ wTemp2 ].dwTime = ++m_dwCurTime ;
    }
    
    // Send data
    Opl3_CalcPatchModifiers(&NS, bChannel);
    Opl3_FMNote(wTemp, &NS, bChannel, wTemp2 ) ; // TODO refactor functionality to insert second operator
+
    m_Voice[ wTemp ].bVoiceID = ++bVoiceID;
    if (b4Op)
+   {
       m_Voice[ wTemp2 ].bVoiceID = bVoiceID;
-
+    
+   }
 } // end of Opl3_NoteOn()
+
+bool 
+   OPLSynth::
+   Opl3_IsPatchEmpty(BYTE bPatch)
+{
+   noteStruct *lpPS = &((glpPatch + bPatch)->note);
+   DWORD isEmpty = 0;
+
+   for (BYTE i = 0; i < NUMOPS; ++i)
+   {
+       isEmpty += (lpPS->op[i].bAt20 + lpPS->op[i].bAt40 
+                 + lpPS->op[i].bAt60 + lpPS->op[i].bAt80
+                 + lpPS->op[i].bAtE0);
+   }
+
+   //isEmpty += (lpPS->bAtA0[0] + lpPS->bAtB0[0] + lpPS->bAtC0[0]);
+   //isEmpty += (lpPS->bAtA0[1] + lpPS->bAtB0[1] + lpPS->bAtC0[1]);
+
+   return (isEmpty == 0);
+}
 
 void
    OPLSynth::
@@ -1305,7 +1332,7 @@ WORD
       // the same patch
       dwOldest = 0xffffffff ;
       found = 0xffff ;
-      for (i = 0; i < NUM2VOICES; i++)
+      for (i = 0; i < NUM4VOICES; i++)
          if ((m_Voice[ gb4OpVoices[ i ] ].bPatch == bPatch) && (m_Voice[ gb4OpVoices[ i ] ].dwTime < dwOldest))
          {
             dwOldest = m_Voice[ gb4OpVoices[ i ] ].dwTime ;
@@ -1317,7 +1344,7 @@ WORD
          // Now, just look for the oldest voice
          found = 0 ;
          dwOldest = m_Voice[ gb4OpVoices[ found ] ].dwTime ;
-         for (i = (found + 1); i < NUM2VOICES; i++)
+         for (i = (found + 1); i < NUM4VOICES; i++)
             if (m_Voice[ gb4OpVoices[ i ] ].dwTime < dwOldest)
             {
                dwOldest = m_Voice[ gb4OpVoices[ i ] ].dwTime ;

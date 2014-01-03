@@ -255,6 +255,7 @@ private:
    void Opl3_CutVoice(BYTE bVoice, BYTE bIsInstantCut);
    void Opl3_CalcPatchModifiers(noteStruct *lpSN, BYTE bChannel);
    void Opl3_BoardReset(void);
+   bool Opl3_IsPatchEmpty(BYTE bPatch);
 public:
    void WriteMidiData(DWORD dwData);
    bool Init(void);
