@@ -10,11 +10,11 @@
 #include "OPLSynth.h"
 
 // TODO - Determine way to read configuration for existing bank file before playback
-//#include "patch.h"
+#include "patch.h"
 //#include "mauipatch.h"
 //#include "fmsynthpatch.h"
 //#include "2x2patchtest.h"
-#include "ctmidipatch.h"
+//#include "ctmidipatch.h"
 
 void
    OPLSynth::
@@ -701,6 +701,7 @@ void
                Opl3_FindSecondVoice((BYTE)wTemp, m_Voice[m_bLastVoiceUsed[bChannel]].bVoiceID) : 
                ~0;
             wTemp2 = (wTemp2 != (WORD)~0) ? wTemp2 : Opl3_FindEmptySlot( bPatch );
+            Opl3_Set4OpFlag((BYTE)wTemp, FALSE);
             break;
 
          case PATCH_1_4OP:

@@ -11,6 +11,11 @@ Git Repository: https://bitbucket.org/djtubig-malicex/opl3-synth-driver
 
 Changelog
 ---------
+[4-JAN-2013]
+ * Fixed polyphony note-stealing issue (relating to drum voices and note offs never registering. My fault. ._.;)
+ * Preliminary "true 4-op" support.  A teaser patch (#34 Finger bass) is present in my 2x2optest custom bank.
+ * Slight modifications to the custom 2x2optest bank.
+
 [3-JAN-2013] - experimental release
  * 2x2op bank support (custom bank included, basically fatman+maui+random patches I like. may change over time)
  * [EXPERIMENTAL] CC72 (Release), CC73 (Attack), CC74 ("Brightness" via op0 TL) automation
