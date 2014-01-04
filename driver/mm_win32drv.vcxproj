@@ -264,9 +264,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\2x2patchtest.h" />
-    <ClInclude Include="src\mmddk.h">
-      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|ARM'">true</ExcludedFromBuild>
-    </ClInclude>
+    <ClInclude Include="src\ctmidipatch.h" />
+    <ClInclude Include="src\fmsynthpatch.h" />
+    <ClInclude Include="src\mmddk.h" />
     <ClInclude Include="src\testpatch.h" />
     <ClInclude Include="src\mauipatch.h" />
     <ClInclude Include="src\MidiSynth.h" />

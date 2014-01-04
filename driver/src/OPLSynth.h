@@ -163,7 +163,7 @@ static WORD BCODE gw2OpOffset[ NUM2VOICES ][ 2 ] =
 
 static BYTE gb4OpVoices[] =
 {
-   0, 1, 2, 8, 9, 10
+   0, 1, 2, 9, 10, 11
 };
 
 static BYTE gbVelocityAtten[64] = 
@@ -229,6 +229,8 @@ private:
    BYTE    m_bRelease[NUMMIDICHN];     /*Scaled to modify carrier instrument RL*/
    BYTE    m_bBrightness[NUMMIDICHN];  /*Scaled to modify modulator instrument TL*/
 
+   BYTE    b4OpVoiceSet;               /*Bitvector to indicate bits 0-6 as channel flags for 4-op voice mode.*/
+
    void Opl3_ChannelVolume(BYTE bChannel, WORD wAtten);
    void Opl3_SetPan(BYTE bChannel, BYTE bPan);
    //void Opl3_PitchBend(BYTE bChannel, short iBend);
@@ -243,6 +245,7 @@ private:
    //WORD Opl3_CalcFAndB (DWORD dwPitch);
    WORD Opl3_MIDINote2FNum(BYTE note, BYTE bChannel);
    void Opl3_ProcessDataEntry(BYTE bVal, BYTE bChannel);
+   void Opl3_Set4OpFlag(BYTE bVoice, bool bSetFlag);
    //DWORD Opl3_CalcBend (DWORD dwOrig, short iBend);
    //DWORD Opl3_CalcBend (DWORD dwOrig, long iBend);
    BYTE Opl3_CalcVolume (BYTE bOrigAtten, BYTE bChannel,BYTE bVelocity, BYTE bOper, BYTE bMode);

@@ -49,10 +49,16 @@
     <ClInclude Include="src\testpatch.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="src\2x2patchtest.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
     <ClInclude Include="src\mmddk.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\2x2patchtest.h">
+    <ClInclude Include="src\fmsynthpatch.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\ctmidipatch.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
