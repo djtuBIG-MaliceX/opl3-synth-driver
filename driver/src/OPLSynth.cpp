@@ -1585,12 +1585,12 @@ bool
       m_bBrightness[i] = 64;
    };
 
-#ifdef DISABLE_HW_SUPPORT
+//#ifdef DISABLE_HW_SUPPORT
    m_Miniport.adlib_init();
-#else
+//#else
    OPL_Hardware_Detection();
    OPL_HW_Init(); // start hardware
-#endif /*DISABLE_HW_SUPPORT*/
+//#endif /*DISABLE_HW_SUPPORT*/
    Opl3_BoardReset();
    return true;
 }
@@ -1599,9 +1599,9 @@ void
    OPLSynth::
    GetSample(short *sample, int len)
 {
-#ifdef DISABLE_HW_SUPPORT
+//#ifdef DISABLE_HW_SUPPORT
    m_Miniport.adlib_getsample(sample,len);
-#endif /*DISABLE_HW_SUPPORT*/
+//#endif /*DISABLE_HW_SUPPORT*/
 }
 
 
