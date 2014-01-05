@@ -137,7 +137,7 @@ void
                   bInst &= ~0xF;
                   bTemp -= bOffset;
                   bInst |= (bTemp > 0xF) ? 0xF : (bTemp >= 0) ? bTemp : 0;
-                  m_Miniport.adlib_write( 0x80 + wOffset, bInst);
+                  Opl3_ChipWrite( 0x80 + wOffset, bInst);
                }
             }
          }
@@ -170,7 +170,7 @@ void
                   bInst &= ~0xF0;
                   bTemp -= bOffset;
                   bInst |= (bTemp > 0xF) ? 0xF : (bTemp >= 0) ? (bTemp<<4) : 0;
-                  m_Miniport.adlib_write( 0x60 + wOffset, bInst) ;
+                  Opl3_ChipWrite( 0x60 + wOffset, bInst) ;
                }
             }
          }
@@ -190,7 +190,7 @@ void
                bInst &= ~0x3F;
                bTemp -= bOffset;
                bInst |= (bTemp > 0x3F) ? 0x3F : (bTemp >= 0) ? bTemp : 0;
-               m_Miniport.adlib_write( 0x40 + wOffset, bInst) ;
+               Opl3_ChipWrite( 0x40 + wOffset, bInst) ;
             }
          }
          //Opl3_UpdateBrightness(bChannel, bVelocity);
@@ -488,7 +488,7 @@ void
       if (wNote >= (NUM2VOICES / 2))
          wOffset += (0x100 - (NUM2VOICES / 2));
 
-      m_Miniport.adlib_write(AD_BLOCK + wOffset, 0 ) ;
+      Opl3_ChipWrite(AD_BLOCK + wOffset, 0 ) ;
 
       // needed for 4op patches
       if (b4Op && (lpSN->bAtC0[1] & 0x01))
@@ -497,7 +497,7 @@ void
          if (wNote2 >= (NUM2VOICES / 2))
             wOffset += (0x100 - (NUM2VOICES / 2));
 
-         m_Miniport.adlib_write(AD_BLOCK + wOffset, 0 ) ;
+         Opl3_ChipWrite(AD_BLOCK + wOffset, 0 ) ;
       }
    }
 
@@ -516,30 +516,30 @@ void
          (i < 2) ? gw2OpOffset[ wNote ][ i ] :
          gw2OpOffset[ wNote2 ][ (i-2) ] ;
 
-      m_Miniport.adlib_write( 0x20 + wOffset, lpOS -> bAt20) ;
-      m_Miniport.adlib_write( 0x40 + wOffset, lpOS -> bAt40) ;
-      m_Miniport.adlib_write( 0x60 + wOffset, lpOS -> bAt60) ;
-      m_Miniport.adlib_write( 0x80 + wOffset, lpOS -> bAt80) ;
-      m_Miniport.adlib_write( 0xE0 + wOffset, lpOS -> bAtE0) ;
+      Opl3_ChipWrite( 0x20 + wOffset, lpOS -> bAt20) ;
+      Opl3_ChipWrite( 0x40 + wOffset, lpOS -> bAt40) ;
+      Opl3_ChipWrite( 0x60 + wOffset, lpOS -> bAt60) ;
+      Opl3_ChipWrite( 0x80 + wOffset, lpOS -> bAt80) ;
+      Opl3_ChipWrite( 0xE0 + wOffset, lpOS -> bAtE0) ;
 
    }
 
    // write out the voice information
    wOffset = (wNote < 9) ? wNote : (wNote + 0x100 - 9) ;
-   m_Miniport.adlib_write(0xa0 + wOffset, lpSN -> bAtA0[ 0 ] ) ;
-   m_Miniport.adlib_write(0xc0 + wOffset, lpSN -> bAtC0[ 0 ] ) ;
+   Opl3_ChipWrite(0xa0 + wOffset, lpSN -> bAtA0[ 0 ] ) ;
+   Opl3_ChipWrite(0xc0 + wOffset, lpSN -> bAtC0[ 0 ] ) ;
 
    // Note on...
-   m_Miniport.adlib_write(0xb0 + wOffset,
+   Opl3_ChipWrite(0xb0 + wOffset,
       (BYTE)(lpSN -> bAtB0[ 0 ] | 0x20) ) ;
 
    if (b4Op && (lpSN->bOp == PATCH_2_2OP || (lpSN->bOp == PATCH_1_4OP && (lpSN->bAtC0[1] & 0x1))))
    {
       wOffset = (wNote2 < 9) ? wNote2 : (wNote2 + 0x100 - 9) ;
-      m_Miniport.adlib_write(0xa0 + wOffset, lpSN -> bAtA0[ 1 ] ) ;
-      m_Miniport.adlib_write(0xc0 + wOffset, lpSN -> bAtC0[ 1 ] ) ;
+      Opl3_ChipWrite(0xa0 + wOffset, lpSN -> bAtA0[ 1 ] ) ;
+      Opl3_ChipWrite(0xc0 + wOffset, lpSN -> bAtC0[ 1 ] ) ;
 
-      m_Miniport.adlib_write(0xb0 + wOffset,
+      Opl3_ChipWrite(0xb0 + wOffset,
          (BYTE)(lpSN -> bAtB0[ 1 ] | 0x20) ) ;
    }
 
@@ -766,7 +766,7 @@ void
             (b4OpVoiceSet & ~(1<<i)) ;
 
          // Write 4op enable/disable register to chip
-         m_Miniport.adlib_write(AD_CONNECTION, (BYTE)(b4OpVoiceSet)) ;
+         Opl3_ChipWrite(AD_CONNECTION, (BYTE)(b4OpVoiceSet)) ;
          
          break;
       }
@@ -1119,7 +1119,7 @@ void
 
             // Write new value.
             wOffset = gw2OpOffset[ i ][ j ] ;
-            m_Miniport.adlib_write(
+            Opl3_ChipWrite(
                0x40 + wOffset,
                //(BYTE) ((lpPS -> op[j].bAt40 & (BYTE)0xc0) | (BYTE) wTemp) ) ;
                (BYTE) (opSt.bAt40) ) ;
@@ -1130,7 +1130,7 @@ void
          wOffset = i;
          if (i >= (NUM2VOICES / 2))
             wOffset += (0x100 - (NUM2VOICES / 2));
-         m_Miniport.adlib_write(0xc0 + wOffset, (BYTE)(lpPS -> bAtC0[ 0 ] & bStereo) ) ;
+         Opl3_ChipWrite(0xc0 + wOffset, (BYTE)(lpPS -> bAtC0[ 0 ] & bStereo) ) ;
       }
    }
 } // end of Opl3_SetVolume
@@ -1207,8 +1207,8 @@ void
          if (i >= (NUM2VOICES / 2))
             wOffset += (0x100 - (NUM2VOICES / 2));
 
-         m_Miniport.adlib_write(AD_BLOCK + wOffset, m_Voice[ i ].bBlock[ 0 ] ) ;
-         m_Miniport.adlib_write(AD_FNUMBER + wOffset, (BYTE) wTemp[ 0 ] ) ;
+         Opl3_ChipWrite(AD_BLOCK + wOffset, m_Voice[ i ].bBlock[ 0 ] ) ;
+         Opl3_ChipWrite(AD_FNUMBER + wOffset, (BYTE) wTemp[ 0 ] ) ;
       }
 } // end of Opl3_PitchBend
 
@@ -1483,29 +1483,29 @@ void
 
    /* tell the FM chip to use 4-operator mode, and
    fill in any other random variables */
-   m_Miniport.adlib_write(AD_NEW, 0x01);
-   m_Miniport.adlib_write(AD_MASK, 0x60);
-   m_Miniport.adlib_write(AD_CONNECTION, 0x00);
-   m_Miniport.adlib_write(AD_NTS, 0x00);
+   Opl3_ChipWrite(AD_NEW, 0x01);
+   Opl3_ChipWrite(AD_MASK, 0x60);
+   Opl3_ChipWrite(AD_CONNECTION, 0x00);
+   Opl3_ChipWrite(AD_NTS, 0x00);
 
    /* turn off the drums, and use high vibrato/modulation */
-   m_Miniport.adlib_write(AD_DRUM, 0xc0);
+   Opl3_ChipWrite(AD_DRUM, 0xc0);
 
    /* turn off all the oscillators */
    for (i = 0; i <= 0x15; i++)
    {
       if ((i & 0x07) <= 0x05)
       {
-         m_Miniport.adlib_write(AD_LEVEL + i, 0x3f);
-         m_Miniport.adlib_write(AD_LEVEL2 + i, 0x3f);
+         Opl3_ChipWrite(AD_LEVEL + i, 0x3f);
+         Opl3_ChipWrite(AD_LEVEL2 + i, 0x3f);
       }
    };
 
    /* turn off all the voices */
    for (i = 0; i <= 0x08; i++)
    {
-      m_Miniport.adlib_write(AD_BLOCK + i, 0x00);
-      m_Miniport.adlib_write(AD_BLOCK2 + i, 0x00);
+      Opl3_ChipWrite(AD_BLOCK + i, 0x00);
+      Opl3_ChipWrite(AD_BLOCK2 + i, 0x00);
    };
 }
 
@@ -1536,10 +1536,10 @@ void
    if (bIsInstantCut)
    {
       wOpOffset = gw2OpOffset[ bVoice ][ 1 ] ; // assuming 2op
-      m_Miniport.adlib_write( 0x80 + wOpOffset, 0xFF) ; // set SR to high
+      Opl3_ChipWrite( 0x80 + wOpOffset, 0xFF) ; // set SR to high
    }
 
-   m_Miniport.adlib_write(AD_BLOCK + wOffset,
+   Opl3_ChipWrite(AD_BLOCK + wOffset,
       (BYTE)(m_Voice[ bVoice ].bBlock[ 0 ] & 0x1f) ) ;
 
    // Note this...
@@ -1585,7 +1585,12 @@ bool
       m_bBrightness[i] = 64;
    };
 
+#ifdef DISABLE_HW_SUPPORT
    m_Miniport.adlib_init();
+#else
+   OPL_Hardware_Detection();
+   OPL_HW_Init(); // start hardware
+#endif /*DISABLE_HW_SUPPORT*/
    Opl3_BoardReset();
    return true;
 }
@@ -1594,7 +1599,9 @@ void
    OPLSynth::
    GetSample(short *sample, int len)
 {
+#ifdef DISABLE_HW_SUPPORT
    m_Miniport.adlib_getsample(sample,len);
+#endif /*DISABLE_HW_SUPPORT*/
 }
 
 
@@ -1663,3 +1670,34 @@ void
       }
    }
 }
+
+inline void
+   OPLSynth::
+   Opl3_ChipWrite(WORD idx, BYTE val)
+{
+#ifdef DISABLE_HW_SUPPORT
+   // Write to software chip
+   m_Miniport.adlib_write(idx,val);
+
+#else
+
+   // Write to hardware
+   OPL_HW_WriteReg(idx, val);
+
+#endif /*DISABLE_HW_SUPPORT*/
+}
+
+void 
+   OPLSynth::
+   close()
+{
+#ifndef DISABLE_HW_SUPPORT
+   OPL_HW_Close();
+#endif /*DISABLE_HW_SUPPORT*/
+}
+
+// Some stupid f***ing reason using this breaks playback, with or without anything in it
+//OPLSynth::~OPLSynth()
+//{
+//   //OPL_HW_Close();
+//}

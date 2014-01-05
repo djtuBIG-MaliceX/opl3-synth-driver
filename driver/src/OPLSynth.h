@@ -7,6 +7,7 @@
 #ifndef OPL3SYNTH_H
 #define OPL3SYNTH_H
 #include "opl.h"
+#include "opl_hw.h"
 
 typedef unsigned char	BYTE;
 typedef unsigned short  WORD;
@@ -264,6 +265,9 @@ public:
    bool Init(void);
    void GetSample(short *samplem, int len);
    void PlaySysex(Bit8u *bufpos, DWORD len);
+   inline void Opl3_ChipWrite(WORD idx, BYTE val);
+   //virtual ~OPLSynth();  // some stupid f***ing reason this breaks playback just for beign in existence
+   void close();
 
 };
 #endif

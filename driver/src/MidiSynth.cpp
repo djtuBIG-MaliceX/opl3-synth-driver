@@ -372,16 +372,16 @@ namespace OPL3Emu {
    }
 
    int MidiSynth::Reset() {
-#ifdef DRIVER_MODE
-
-      return 0;
-#endif
+//#ifdef DRIVER_MODE
+//
+//      return 0;
+//#endif
 
       UINT wResult = waveOut.Pause();
       if (wResult) return wResult;
 
       synthEvent.Wait();
-      //synth->close();
+      synth->close();  
       delete synth;
       synth = new OPLSynth();
       if (!synth->Init()) {
@@ -408,7 +408,7 @@ namespace OPL3Emu {
       waveOut.Pause();
       waveOut.Close();
       synthEvent.Wait();
-      //synth->close();
+      synth->close();
 
       // Cleanup memory
       delete synth;

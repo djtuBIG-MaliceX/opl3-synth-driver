@@ -11,6 +11,18 @@ Git Repository: https://bitbucket.org/djtubig-malicex/opl3-synth-driver
 
 Changelog
 ---------
+[5-JAN-2013]
+ * Hardware OPL Passthrough via inpout32.dll (x86/64-compatible) implemented!
+   MAKE SURE YOU INSTALL INPOUT32.DLL BEFORE INSTALLING THE OPL3HW BUILD!!!
+   
+   NOTE: Currently hardcoded to 0x388.  Anyone that needs a specific port
+   please let me know and I will build it for you if you are unable to.
+   
+ * Separated builds for now until a configuration utility is made.
+ * Changed driver names to reflect these changes
+ 
+ Special thanks to ValleyBell for the hardware playback code from VGMPlay.
+ 
 [4-JAN-2013]
  * Fixed polyphony note-stealing issue (relating to drum voices and note offs never registering. My fault. ._.;)
  * Preliminary "true 4-op" support.  A teaser patch (#34 Finger bass) is present in my 2x2optest custom bank.
@@ -88,6 +100,9 @@ First-time Installation
 Run drvsetup.exe to perform installation. This will copy opl3emu.dll into
 C:\WINDOWS\SYSTEM32 (C:\WINDOWS\SYSWOW64 for x64 systems) directory.
 Use the main UI-enabled application to configure driver settings.
+
+OPL3HW USERS: ENSURE YOU COPY INPOUT32.DLL TO YOUR WINDOWS DIRECTORY BEFORE
+              USING.  THIS WILL ONLY WORK FOR THOSE WITH REAL OPL3 CARDS!
 
 --------------------------------------------------------------------------------
 

@@ -16,7 +16,12 @@
 
 #include "stdafx.h"
 
+#ifdef DISABLE_HW_SUPPORT
 const char OPL3EMU_DRIVER_NAME[] = "opl3emu.dll";
+#else
+const char OPL3EMU_DRIVER_NAME[] = "opl3hw.dll";
+#endif // DISABLE_HW_SUPPORT
+
 const char WDM_DRIVER_NAME[] = "wdmaud.drv";
 const char SYSTEM_DIR_NAME[] = "SYSTEM32";
 const char SYSTEM_ROOT_ENV_NAME[] = "SYSTEMROOT";
@@ -25,18 +30,34 @@ const char UNINSTALL_COMMAND[] = "uninstall";
 const char DRIVERS_REGISTRY_KEY[] = "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Drivers32";
 const char PATH_SEPARATOR[] = "\\";
 
+#ifdef DISABLE_HW_SUPPORT
 const char SUCCESSFULLY_INSTALLED_MSG[] = "OPL3Emu MIDI Driver successfully installed";
 const char SUCCESSFULLY_UPDATED_MSG[] = "OPL3Emu MIDI Driver successfully updated";
 const char SUCCESSFULLY_UNINSTALLED_MSG[] = "OPL3Emu MIDI Driver successfully uninstalled";
+#else
+const char SUCCESSFULLY_INSTALLED_MSG[] = "OPL3HW MIDI Driver successfully installed";
+const char SUCCESSFULLY_UPDATED_MSG[] = "OPL3HW MIDI Driver successfully updated";
+const char SUCCESSFULLY_UNINSTALLED_MSG[] = "OPL3HW MIDI Driver successfully uninstalled";
+#endif // DISABLE_HW_SUPPORT
+
 const char USAGE_MSG[] = "Usage:\n  drvsetup install - install driver\n  drvsetup uninstall - uninstall driver";
 
 const char CANNOT_OPEN_REGISTRY_ERR[] = "Cannot open registry key";
-const char CANNOT_INSTALL_NO_PORTS_ERR[] = "Cannot install OPL3Emu MIDI driver:\n There is no MIDI ports available";
 const char CANNOT_REGISTER_ERR[] = "Cannot register driver";
+
+#ifdef DISABLE_HW_SUPPORT
+const char CANNOT_INSTALL_NO_PORTS_ERR[] = "Cannot install OPL3Emu MIDI driver:\n There is no MIDI ports available";
 const char CANNOT_UNINSTALL_ERR[] = "Cannot uninstall OPL3Emu MIDI driver";
 const char CANNOT_UNINSTALL_NOT_FOUND_ERR[] = "Cannot uninstall OPL3Emu MIDI driver:\n There is no driver registry entry found";
 const char CANNOT_INSTALL_PATH_TOO_LONG_ERR[] = "OPL3Emu MIDI Driver cannot be installed:\n Installation path is too long";
 const char CANNOT_INSTALL_FILE_COPY_ERR[] = "OPL3Emu MIDI Driver failed to install:\n File copying error";
+#else
+const char CANNOT_INSTALL_NO_PORTS_ERR[] = "Cannot install OPL3HW MIDI driver:\n There is no MIDI ports available";
+const char CANNOT_UNINSTALL_ERR[] = "Cannot uninstall OPL3HW MIDI driver";
+const char CANNOT_UNINSTALL_NOT_FOUND_ERR[] = "Cannot uninstall OPL3Emu MIDI driver:\n There is no driver registry entry found";
+const char CANNOT_INSTALL_PATH_TOO_LONG_ERR[] = "OPL3HW MIDI Driver cannot be installed:\n Installation path is too long";
+const char CANNOT_INSTALL_FILE_COPY_ERR[] = "OPL3HW MIDI Driver failed to install:\n File copying error";
+#endif //DISABLE_HW_SUPPORT
 
 const char INFORMATION_TITLE[] = "Information";
 const char ERROR_TITLE[] = "Error";
