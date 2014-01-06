@@ -10,10 +10,10 @@
 #include "OPLSynth.h"
 
 // TODO - Determine way to read configuration for existing bank file before playback
-#include "patch.h"
+//#include "patch.h"
 //#include "mauipatch.h"
 //#include "fmsynthpatch.h"
-//#include "2x2patchtest.h"
+#include "2x2patchtest.h"
 //#include "ctmidipatch.h"
 
 void
@@ -660,10 +660,35 @@ void
       // else find a new slot.
       // TODO: special case needed for PATCH_1_4OP
 
-      wTemp = m_Voice[m_bLastVoiceUsed[bChannel]].bChannel;
-      wTemp = (wTemp == bChannel) ? wTemp : 
-              (NS.bOp == PATCH_1_4OP) ? Opl3_FindEmptySlot4Op(bPatch) :
-              Opl3_FindEmptySlot(bPatch);
+      //wTemp = m_Voice[m_bLastVoiceUsed[bChannel]].bChannel;
+      wTemp = m_bLastVoiceUsed[bChannel];
+      
+      // safety measure for pure 4-op patches
+      if (NS.bOp == PATCH_1_4OP && ((wTemp > 2 && wTemp < 9) || wTemp > 11))
+      {
+         bool is4OpVoice = false;
+
+         for (i = 0; i < NUM4VOICES; ++i)
+            if (gb4OpVoices[i] == wTemp)
+            {
+               is4OpVoice = true;
+               break;
+            }
+         
+         if (!is4OpVoice)
+         {
+            wTemp = Opl3_FindEmptySlot4Op(bPatch);
+         }
+      }
+
+      // Check if last channel used else find one.
+      else if (NS.bOp != PATCH_1_4OP)
+      {
+         wTemp = (wTemp == bChannel) ? wTemp : 
+                 //(NS.bOp == PATCH_1_4OP) ? Opl3_FindEmptySlot4Op(bPatch) :
+                 Opl3_FindEmptySlot(bPatch);
+      }
+      
 
       /*if (b4Op)
       {
@@ -745,11 +770,11 @@ void
    Opl3_CalcPatchModifiers(&NS, bChannel);
    Opl3_FMNote(wTemp, &NS, bChannel, wTemp2 ) ; // TODO refactor functionality to insert second operator
 
+   m_bLastVoiceUsed[bChannel] = wTemp; // save voice ref
    m_Voice[ wTemp ].bVoiceID = ++bVoiceID;
    if (b4Op)
    {
       m_Voice[ wTemp2 ].bVoiceID = bVoiceID;
-    
    }
 } // end of Opl3_NoteOn()
 
@@ -758,6 +783,7 @@ void
    Opl3_Set4OpFlag(BYTE bVoice, bool bSetFlag)
 {
    for (int i = 0; i < NUM4VOICES; ++i)
+   {
       if (gb4OpVoices[i] == (BYTE)bVoice)
       {
          // Update local register
@@ -770,6 +796,22 @@ void
          
          break;
       }
+
+      // this will always be to unset since FindEmptySlot4Op only looks for first pair
+      else if (gb4OpVoices[i]+3 == (BYTE)bVoice/* && !bSetFlag*/)
+      {
+         // Cut base voice to be safe (?)
+         if (b4OpVoiceSet & (1<<i))
+            Opl3_CutVoice(gb4OpVoices[i], TRUE);
+
+         // Update local register
+         b4OpVoiceSet &= ~(1<<i);
+
+         // Write 4op enable/disable register to chip
+         Opl3_ChipWrite(AD_CONNECTION, (BYTE)(b4OpVoiceSet)) ;
+         break;
+      }
+   }
 }
 
 bool 
@@ -798,10 +840,6 @@ void
 {
    char bTemp;
    char bOffset;
-
-   // Do not allow these changes with 4op patches for now.
-   if (lpSN->bOp == PATCH_1_4OP) 
-      return; 
 
    //Attack
    bOffset = (char)lin_intp(m_bAttack[bChannel], 0, 127, (-8), 8);
