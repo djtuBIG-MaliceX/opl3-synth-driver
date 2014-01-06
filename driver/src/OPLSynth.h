@@ -8,6 +8,7 @@
 #define OPL3SYNTH_H
 #include "opl.h"
 #include "opl_hw.h"
+#include "vgm_logging.h"
 
 typedef unsigned char	BYTE;
 typedef unsigned short  WORD;

@@ -770,7 +770,7 @@ void
    Opl3_CalcPatchModifiers(&NS, bChannel);
    Opl3_FMNote(wTemp, &NS, bChannel, wTemp2 ) ; // TODO refactor functionality to insert second operator
 
-   m_bLastVoiceUsed[bChannel] = wTemp; // save voice ref
+   m_bLastVoiceUsed[bChannel] = (BYTE)wTemp; // save voice ref
    m_Voice[ wTemp ].bVoiceID = ++bVoiceID;
    if (b4Op)
    {
@@ -1629,6 +1629,7 @@ bool
    OPL_Hardware_Detection();
    OPL_HW_Init(); // start hardware
 //#endif /*DISABLE_HW_SUPPORT*/
+   VGMLog_Init();
    Opl3_BoardReset();
    return true;
 }
@@ -1640,6 +1641,9 @@ void
 //#ifdef DISABLE_HW_SUPPORT
    m_Miniport.adlib_getsample(sample,len);
 //#endif /*DISABLE_HW_SUPPORT*/
+
+   // Increment logger sample history
+   VGMLog_IncrementSamples(len);
 }
 
 
@@ -1723,6 +1727,8 @@ inline void
    OPL_HW_WriteReg(idx, val);
 
 #endif /*DISABLE_HW_SUPPORT*/
+
+   VGMLog_CmdWrite((0x5E | (idx>>8)), (BYTE)idx, val);
 }
 
 void 
@@ -1732,6 +1738,7 @@ void
 #ifndef DISABLE_HW_SUPPORT
    OPL_HW_Close();
 #endif /*DISABLE_HW_SUPPORT*/
+   VGMLog_Close();
 }
 
 // Some stupid f***ing reason using this breaks playback, with or without anything in it

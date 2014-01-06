@@ -342,6 +342,7 @@
     <ClCompile Include="src\opl.cpp" />
     <ClCompile Include="src\OPLSynth.cpp" />
     <ClCompile Include="src\opl_hw.cpp" />
+    <ClCompile Include="src\vgm_logging.cpp" />
     <ClCompile Include="src\winmm_drv.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -361,6 +362,8 @@
     <ClInclude Include="src\patch.h" />
     <ClInclude Include="src\stdafx.h" />
     <ClInclude Include="src\targetver.h" />
+    <ClInclude Include="src\VGMFile.h" />
+    <ClInclude Include="src\vgm_logging.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
