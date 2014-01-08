@@ -25,11 +25,13 @@ static bool synthOpened = false;
 //static HWND hwnd = NULL;
 static int driverCount;
 
-struct Driver {
+struct Driver
+{
 	bool open;
 	int clientCount;
 	HDRVR hdrvr;
-	struct Client {
+	struct Client 
+   {
 		bool allocated;
 		DWORD_PTR instance;
 		DWORD flags;
@@ -38,8 +40,11 @@ struct Driver {
 	} clients[MAX_CLIENTS];
 } drivers[MAX_DRIVERS];
 
-STDAPI_(LONG) DriverProc(DWORD dwDriverID, HDRVR hdrvr, WORD wMessage, DWORD dwParam1, DWORD dwParam2) {
-	switch(wMessage) {
+STDAPI_(LONG) DriverProc(DWORD dwDriverID, HDRVR hdrvr, WORD wMessage,
+                         DWORD dwParam1, DWORD dwParam2) 
+{
+	switch(wMessage) 
+   {
 	case DRV_LOAD:
 		memset(drivers, 0, sizeof(drivers));
 		driverCount = 0;
@@ -48,14 +53,20 @@ STDAPI_(LONG) DriverProc(DWORD dwDriverID, HDRVR hdrvr, WORD wMessage, DWORD dwP
 		return DRV_OK;
 	case DRV_OPEN:
 		int driverNum;
-		if (driverCount == MAX_DRIVERS) {
+		if (driverCount == MAX_DRIVERS) 
+      {
 			return 0;
-		} else {
-			for (driverNum = 0; driverNum < MAX_DRIVERS; driverNum++) {
-				if (!drivers[driverNum].open) {
+		}
+      else
+      {
+			for (driverNum = 0; driverNum < MAX_DRIVERS; driverNum++) 
+         {
+				if (!drivers[driverNum].open) 
+            {
 					break;
 				}
-				if (driverNum == MAX_DRIVERS) {
+				if (driverNum == MAX_DRIVERS) 
+            {
 					return 0;
 				}
 			}
@@ -73,8 +84,10 @@ STDAPI_(LONG) DriverProc(DWORD dwDriverID, HDRVR hdrvr, WORD wMessage, DWORD dwP
 	case DRV_CONFIGURE:
 		return DRVCNF_OK;
 	case DRV_CLOSE:
-		for (int i = 0; i < MAX_DRIVERS; i++) {
-			if (drivers[i].open && drivers[i].hdrvr == hdrvr) {
+		for (int i = 0; i < MAX_DRIVERS; i++) 
+      {
+			if (drivers[i].open && drivers[i].hdrvr == hdrvr) 
+         {
 				drivers[i].open = false;
 				--driverCount;
 				return DRV_OK;
@@ -92,7 +105,8 @@ STDAPI_(LONG) DriverProc(DWORD dwDriverID, HDRVR hdrvr, WORD wMessage, DWORD dwP
 }
 
 
-HRESULT modGetCaps(PVOID capsPtr, DWORD capsSize) {
+HRESULT modGetCaps(PVOID capsPtr, DWORD capsSize) 
+{
 	MIDIOUTCAPSA * myCapsA;
 	MIDIOUTCAPSW * myCapsW;
 	MIDIOUTCAPS2A * myCaps2A;
@@ -106,7 +120,8 @@ HRESULT modGetCaps(PVOID capsPtr, DWORD capsSize) {
 	WCHAR synthNameW[] = L"YMF262 (OPL3) FM Synthesizer\0";
 #endif /*DISABLE_HW_SUPPORT*/
 
-	switch (capsSize) {
+	switch (capsSize) 
+   {
 	case (sizeof(MIDIOUTCAPSA)):
 		myCapsA = (MIDIOUTCAPSA *)capsPtr;
 		myCapsA->wMid = MM_UNMAPPED;
@@ -164,25 +179,36 @@ HRESULT modGetCaps(PVOID capsPtr, DWORD capsSize) {
 	}
 }
 
-void DoCallback(int driverNum, DWORD_PTR clientNum, DWORD msg, DWORD_PTR param1, DWORD_PTR param2) {
+void DoCallback(int driverNum, DWORD_PTR clientNum, DWORD msg, 
+                DWORD_PTR param1, DWORD_PTR param2) {
 	Driver::Client *client = &drivers[driverNum].clients[clientNum];
-	DriverCallback(client->callback, client->flags, drivers[driverNum].hdrvr, msg, client->instance, param1, param2);
+	DriverCallback(client->callback, client->flags, drivers[driverNum].hdrvr,
+      msg, client->instance, param1, param2);
 }
 
-LONG OpenDriver(Driver *driver, UINT uDeviceID, UINT uMsg, DWORD_PTR dwUser, DWORD_PTR dwParam1, DWORD_PTR dwParam2) {
+LONG OpenDriver(Driver *driver, UINT uDeviceID, UINT uMsg, 
+                DWORD_PTR dwUser, DWORD_PTR dwParam1, DWORD_PTR dwParam2) 
+{
 	int clientNum;
 	if (driver->clientCount == 0) {
 		clientNum = 0;
-	} else if (driver->clientCount == MAX_CLIENTS) {
+	}
+   else if (driver->clientCount == MAX_CLIENTS) 
+   {
 		return MMSYSERR_ALLOCATED;
-	} else {
+	}
+   else 
+   {
 		int i;
-		for (i = 0; i < MAX_CLIENTS; i++) {
-			if (!driver->clients[i].allocated) {
+		for (i = 0; i < MAX_CLIENTS; i++)
+      {
+			if (!driver->clients[i].allocated) 
+         {
 				break;
 			}
 		}
-		if (i == MAX_CLIENTS) {
+		if (i == MAX_CLIENTS) 
+      {
 			return MMSYSERR_ALLOCATED;
 		}
 		clientNum = i;
@@ -208,27 +234,40 @@ LONG CloseDriver(Driver *driver, UINT uDeviceID, UINT uMsg, DWORD_PTR dwUser, DW
 	return MMSYSERR_NOERROR;
 }
 
-STDAPI_(DWORD) modMessage(DWORD uDeviceID, DWORD uMsg, DWORD_PTR dwUser, DWORD_PTR dwParam1, DWORD_PTR dwParam2) {
+STDAPI_(DWORD) modMessage(DWORD uDeviceID, DWORD uMsg, DWORD_PTR dwUser,
+                          DWORD_PTR dwParam1, DWORD_PTR dwParam2)
+{
 	MIDIHDR *midiHdr;
 	Driver *driver = &drivers[uDeviceID];
 	DWORD instance;
-	switch (uMsg) {
+	switch (uMsg) 
+   {
 	case MODM_OPEN:
-		if (!synthOpened) {
-			if (midiSynth.Init() != 0) return MMSYSERR_ERROR;
-			synthOpened = true;
+		if (!synthOpened) 
+      {
+			if (midiSynth.Init() != 0) 
+            return MMSYSERR_ERROR;
+			
+         synthOpened = true;
 		}
 		instance = NULL;
 		DWORD res;
-		res = OpenDriver(driver, uDeviceID, uMsg, dwUser, dwParam1, dwParam2);
+      res = OpenDriver(driver, uDeviceID, uMsg, dwUser, dwParam1, dwParam2);
 		driver->clients[*(LONG *)dwUser].synth_instance = instance;
 		return res;
 
 	case MODM_CLOSE:
-		if (driver->clients[dwUser].allocated == false) {
+		if (driver->clients[dwUser].allocated == false) 
+      {
 			return MMSYSERR_ERROR;
 		}
-		if (synthOpened) midiSynth.Reset();
+		
+      if (synthOpened)
+      {
+         //midiSynth.Reset();
+         midiSynth.Close();
+         synthOpened = false;
+      }
 		return CloseDriver(driver, uDeviceID, uMsg, dwUser, dwParam1, dwParam2);
 
 	case MODM_PREPARE:
@@ -241,18 +280,21 @@ STDAPI_(DWORD) modMessage(DWORD uDeviceID, DWORD uMsg, DWORD_PTR dwUser, DWORD_P
 		return modGetCaps((PVOID)dwParam1, (DWORD)dwParam2);
 
 	case MODM_DATA:
-		if (driver->clients[dwUser].allocated == false) {
+		if (driver->clients[dwUser].allocated == false) 
+      {
 			return MMSYSERR_ERROR;
 		}
 		midiSynth.PushMIDI((DWORD)dwParam1);
 		return MMSYSERR_NOERROR;
 
 	case MODM_LONGDATA:
-		if (driver->clients[dwUser].allocated == false) {
+		if (driver->clients[dwUser].allocated == false)
+      {
 			return MMSYSERR_ERROR;
 		}
 		midiHdr = (MIDIHDR *)dwParam1;
-		if ((midiHdr->dwFlags & MHDR_PREPARED) == 0) {
+		if ((midiHdr->dwFlags & MHDR_PREPARED) == 0) 
+      {
 			return MIDIERR_UNPREPARED;
 		}
 		midiSynth.PlaySysex((unsigned char*)midiHdr->lpData, midiHdr->dwBufferLength);

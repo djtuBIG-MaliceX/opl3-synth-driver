@@ -7,9 +7,10 @@ VGM_HEADER VGMHead;
 DWORD ClockAdd, LastVgmDelay;
 FILE *hFileVGM = NULL;
 DWORD VGMSmplPlayed;
+WCHAR TempLogPath[BUFSIZ];
 
 void VGMLog_Init()
-{	
+{
    memset(&VGMHead, 0x00, sizeof(VGM_HEADER));
    /*switch(DROInf.iHardwareType)
    {
@@ -34,6 +35,7 @@ void VGMLog_Init()
    //   ClockAdd = 0x00;
    VGMHead.fccVGM = FCC_VGM;
    VGMHead.lngVersion = 0x00000151;
+   VGMHead.lngEOFOffset = 0xC0;
    VGMHead.lngDataOffset = sizeof(VGM_HEADER) - 0x34;
    //if (VGMHead.lngHzYM3526)
    //   VGMHeadL.lngHzYM3526 = VGMHead.lngHzYM3526 | ClockAdd;
@@ -41,10 +43,12 @@ void VGMLog_Init()
    //   VGMHeadL.lngHzYM3812 = VGMHead.lngHzYM3812 | ClockAdd;
    if (VGMHead.lngHzYMF262)
       VGMHead.lngHzYMF262 = VGMHead.lngHzYMF262 | ClockAdd;
-
+   ExpandEnvironmentStrings(L"%TEMP%\\opl3vgmlog.vgm", (LPWSTR)&TempLogPath, BUFSIZ);
+   //strcpy_s(TempLogPath, getenv("TEMP"));
    //fopen_s(&hFileVGM, "opl3SynthLog.vgm", "wb");
-   hFileVGM = fopen("D:\\Downloads\\testlog.vgm", "wb");
-   if (hFileVGM == NULL/*errno*/)
+   _wfopen_s(&hFileVGM, TempLogPath, L"wb");
+   //hFileVGM = fopen("D:\\Downloads\\testlog.vgm", "wb");
+   if (hFileVGM == NULL)
    {
       //hFileVGM = NULL;
       MessageBox(NULL, L"Handle for opl3SynthLog.vgm failed.", L"VGM Logger", MB_OK | MB_ICONEXCLAMATION);
@@ -141,9 +145,9 @@ void VGMLog_Close()
    if (hFileVGM == NULL) return;
 
    VGMLog_CmdWrite(0x66, 0x00, 0x00);
-   BYTE AbsVol = (BYTE)(ftell(hFileVGM) - 0x04);
+   UINT32 AbsVol = (UINT32)(ftell(hFileVGM) - 0x04);
    fseek(hFileVGM, 0x04, SEEK_SET);
-   fwrite(&AbsVol, 0x04, 0x01, hFileVGM);
+   fwrite(&AbsVol, sizeof(UINT32), 0x01, hFileVGM);
    fseek(hFileVGM, 0x18, SEEK_SET);
    fwrite(&VGMSmplPlayed, 0x04, 0x01, hFileVGM);
    fclose(hFileVGM);

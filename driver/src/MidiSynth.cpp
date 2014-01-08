@@ -16,13 +16,15 @@
 
 #include "stdafx.h"
 
-namespace OPL3Emu {
+namespace OPL3Emu 
+{
 
 //#define	DRIVER_MODE
-
    static MidiSynth &midiSynth = MidiSynth::getInstance();
 
-   static class MidiStream {
+
+   class MidiStream 
+   {
    private:
       static const unsigned int maxPos = 1024;
       unsigned int startpos;
@@ -30,12 +32,14 @@ namespace OPL3Emu {
       DWORD stream[maxPos][2];
 
    public:
-      MidiStream() {
+      MidiStream()
+      {
          startpos = 0;
          endpos = 0;
       }
 
-      DWORD PutMessage(DWORD msg, DWORD timestamp) {
+      DWORD PutMessage(DWORD msg, DWORD timestamp) 
+      {
          unsigned int newEndpos = endpos;
 
          newEndpos++;
@@ -49,7 +53,8 @@ namespace OPL3Emu {
          return 0;
       }
 
-      DWORD GetMessage() {
+      DWORD GetMessage() 
+      {
          if (startpos == endpos) // check for buffer empty
             return -1;
          DWORD msg = stream[startpos][0];
@@ -59,26 +64,31 @@ namespace OPL3Emu {
          return msg;
       }
 
-      DWORD PeekMessageTime() {
+      DWORD PeekMessageTime() 
+      {
          if (startpos == endpos) // check for buffer empty
             return (DWORD)-1;
          return stream[startpos][1];
       }
 
-      DWORD PeekMessageTimeAt(unsigned int pos) {
+      DWORD PeekMessageTimeAt(unsigned int pos) 
+      {
          if (startpos == endpos) // check for buffer empty
             return -1;
          unsigned int peekPos = (startpos + pos) % maxPos;
          return stream[peekPos][1];
       }
-   } midiStream;
+   };
 
-   static class SynthEventWin32 {
+
+   class SynthEventWin32 
+   {
    private:
       HANDLE hEvent;
 
    public:
-      int Init() {
+      int Init() 
+      {
          hEvent = CreateEvent(NULL, false, true, NULL);
          if (hEvent == NULL) {
             MessageBox(NULL, L"Can't create sync object", L"OPL3", MB_OK | MB_ICONEXCLAMATION);
@@ -87,20 +97,23 @@ namespace OPL3Emu {
          return 0;
       }
 
-      void Close() {
+      void Close() 
+      {
          CloseHandle(hEvent);
       }
 
-      void Wait() {
+      void Wait() 
+      {
          WaitForSingleObject(hEvent, INFINITE);
       }
 
       void Release() {
          SetEvent(hEvent);
       }
-   } synthEvent;
+   };
 
-   static class WaveOutWin32 {
+   class WaveOutWin32 
+   {
    private:
       HWAVEOUT	hWaveOut;
       WAVEHDR	*WaveHdr;
@@ -111,11 +124,14 @@ namespace OPL3Emu {
       bool		stopProcessing;
 
    public:
-      int Init(Bit16s *buffer, unsigned int bufferSize, unsigned int chunkSize, bool useRingBuffer, unsigned int sampleRate) {
+      int Init(Bit16s *buffer, unsigned int bufferSize, unsigned int chunkSize, 
+         bool useRingBuffer, unsigned int sampleRate) 
+      {
          DWORD callbackType = CALLBACK_NULL;
          DWORD_PTR callback = NULL;
          hEvent = NULL;
-         if (!useRingBuffer) {
+         if (!useRingBuffer)
+         {
             hEvent = CreateEvent(NULL, false, true, NULL);
             callback = (DWORD_PTR)hEvent;
             callbackType = CALLBACK_EVENT;
@@ -124,8 +140,10 @@ namespace OPL3Emu {
          PCMWAVEFORMAT wFormat = {WAVE_FORMAT_PCM, 2, sampleRate, sampleRate * 4, 4, 16};
 
          // Open waveout device
-         int wResult = waveOutOpen(&hWaveOut, WAVE_MAPPER, (LPWAVEFORMATEX)&wFormat, callback, (DWORD_PTR)&midiSynth, callbackType);
-         if (wResult != MMSYSERR_NOERROR) {
+         int wResult = waveOutOpen(&hWaveOut, WAVE_MAPPER,
+            (LPWAVEFORMATEX)&wFormat, callback, (DWORD_PTR)&midiSynth, callbackType);
+         if (wResult != MMSYSERR_NOERROR)
+         {
             MessageBox(NULL, L"Failed to open waveform output device", L"OPL3", MB_OK | MB_ICONEXCLAMATION);
             return 2;
          }
@@ -135,13 +153,17 @@ namespace OPL3Emu {
          WaveHdr = new WAVEHDR[chunks];
          LPSTR chunkStart = (LPSTR)buffer;
          DWORD chunkBytes = 4 * chunkSize;
-         for (UINT i = 0; i < chunks; i++) {
-            if (useRingBuffer) {
+         for (UINT i = 0; i < chunks; i++)
+         {
+            if (useRingBuffer)
+            {
                WaveHdr[i].dwBufferLength = 4 * bufferSize;
                WaveHdr[i].lpData = chunkStart;
                WaveHdr[i].dwFlags = WHDR_BEGINLOOP | WHDR_ENDLOOP;
                WaveHdr[i].dwLoops = -1L;
-            } else {
+            } 
+            else
+            {
                WaveHdr[i].dwBufferLength = chunkBytes;
                WaveHdr[i].lpData = chunkStart;
                WaveHdr[i].dwFlags = 0L;
@@ -149,8 +171,10 @@ namespace OPL3Emu {
                chunkStart += chunkBytes;
             }
             wResult = waveOutPrepareHeader(hWaveOut, &WaveHdr[i], sizeof(WAVEHDR));
-            if (wResult != MMSYSERR_NOERROR) {
-               MessageBox(NULL, L"Failed to Prepare Header", L"OPL3", MB_OK | MB_ICONEXCLAMATION);
+            if (wResult != MMSYSERR_NOERROR)
+            {
+               MessageBox(NULL, L"Failed to Prepare Header", L"OPL3", MB_OK |
+                  MB_ICONEXCLAMATION);
                return 3;
             }
          }
@@ -158,19 +182,24 @@ namespace OPL3Emu {
          return 0;
       }
 
-      int Close() {
+      int Close() 
+      {
          stopProcessing = true;
          SetEvent(hEvent);
          int wResult = waveOutReset(hWaveOut);
-         if (wResult != MMSYSERR_NOERROR) {
+         if (wResult != MMSYSERR_NOERROR) 
+         {
             MessageBox(NULL, L"Failed to Reset WaveOut", L"OPL3", MB_OK | MB_ICONEXCLAMATION);
             return 8;
          }
 
-         for (UINT i = 0; i < chunks; i++) {
+         for (UINT i = 0; i < chunks; i++)
+         {
             wResult = waveOutUnprepareHeader(hWaveOut, &WaveHdr[i], sizeof(WAVEHDR));
-            if (wResult != MMSYSERR_NOERROR) {
-               MessageBox(NULL, L"Failed to Unprepare Wave Header", L"OPL3", MB_OK | MB_ICONEXCLAMATION);
+            if (wResult != MMSYSERR_NOERROR)
+            {
+               MessageBox(NULL, L"Failed to Unprepare Wave Header", L"OPL3", 
+                  MB_OK | MB_ICONEXCLAMATION);
                return 8;
             }
          }
@@ -179,55 +208,71 @@ namespace OPL3Emu {
 
          wResult = waveOutClose(hWaveOut);
          if (wResult != MMSYSERR_NOERROR) {
-            MessageBox(NULL, L"Failed to Close WaveOut", L"OPL3", MB_OK | MB_ICONEXCLAMATION);
+            MessageBox(NULL, L"Failed to Close WaveOut", L"OPL3", 
+               MB_OK | MB_ICONEXCLAMATION);
             return 8;
          }
-         if (hEvent != NULL) {
+         if (hEvent != NULL)
+         {
             CloseHandle(hEvent);
             hEvent = NULL;
          }
          return 0;
       }
 
-      int Start() {
+      int Start()
+      {
          getPosWraps = 0;
          prevPlayPos = 0;
-         for (UINT i = 0; i < chunks; i++) {
-            if (waveOutWrite(hWaveOut, &WaveHdr[i], sizeof(WAVEHDR)) != MMSYSERR_NOERROR) {
-               MessageBox(NULL, L"Failed to write block to device", L"OPL3", MB_OK | MB_ICONEXCLAMATION);
+         for (UINT i = 0; i < chunks; i++)
+         {
+            if (waveOutWrite(hWaveOut, &WaveHdr[i], sizeof(WAVEHDR)) != MMSYSERR_NOERROR)
+            {
+               MessageBox(NULL, L"Failed to write block to device", L"OPL3", 
+                  MB_OK | MB_ICONEXCLAMATION);
                return 4;
             }
          }
+         //_beginthread(RenderingThread, 16384, this);
          _beginthread(RenderingThread, 16384, this);
          return 0;
       }
 
-      int Pause() {
-         if (waveOutPause(hWaveOut) != MMSYSERR_NOERROR) {
+      int Pause() 
+      {
+         if (waveOutPause(hWaveOut) != MMSYSERR_NOERROR)
+         {
             MessageBox(NULL, L"Failed to Pause wave playback", L"OPL3", MB_OK | MB_ICONEXCLAMATION);
             return 9;
          }
          return 0;
       }
 
-      int Resume() {
-         if (waveOutRestart(hWaveOut) != MMSYSERR_NOERROR) {
+      int Resume() 
+      {
+         if (waveOutRestart(hWaveOut) != MMSYSERR_NOERROR)
+         {
             MessageBox(NULL, L"Failed to Resume wave playback", L"OPL3", MB_OK | MB_ICONEXCLAMATION);
             return 9;
          }
          return 0;
       }
 
-      UINT64 GetPos() {
+      UINT64 GetPos()
+      {
          MMTIME mmTime;
          mmTime.wType = TIME_SAMPLES;
 
-         if (waveOutGetPosition(hWaveOut, &mmTime, sizeof MMTIME) != MMSYSERR_NOERROR) {
-            MessageBox(NULL, L"Failed to get current playback position", L"OPL3", MB_OK | MB_ICONEXCLAMATION);
+         if (waveOutGetPosition(hWaveOut, &mmTime, sizeof MMTIME) != MMSYSERR_NOERROR)
+         {
+            MessageBox(NULL, L"Failed to get current playback position", L"OPL3",
+               MB_OK | MB_ICONEXCLAMATION);
             return 10;
          }
-         if (mmTime.wType != TIME_SAMPLES) {
-            MessageBox(NULL, L"Failed to get # of samples played", L"OPL3", MB_OK | MB_ICONEXCLAMATION);
+         if (mmTime.wType != TIME_SAMPLES)
+         {
+            MessageBox(NULL, L"Failed to get # of samples played", L"OPL3",
+               MB_OK | MB_ICONEXCLAMATION);
             return 10;
          }
 
@@ -236,7 +281,8 @@ namespace OPL3Emu {
          // The output of that nasty waveOutGetPosition() isn't monotonically increasing
          // even during 2^27 samples playback, so we have to ensure the difference is big enough...
          int delta = mmTime.u.sample - prevPlayPos;
-         if (delta < -(1 << 26)) {
+         if (delta < -(1 << 26))
+         {
             std::cout << "OPL3: GetPos() wrap: " << delta << "\n";
             ++getPosWraps;
          }
@@ -244,50 +290,87 @@ namespace OPL3Emu {
          return mmTime.u.sample + getPosWraps * (1 << 27);
       }
 
-      static void RenderingThread(void *) {
-         if (waveOut.chunks == 1) {
+      static void RenderingThread(void *arg)
+      {
+         WaveOutWin32 *self = (WaveOutWin32*)arg;
+         //if (waveOut.chunks == 1)
+         if (self->chunks == 1)
+         {
             // Rendering using single looped ring buffer
-            while (!waveOut.stopProcessing) {
+            //while (!waveOut.stopProcessing)
+            while (!self->stopProcessing)
+            {
                midiSynth.RenderAvailableSpace();
             }
-         } else {
-            while (!waveOut.stopProcessing) {
+         } 
+         else 
+         {
+            //while (!waveOut.stopProcessing)
+            while (!self->stopProcessing)
+            {
                bool allBuffersRendered = true;
-               for (UINT i = 0; i < waveOut.chunks; i++) {
-                  if (waveOut.WaveHdr[i].dwFlags & WHDR_DONE) {
+               //for (UINT i = 0; i < waveOut.chunks; i++)
+               for (UINT i = 0; i < self->chunks && !self->stopProcessing; i++)
+               {
+                  //if (waveOut.WaveHdr[i].dwFlags & WHDR_DONE)
+                  if (self->WaveHdr[i].dwFlags & WHDR_DONE)
+                  {
                      allBuffersRendered = false;
-                     midiSynth.Render((Bit16s *)waveOut.WaveHdr[i].lpData, waveOut.WaveHdr[i].dwBufferLength / 4);
-                     if (waveOutWrite(waveOut.hWaveOut, &waveOut.WaveHdr[i], sizeof(WAVEHDR)) != MMSYSERR_NOERROR) {
-                        MessageBox(NULL, L"Failed to write block to device", L"OPL3", MB_OK | MB_ICONEXCLAMATION);
+                     /*midiSynth.Render((Bit16s *)waveOut.WaveHdr[i].lpData,
+                        waveOut.WaveHdr[i].dwBufferLength / 4);*/
+                     midiSynth.Render((Bit16s *)self->WaveHdr[i].lpData,
+                        self->WaveHdr[i].dwBufferLength / 4);
+                     /*if (waveOutWrite(waveOut.hWaveOut, &waveOut.WaveHdr[i],
+                        sizeof(WAVEHDR)) != MMSYSERR_NOERROR)*/
+                     if (!self->stopProcessing && waveOutWrite(self->hWaveOut,
+                        &self->WaveHdr[i],sizeof(WAVEHDR)) != MMSYSERR_NOERROR)
+                     {
+                        MessageBox(NULL, L"Failed to write block to device", L"OPL3",
+                           MB_OK | MB_ICONEXCLAMATION);
                      }
                   }
                }
-               if (allBuffersRendered) {
-                  WaitForSingleObject(waveOut.hEvent, INFINITE);
+               if (allBuffersRendered)
+               {
+                  //WaitForSingleObject(waveOut.hEvent, INFINITE);
+                  WaitForSingleObject(self->hEvent, INFINITE);
                }
             }
          }
       }
-   } waveOut;
+   };
+
+   static WaveOutWin32 waveOut;
+   
+   static MidiStream midiStream;
+
+   static SynthEventWin32 synthEvent;
+
+   
 
    MidiSynth::MidiSynth() {}
 
-   MidiSynth &MidiSynth::getInstance() {
+   MidiSynth &MidiSynth::getInstance() 
+   {
       static MidiSynth *instance = new MidiSynth;
       return *instance;
    }
 
    // Renders all the available space in the single looped ring buffer
-   void MidiSynth::RenderAvailableSpace() {
+   void MidiSynth::RenderAvailableSpace() 
+   {
       DWORD playPos = waveOut.GetPos() % bufferSize;
       DWORD framesToRender;
 
       if (playPos < framesRendered) {
          // Buffer wrap, render 'till the end of the buffer
          framesToRender = bufferSize - framesRendered;
-      } else {
+      } 
+      else 
+      {
          framesToRender = playPos - framesRendered;
-         if (framesToRender < chunkSize) {
+         if (framesToRender < chunkSize) 
+         {
             Sleep(1 + (chunkSize - framesToRender) * 1000 / sampleRate);
             return;
          }
@@ -298,10 +381,12 @@ namespace OPL3Emu {
    // Renders totalFrames frames starting from bufpos
    // The number of frames rendered is added to the global counter framesRendered
    void MidiSynth::Render(Bit16s *bufpos, DWORD totalFrames) {
-      while (totalFrames > 0) {
+      while (totalFrames > 0) 
+      {
          DWORD timeStamp;
          // Incoming MIDI messages timestamped with the current audio playback position + midiLatency
-         while ((timeStamp = midiStream.PeekMessageTime()) == framesRendered) {
+         while ((timeStamp = midiStream.PeekMessageTime()) == framesRendered) 
+         {
             DWORD msg = midiStream.GetMessage();
             synthEvent.Wait();
             synth->WriteMidiData(msg);
@@ -310,7 +395,8 @@ namespace OPL3Emu {
 
          // Find out how many frames to render. The value of timeStamp == -1 indicates the MIDI buffer is empty
          DWORD framesToRender = timeStamp - framesRendered;
-         if (framesToRender > totalFrames) {
+         if (framesToRender > totalFrames) 
+         {
             // MIDI message is too far - render the rest of frames
             framesToRender = totalFrames;
          }
@@ -323,12 +409,14 @@ namespace OPL3Emu {
       }
 
       // Wrap framesRendered counter
-      if (framesRendered >= bufferSize) {
+      if (framesRendered >= bufferSize) 
+      {
          framesRendered -= bufferSize;
       }
    }
 
-   unsigned int MidiSynth::MillisToFrames(unsigned int millis) {
+   unsigned int MidiSynth::MillisToFrames(unsigned int millis) 
+   {
       return UINT(sampleRate * millis / 1000.f);
    }
 
@@ -346,16 +434,19 @@ namespace OPL3Emu {
       }
    }
 
-   int MidiSynth::Init() {
+   int MidiSynth::Init()
+   {
       LoadSettings();
       buffer = new Bit16s[2 * bufferSize]; // each frame consists of two samples for both the Left and Right channels
 
       // Init synth
-      if (synthEvent.Init()) {
+      if (synthEvent.Init()) 
+      {
          return 1;
       }
       synth = new OPLSynth();
-      if (!synth->Init()) {
+      if (!synth->Init()) 
+      {
          MessageBox(NULL, L"Can't open Synth", L"OPL3", MB_OK | MB_ICONEXCLAMATION);
          return 1;
       }
@@ -371,7 +462,8 @@ namespace OPL3Emu {
       return wResult;
    }
 
-   int MidiSynth::Reset() {
+   int MidiSynth::Reset()
+   {
 //#ifdef DRIVER_MODE
 //
 //      return 0;
@@ -384,8 +476,8 @@ namespace OPL3Emu {
       synth->close();  
       delete synth;
       synth = new OPLSynth();
-      if (!synth->Init()) {
-         MessageBox(NULL, L"Can't open Synth", L"OPL3", MB_OK | MB_ICONEXCLAMATION);
+      if (!synth->Init())
+      {
          return 1;
       }
       synthEvent.Release();
@@ -394,17 +486,20 @@ namespace OPL3Emu {
       return wResult;
    }
 
-   void MidiSynth::PushMIDI(DWORD msg) {
+   void MidiSynth::PushMIDI(DWORD msg) 
+   {
       midiStream.PutMessage(msg, (waveOut.GetPos() + midiLatency) % bufferSize);
    }
 
-   void MidiSynth::PlaySysex(Bit8u *bufpos, DWORD len) {
+   void MidiSynth::PlaySysex(Bit8u *bufpos, DWORD len) 
+   {
       synthEvent.Wait();
       synth->PlaySysex(bufpos, len);
       synthEvent.Release();
    }
 
-   void MidiSynth::Close() {
+   void MidiSynth::Close()
+   {
       waveOut.Pause();
       waveOut.Close();
       synthEvent.Wait();

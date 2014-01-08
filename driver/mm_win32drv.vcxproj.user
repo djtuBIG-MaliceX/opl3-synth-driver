@@ -3,8 +3,8 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
     <RemoteDebuggerAttach>true</RemoteDebuggerAttach>
-    <LocalDebuggerCommand>wmplayer.exe</LocalDebuggerCommand>
-    <LocalDebuggerAttach>true</LocalDebuggerAttach>
+    <LocalDebuggerCommand>"D:\Apps\Audio\Winjammer Professional\WJPro.exe"</LocalDebuggerCommand>
+    <LocalDebuggerAttach>false</LocalDebuggerAttach>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LocalDebuggerCommand>wmplayer.exe</LocalDebuggerCommand>

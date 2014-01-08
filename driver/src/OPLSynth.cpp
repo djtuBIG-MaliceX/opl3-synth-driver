@@ -10,10 +10,10 @@
 #include "OPLSynth.h"
 
 // TODO - Determine way to read configuration for existing bank file before playback
-//#include "patch.h"
+#include "patch.h"
 //#include "mauipatch.h"
 //#include "fmsynthpatch.h"
-#include "2x2patchtest.h"
+//#include "2x2patchtest.h"
 //#include "ctmidipatch.h"
 
 void
@@ -30,8 +30,8 @@ void
 
    switch (bMsgType)
    {
-   case 0x90:      /* turn key on, or key off if volume == 0 */
-      if (bVelocity && m_curVol[bChannel] && m_iExpThres[bChannel])
+   case 0x90:      /* turn key on, or key off if VELOCITY == 0 */
+      if (bVelocity)
       {
          //if (bChannel == DRUMCHANNEL) // TODO: change to dynamically assignable drum channels
          if ((m_wDrumMode & (1<<bChannel)) || bChannel == DRUMCHANNEL)
