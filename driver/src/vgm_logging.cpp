@@ -1,13 +1,13 @@
 
 #include "vgm_logging.h"
 
-const double FMToVGMSamples = 0.887038377986966;
+static const double FMToVGMSamples = 0.887038377986966;
 
-VGM_HEADER VGMHead;
-DWORD ClockAdd, LastVgmDelay;
-FILE *hFileVGM = NULL;
-DWORD VGMSmplPlayed;
-WCHAR TempLogPath[BUFSIZ];
+static VGM_HEADER VGMHead;
+static DWORD ClockAdd, LastVgmDelay;
+static FILE *hFileVGM = NULL;
+static DWORD VGMSmplPlayed;
+static WCHAR TempLogPath[BUFSIZ];
 
 void VGMLog_Init()
 {
@@ -43,11 +43,13 @@ void VGMLog_Init()
    //   VGMHeadL.lngHzYM3812 = VGMHead.lngHzYM3812 | ClockAdd;
    if (VGMHead.lngHzYMF262)
       VGMHead.lngHzYMF262 = VGMHead.lngHzYMF262 | ClockAdd;
+
    ExpandEnvironmentStrings(L"%TEMP%\\opl3vgmlog.vgm", (LPWSTR)&TempLogPath, BUFSIZ);
-   //strcpy_s(TempLogPath, getenv("TEMP"));
-   //fopen_s(&hFileVGM, "opl3SynthLog.vgm", "wb");
    _wfopen_s(&hFileVGM, TempLogPath, L"wb");
-   //hFileVGM = fopen("D:\\Downloads\\testlog.vgm", "wb");
+   
+   //strcpy_s(TempLogPath, getenv("TEMP"));
+   //hFileVGM = fopen(TempLogPath, "wb");
+
    if (hFileVGM == NULL)
    {
       //hFileVGM = NULL;
@@ -58,6 +60,68 @@ void VGMLog_Init()
    LastVgmDelay = 0;
    VGMSmplPlayed = 0;
 }
+
+// helper function
+inline void VGMLog_CmdWrite(BYTE Cmd, BYTE Reg, BYTE Data)
+{
+	DWORD DelayDiff, CurTime;
+	WORD WrtDly;
+	
+   if (hFileVGM == NULL) return;
+
+   // Save current time before processing
+   CurTime = VGMSmplPlayed;
+
+	//DelayDiff = CurTime - LastVgmDelay;
+   DelayDiff = (DWORD)ceil((FMToVGMSamples * (CurTime - LastVgmDelay)));  // ceiling for now
+
+   // Write long waits
+	while(DelayDiff)
+	{
+		if (DelayDiff > 0xFFFF)
+			WrtDly = 0xFFFF;
+		else
+			WrtDly = (WORD)DelayDiff;
+		fputc(0x61, hFileVGM);
+		fwrite(&WrtDly, 0x02, 0x01, hFileVGM);
+		DelayDiff -= WrtDly;
+	}
+	LastVgmDelay = CurTime;	//PlayingTime;
+	
+	fputc(Cmd, hFileVGM);
+	if (Cmd == 0x66)  // EOF
+		return;
+	fputc(Reg, hFileVGM);
+	fputc(Data, hFileVGM);
+	
+	return;
+}
+
+void VGMLog_IncrementSamples(int len)
+{
+   //VGMSmplPlayed += (DWORD)(len * FMToVGMSamples);
+   VGMSmplPlayed += len;
+}
+
+
+//Stop the logger
+void VGMLog_Close()
+{
+   if (hFileVGM == NULL) return;
+
+   VGMLog_CmdWrite(0x66, 0x00, 0x00);
+   UINT32 AbsVol = (UINT32)(ftell(hFileVGM) - 0x04);
+   fseek(hFileVGM, 0x04, SEEK_SET);
+   fwrite(&AbsVol, sizeof(UINT32), 0x01, hFileVGM);
+   fseek(hFileVGM, 0x18, SEEK_SET);
+   fwrite(&VGMSmplPlayed, 0x04, 0x01, hFileVGM);
+   fclose(hFileVGM);
+
+#ifdef _DEBUG
+   MessageBox(NULL, L"File opl3SynthLog.vgm saved.", L"VGM Logger", MB_OK | MB_ICONINFORMATION);
+#endif //_DEBUG
+}
+
 
 /*OPL_Write() / adlib_wite() etc. guide
 static inline void OPL_Write(BYTE ChipID, WORD Register, BYTE Data)
@@ -100,57 +164,3 @@ static inline void OPL_Write(BYTE ChipID, WORD Register, BYTE Data)
       break;
    }
 }*/
-
-// helper function
-inline void VGMLog_CmdWrite(BYTE Cmd, BYTE Reg, BYTE Data)
-{
-	DWORD DelayDiff, CurTime;
-	WORD WrtDly;
-	
-   if (hFileVGM == NULL) return;
-
-   CurTime = VGMSmplPlayed;
-
-	//DelayDiff = PlayingTime - LastVgmDelay;
-	DelayDiff = CurTime - LastVgmDelay;
-	while(DelayDiff)
-	{
-		if (DelayDiff > 0xFFFF)
-			WrtDly = 0xFFFF;
-		else
-			WrtDly = (unsigned short int)DelayDiff;
-		fputc(0x61, hFileVGM);
-		fwrite(&WrtDly, 0x02, 0x01, hFileVGM);
-		DelayDiff -= WrtDly;
-	}
-	LastVgmDelay = CurTime;	//PlayingTime;
-	
-	fputc(Cmd, hFileVGM);
-	if (Cmd == 0x66)
-		return;
-	fputc(Reg, hFileVGM);
-	fputc(Data, hFileVGM);
-	
-	return;
-}
-
-void VGMLog_IncrementSamples(int len)
-{
-   VGMSmplPlayed += (DWORD)(len * FMToVGMSamples);
-   //VGMSmplPlayed += len;
-}
-
-void VGMLog_Close()
-{
-   if (hFileVGM == NULL) return;
-
-   VGMLog_CmdWrite(0x66, 0x00, 0x00);
-   UINT32 AbsVol = (UINT32)(ftell(hFileVGM) - 0x04);
-   fseek(hFileVGM, 0x04, SEEK_SET);
-   fwrite(&AbsVol, sizeof(UINT32), 0x01, hFileVGM);
-   fseek(hFileVGM, 0x18, SEEK_SET);
-   fwrite(&VGMSmplPlayed, 0x04, 0x01, hFileVGM);
-   fclose(hFileVGM);
-
-   MessageBox(NULL, L"File opl3SynthLog.vgm saved.", L"VGM Logger", MB_OK | MB_ICONINFORMATION);
-}

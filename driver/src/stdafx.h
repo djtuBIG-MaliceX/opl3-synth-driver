@@ -23,5 +23,6 @@ extern "C" {
 #include <mmreg.h>
 #include <process.h>
 #include <iostream>
+#include <cmath>
 #include "OPLSynth.h"
 #include "MidiSynth.h"
