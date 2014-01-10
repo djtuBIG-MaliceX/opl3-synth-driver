@@ -66,6 +66,7 @@ inline void VGMLog_CmdWrite(BYTE Cmd, BYTE Reg, BYTE Data)
 {
 	DWORD DelayDiff, CurTime;
 	WORD WrtDly;
+   double tempCalc;
 	
    if (hFileVGM == NULL) return;
 
@@ -73,7 +74,10 @@ inline void VGMLog_CmdWrite(BYTE Cmd, BYTE Reg, BYTE Data)
    CurTime = VGMSmplPlayed;
 
 	//DelayDiff = CurTime - LastVgmDelay;
-   DelayDiff = (DWORD)ceil((FMToVGMSamples * (CurTime - LastVgmDelay)));  // ceiling for now
+   //tempCalc = FMToVGMSamples * (CurTime - LastVgmDelay);  // ceiling for now
+   //DelayDiff = (fmod(tempCalc, 1) >= 0.5) ? (DWORD)ceil(tempCalc) : (DWORD)(tempCalc);
+   DelayDiff = (DWORD)floor((FMToVGMSamples * (CurTime - LastVgmDelay) + 0.5));
+   //DelayDiff = (DWORD)(FMToVGMSamples * CurTime - FMToVGMSamples * LastVgmDelay);
 
    // Write long waits
 	while(DelayDiff)
@@ -82,6 +86,7 @@ inline void VGMLog_CmdWrite(BYTE Cmd, BYTE Reg, BYTE Data)
 			WrtDly = 0xFFFF;
 		else
 			WrtDly = (WORD)DelayDiff;
+
 		fputc(0x61, hFileVGM);
 		fwrite(&WrtDly, 0x02, 0x01, hFileVGM);
 		DelayDiff -= WrtDly;
