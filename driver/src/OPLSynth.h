@@ -115,6 +115,10 @@ typedef struct _voiceStruct {
    DWORD   dwOrigPitch[2];         /* original pitch, for pitch bend */
    BYTE    bBlock[2];              /* value sent to the block */
    BYTE    bSusHeld;               /* turned off, but held on by sustain */
+
+   // for EG/LFO
+   DWORD   dwStartTime;
+   DWORD   dwLFOVal;
 } voiceStruct;
 
 
@@ -168,6 +172,13 @@ static BYTE gb4OpVoices[] =
    0, 1, 2, 9, 10, 11
 };
 
+// Rhythm mode channels
+#define RHY_CH_BD (0x06)
+#define RHY_CH_SD (0x07)
+#define RHY_CH_TOM (0x08)
+#define RHY_CH_HH (0x09)
+#define RHY_CH_CY (0x0A)
+
 static BYTE gbVelocityAtten[64] = 
 {
    40, 37, 35, 33, 31, 29, 27, 25, 24, 22, 21, 20, 19, 18, 17, 16,
@@ -197,6 +208,7 @@ private:
    // midi stuff
    voiceStruct m_Voice[NUM2VOICES];  /* info on what voice is where */
    DWORD m_dwCurTime;    /* for note on/off */
+   DWORD m_dwCurSample;  /* for software eg/lfo generators */
    /* volume */
    WORD    m_wSynthAttenL;        /* in 1.5dB steps */
    WORD    m_wSynthAttenR;        /* in 1.5dB steps */
@@ -217,6 +229,7 @@ private:
    BYTE    m_curVol[NUMMIDICHN];      /* Volume control */
    BYTE    m_RPN[NUMMIDICHN][2];      /* RPN WORD */
    BYTE    m_iBendRange[NUMMIDICHN];  /* Bend range as dictated by CC100=0, CC101=0, CC6=n, where n= +/- range of semitones */
+   BYTE    m_bModWheel[NUMMIDICHN];   /* Modulation wheel setting */
    
    WORD    m_wMonoMode;    /* Flag for bend mode, bitmasked (LSB=ch1) */
    WORD    m_wDrumMode;    /* Flag for drum mode, bitmasked (LSB=ch1) */
@@ -245,9 +258,9 @@ private:
    void Opl3_ChannelNotesOff(BYTE bChannel);
    WORD Opl3_FindFullSlot(BYTE bNote, BYTE bChannel);
    //WORD Opl3_CalcFAndB (DWORD dwPitch);
-   WORD Opl3_MIDINote2FNum(BYTE note, BYTE bChannel);
+   WORD Opl3_MIDINote2FNum(BYTE note, BYTE bChannel, long dwLFOVal);
    void Opl3_ProcessDataEntry(BYTE bVal, BYTE bChannel);
-   void Opl3_Set4OpFlag(BYTE bVoice, bool bSetFlag);
+   void Opl3_Set4OpFlag(BYTE bVoice, bool bSetFlag, BYTE bOp);
    //DWORD Opl3_CalcBend (DWORD dwOrig, short iBend);
    //DWORD Opl3_CalcBend (DWORD dwOrig, long iBend);
    BYTE Opl3_CalcVolume (BYTE bOrigAtten, BYTE bChannel,BYTE bVelocity, BYTE bOper, BYTE bMode);
@@ -261,6 +274,7 @@ private:
    void Opl3_CalcPatchModifiers(noteStruct *lpSN, BYTE bChannel);
    void Opl3_BoardReset(void);
    bool Opl3_IsPatchEmpty(BYTE bPatch);
+   void Opl3_LFOUpdate(BYTE bVoice);
 public:
    void WriteMidiData(DWORD dwData);
    bool Init(void);

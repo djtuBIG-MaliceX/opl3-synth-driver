@@ -82,7 +82,11 @@ void
             m_wDrumMode &~(1<<bChannel) ;
 
          break;
-         
+     
+      case 1: // Modulation
+         m_bModWheel[bChannel] = bVelocity;
+         break;
+
       case 6: // Data Entry (CC98-101 dependent)
          Opl3_ProcessDataEntry(bVelocity, bChannel);
          break;
@@ -315,7 +319,9 @@ void
          m_Voice[wTemp].bSusHeld = 1;
          if (b4Op)
          {
-            wTemp2 = Opl3_FindSecondVoice((BYTE)wTemp, m_Voice[wTemp].bVoiceID);
+            wTemp2 = (lpPS->note.bOp == PATCH_2_2OP) ?
+               Opl3_FindSecondVoice((BYTE)wTemp, m_Voice[wTemp].bVoiceID) :
+               wTemp + 3;
             if (wTemp2 != (WORD)~0) 
                m_Voice[wTemp2].bSusHeld = 1;
          }
@@ -326,13 +332,13 @@ void
       switch(lpPS->note.bOp)
       {
          case PATCH_1_4OP: // note cut on second voice is not necessary but need to be verified.
-            wTemp2 = (lpPS->note.bAtC0[1] & 0x1) ? Opl3_FindSecondVoice((BYTE)wTemp, m_Voice[wTemp].bVoiceID) : (wTemp+3);
+            wTemp2 = /*(lpPS->note.bAtC0[1] & 0x1) ? Opl3_FindSecondVoice((BYTE)wTemp, m_Voice[wTemp].bVoiceID) :*/ (wTemp+3);
 
             Opl3_CutVoice((BYTE)wTemp, FALSE);
 
-            if (wTemp2 != (WORD)~0 && (lpPS->note.bAtC0[1] & 0x1))
+            /*if (wTemp2 != (WORD)~0 && (lpPS->note.bAtC0[1] & 0x1))
                Opl3_CutVoice((BYTE)wTemp2, FALSE);
-            else
+            else*/
             {
                m_Voice[wTemp+3].bOn = FALSE;
                m_Voice[wTemp+3].bSusHeld = FALSE;
@@ -478,7 +484,7 @@ void
    WORD            i ;
    WORD            wOffset ;
    operStruct      *lpOS ;
-   BYTE            b4Op = (BYTE)(lpSN->bOp != PATCH_1_2OP); // second operator pair does not send key on
+   BYTE            b4Op = (BYTE)(lpSN->bOp != PATCH_1_2OP);
 
    // Do not send note off to allow for mono mode legato
    if ( !(m_wMonoMode & (1<<bChannel)) )
@@ -490,8 +496,8 @@ void
 
       Opl3_ChipWrite(AD_BLOCK + wOffset, 0 ) ;
 
-      // needed for 4op patches
-      if (b4Op && (lpSN->bAtC0[1] & 0x01))
+      // needed for 2x2op patches
+      if (b4Op && lpSN->bOp == PATCH_2_2OP)
       {
          wOffset = wNote2;
          if (wNote2 >= (NUM2VOICES / 2))
@@ -533,7 +539,7 @@ void
    Opl3_ChipWrite(0xb0 + wOffset,
       (BYTE)(lpSN -> bAtB0[ 0 ] | 0x20) ) ;
 
-   if (b4Op && (lpSN->bOp == PATCH_2_2OP || (lpSN->bOp == PATCH_1_4OP && (lpSN->bAtC0[1] & 0x1))))
+   if (b4Op && (lpSN->bOp == PATCH_2_2OP /*|| (lpSN->bOp == PATCH_1_4OP && (lpSN->bAtC0[1] & 0x1))*/))
    {
       wOffset = (wNote2 < 9) ? wNote2 : (wNote2 + 0x100 - 9) ;
       Opl3_ChipWrite(0xa0 + wOffset, lpSN -> bAtA0[ 1 ] ) ;
@@ -623,7 +629,7 @@ void
          dwPitch[ j ] = AsULSHR( dwPitch[ j ], (BYTE)((BYTE)4 - bTemp) ) ;*/
 
       //wTemp = Opl3_CalcFAndB( Opl3_CalcBend( dwPitch[ j ], iBend ) ) ;
-      wTemp = Opl3_MIDINote2FNum(bNote, bChannel);
+      wTemp = Opl3_MIDINote2FNum(bNote, bChannel, 0);
       NS.bAtA0[ j ] = (BYTE) wTemp ;
       NS.bAtB0[ j ] = (BYTE) 0x20 | (BYTE) (wTemp >> 8) ;
    }
@@ -701,7 +707,7 @@ void
    else
    {
       // Find an empty slot, and use it...
-      wTemp = (NS.bOp == PATCH_1_4OP && (NS.bAtC0[1] & 0x1) == 0) ?
+      wTemp = (NS.bOp == PATCH_1_4OP /*&& (NS.bAtC0[1] & 0x1) == 0*/) ?
          Opl3_FindEmptySlot4Op(bPatch) : Opl3_FindEmptySlot( bPatch );
    }
 
@@ -716,6 +722,7 @@ void
    m_Voice[ wTemp ].bBlock[1] = NS.bAtB0[ 1 ] ;
    m_Voice[ wTemp ].bSusHeld = 0;
    m_Voice[ wTemp ].dwTime = ++m_dwCurTime ;
+   m_Voice[ wTemp ].dwStartTime = m_dwCurSample;
 
    if (b4Op)
    {
@@ -726,20 +733,21 @@ void
                Opl3_FindSecondVoice((BYTE)wTemp, m_Voice[m_bLastVoiceUsed[bChannel]].bVoiceID) : 
                ~0;
             wTemp2 = (wTemp2 != (WORD)~0) ? wTemp2 : Opl3_FindEmptySlot( bPatch );
-            Opl3_Set4OpFlag((BYTE)wTemp, FALSE);
+            Opl3_Set4OpFlag((BYTE)wTemp, false, PATCH_2_2OP);
+            Opl3_Set4OpFlag((BYTE)wTemp2, false, PATCH_2_2OP);
             break;
 
          case PATCH_1_4OP:
-            if ((NS.bAtC0[1] & 0x1) == 0)
+            /*if ((NS.bAtC0[1] & 0x1) == 0)*/
             {
                wTemp2 = wTemp + 3; // TODO check if correct voice distance
 
                // set 4-op mode for this channel
-               Opl3_Set4OpFlag((BYTE)wTemp, TRUE);
+               Opl3_Set4OpFlag((BYTE)wTemp, true, PATCH_1_4OP);
 
                break;
             }
-            else
+            /*else
             {
                wTemp2 = ((m_wMonoMode & (1<<bChannel)) > 0) ? // Get corresponding voice last used
                Opl3_FindSecondVoice((BYTE)wTemp, m_Voice[m_bLastVoiceUsed[bChannel]].bVoiceID) : 
@@ -748,7 +756,7 @@ void
                
                Opl3_Set4OpFlag((BYTE)wTemp, FALSE);
                break;
-            }
+            }*/
       }
 
       m_Voice[ wTemp2 ].bNote = bNote ;
@@ -762,9 +770,10 @@ void
       m_Voice[ wTemp2 ].bBlock[1] = NS.bAtB0[ 1 ] ;
       m_Voice[ wTemp2 ].bSusHeld = 0;
       m_Voice[ wTemp2 ].dwTime = ++m_dwCurTime ;
+      m_Voice[ wTemp2 ].dwStartTime = m_dwCurSample;
    }
    else
-      Opl3_Set4OpFlag((BYTE)wTemp, FALSE);
+      Opl3_Set4OpFlag((BYTE)wTemp, false, PATCH_1_2OP);
    
    // Send data
    Opl3_CalcPatchModifiers(&NS, bChannel);
@@ -780,19 +789,36 @@ void
 
 void
    OPLSynth::
-   Opl3_Set4OpFlag(BYTE bVoice, bool bSetFlag)
+   Opl3_Set4OpFlag(BYTE bVoice, bool bSetFlag, BYTE bOp)
 {
+   BYTE cur4OpVoiceSet = b4OpVoiceSet;
+
    for (int i = 0; i < NUM4VOICES; ++i)
    {
       if (gb4OpVoices[i] == (BYTE)bVoice)
       {
+         // Unset voice if not 4op
+         if (bOp != PATCH_1_4OP && (cur4OpVoiceSet & (1<<i)) > 0)
+            Opl3_CutVoice(gb4OpVoices[i], TRUE);
+
+         // Unset relevant voices if 4op
+         /*else if (bOp == PATCH_1_4OP && (cur4OpVoiceSet & (i<<1)) > 0)
+         {
+            //if (m_Voice[bVoice].bOn)
+            Opl3_CutVoice(gb4OpVoices[i], TRUE);
+
+            //if (m_Voice[bVoice+3].bOn)
+            Opl3_CutVoice(gb4OpVoices[i]+3, TRUE);
+         }*/
+
          // Update local register
          b4OpVoiceSet = (bSetFlag) ?
             (b4OpVoiceSet | (1<<i)) :
             (b4OpVoiceSet & ~(1<<i)) ;
 
          // Write 4op enable/disable register to chip
-         Opl3_ChipWrite(AD_CONNECTION, (BYTE)(b4OpVoiceSet)) ;
+         if (cur4OpVoiceSet != b4OpVoiceSet)
+            Opl3_ChipWrite(AD_CONNECTION, (BYTE)(b4OpVoiceSet)) ;
          
          break;
       }
@@ -801,14 +827,15 @@ void
       else if (gb4OpVoices[i]+3 == (BYTE)bVoice/* && !bSetFlag*/)
       {
          // Cut base voice to be safe (?)
-         if (b4OpVoiceSet & (1<<i))
+         if (bOp != PATCH_1_4OP && (cur4OpVoiceSet & (1<<i)) > 0)
             Opl3_CutVoice(gb4OpVoices[i], TRUE);
 
          // Update local register
          b4OpVoiceSet &= ~(1<<i);
 
          // Write 4op enable/disable register to chip
-         Opl3_ChipWrite(AD_CONNECTION, (BYTE)(b4OpVoiceSet)) ;
+         if (cur4OpVoiceSet != b4OpVoiceSet)
+            Opl3_ChipWrite(AD_CONNECTION, (BYTE)(b4OpVoiceSet)) ;
          break;
       }
    }
@@ -1226,7 +1253,7 @@ void
 //   DWORD  dwNew ;
 
    // Remember the current bend..
-   m_iBend[ bChannel ] = iBend ;
+   m_iBend[ bChannel ] = iBend;
 
    // Loop through all the notes looking for
    // the correct channel.  Anything with the
@@ -1236,7 +1263,7 @@ void
       {
          j = 0 ;
          //wTemp[ j ] = Opl3_CalcFAndB( Opl3_CalcBend( m_Voice[ i ].dwOrigPitch[ j ], iBend ) ) ;
-         wTemp[ j ] = Opl3_MIDINote2FNum(m_Voice[ i ].bNote, bChannel);
+         wTemp[ j ] = Opl3_MIDINote2FNum(m_Voice[ i ].bNote, bChannel, m_Voice[ i ].dwLFOVal);
          m_Voice[ i ].bBlock[ j ] =
             (m_Voice[ i ].bBlock[ j ] & (BYTE) 0xe0) |
             (BYTE) (wTemp[ j ] >> 8) ;
@@ -1260,13 +1287,14 @@ void
 //  Parameters:
 //     BYTE note     - MIDI note number
 //     BYTE bChannel - channel
+//     long dwLFOVal - current magnitude of the modulation waveform
 //
 //  Return Value:
 //     ((WORD) BlockVal << 10) | (WORD) keyVal;
 // ===========================================================================
 WORD
    OPLSynth::
-   Opl3_MIDINote2FNum(BYTE note, BYTE bChannel)
+   Opl3_MIDINote2FNum(BYTE note, BYTE bChannel, long dwLFOVal)
 {
 	double freqVal, curNote;
 	signed char BlockVal;
@@ -1276,7 +1304,7 @@ WORD
    /*TODO: keep for later, may add other features */
 	//CurPitch = //MMstTuning + TempMid->TunePb + TempMid->Pitch + TempMid->ModPb;
 	
-	curNote = (double)(note + m_iBend[bChannel] / 8192.0); //Note + CurPitch / 8192.0;
+	curNote = (double)(note + (m_iBend[bChannel] + dwLFOVal) / 8192.0); //Note + CurPitch / 8192.0;
 	freqVal = 440.0 * pow(2.0, (curNote - 69) / 12.0);
 	//BlockVal = ((signed short int)CurNote / 12) - 1;
 	BlockVal = ((signed short int)(curNote + 6) / 12) - 2;
@@ -1363,43 +1391,44 @@ WORD
    found = 0xffff ;
 
    for (i = 0; i < NUM2VOICES; i++)
-      if (!m_Voice[ i ].bOn && (m_Voice[ i ].dwTime < dwOldest))
+      if ((!m_Voice[ i ].bOn/* || !m_Voice[ i ].bSusHeld*/)
+       && (m_Voice[ i ].dwTime < dwOldest))
       {
          dwOldest = m_Voice[ i ].dwTime ;
          found = i ;
       }
-      if (found != 0xffff)
-         return ( found ) ;
+   if (found != 0xffff)
+      return ( found ) ;
 
-      // Now, look for a slot of the oldest note with
-      // the same patch
-      dwOldest = 0xffffffff ;
-      found = 0xffff ;
-      for (i = 0; i < NUM2VOICES; i++)
-         if ((m_Voice[ i ].bPatch == bPatch) && (m_Voice[ i ].dwTime < dwOldest))
-         {
-            dwOldest = m_Voice[ i ].dwTime ;
-            found = i ;
-         }
-         if (found != 0xffff)
-            return ( found ) ;
+   // Now, look for a slot of the oldest note with
+   // the same patch
+   dwOldest = 0xffffffff ;
+   found = 0xffff ;
+   for (i = 0; i < NUM2VOICES; i++)
+      if ((m_Voice[ i ].bPatch == bPatch) && (m_Voice[ i ].dwTime < dwOldest))
+      {
+         dwOldest = m_Voice[ i ].dwTime ;
+         found = i ;
+      }
+   if (found != 0xffff)
+      return ( found ) ;
 
-         // Now, just look for the oldest voice
-         found = 0 ;
-         dwOldest = m_Voice[ found ].dwTime ;
-         for (i = (found + 1); i < NUM2VOICES; i++)
-            if (m_Voice[ i ].dwTime < dwOldest)
-            {
-               dwOldest = m_Voice[ i ].dwTime ;
-               found = i ;
-            }
+   // Now, just look for the oldest voice
+   found = 0 ;
+   dwOldest = m_Voice[ found ].dwTime ;
+   for (i = (found + 1); i < NUM2VOICES; i++)
+      if (m_Voice[ i ].dwTime < dwOldest)
+      {
+         dwOldest = m_Voice[ i ].dwTime ;
+         found = i ;
+      }
 
-            return ( found ) ;
+    return ( found ) ;
 
 } // end of Opl3_FindEmptySlot()
 
 //------------------------------------------------------------------------
-//  WORD Opl3_FindEmptySlot
+//  WORD Opl3_FindEmptySlot4Op
 //
 //  Description:
 //     This finds an empty note-slot for a 4-op MIDI voice.
@@ -1435,41 +1464,40 @@ WORD
    found = 0xffff ;
 
    for (i = 0; i < NUM4VOICES; i++)
-      if (!m_Voice[ gb4OpVoices[ i ] ].bOn && (m_Voice[ gb4OpVoices[ i ] ].dwTime < dwOldest))
+      if ((!m_Voice[ gb4OpVoices[ i ] ].bOn/* || !m_Voice[ gb4OpVoices[ i ] ].bSusHeld*/)
+       && (m_Voice[ gb4OpVoices[ i ] ].dwTime < dwOldest))
       {
          dwOldest = m_Voice[ gb4OpVoices[ i ] ].dwTime ;
          found = gb4OpVoices[ i ] ;
       }
-      if (found != 0xffff)
-         return ( found ) ;
 
-      // Now, look for a slot of the oldest note with
-      // the same patch
-      dwOldest = 0xffffffff ;
-      found = 0xffff ;
-      for (i = 0; i < NUM4VOICES; i++)
-         if ((m_Voice[ gb4OpVoices[ i ] ].bPatch == bPatch) && (m_Voice[ gb4OpVoices[ i ] ].dwTime < dwOldest))
-         {
-            dwOldest = m_Voice[ gb4OpVoices[ i ] ].dwTime ;
-            found = gb4OpVoices[ i ] ;
-         }
-         if (found != 0xffff)
-            return ( found ) ;
+   if (found != 0xffff)
+      return ( found ) ;
 
-         // Now, just look for the oldest voice
-         found = 0 ;
-         dwOldest = m_Voice[ gb4OpVoices[ found ] ].dwTime ;
-         for (i = (found + 1); i < NUM4VOICES; i++)
-            if (m_Voice[ gb4OpVoices[ i ] ].dwTime < dwOldest)
-            {
-               dwOldest = m_Voice[ gb4OpVoices[ i ] ].dwTime ;
-               found = gb4OpVoices[ i ] ;
-            }
+   // Now, look for a slot of the oldest note with
+   // the same patch
+   dwOldest = 0xffffffff ;
+   found = 0xffff ;
+   for (i = 0; i < NUM4VOICES; i++)
+      if ((m_Voice[ gb4OpVoices[ i ] ].bPatch == bPatch) && (m_Voice[ gb4OpVoices[ i ] ].dwTime < dwOldest))
+      {
+         dwOldest = m_Voice[ gb4OpVoices[ i ] ].dwTime ;
+         found = gb4OpVoices[ i ] ;
+      }
+   if (found != 0xffff)
+      return ( found ) ;
 
-            return ( found ) ;
+   // Now, just look for the oldest voice
+   found = 0 ;
+   dwOldest = m_Voice[ gb4OpVoices[ found ] ].dwTime ;
+   for (i = (found + 1); i < NUM4VOICES; i++)
+      if (m_Voice[ gb4OpVoices[ i ] ].dwTime < dwOldest)
+      {
+         dwOldest = m_Voice[ gb4OpVoices[ i ] ].dwTime ;
+         found = gb4OpVoices[ i ] ;
+      }
 
-   // should never go here
-   return (WORD)0xffff;
+   return ( found ) ;
 
 } // end of Opl3_FindEmptySlot4Op()
 
@@ -1566,6 +1594,8 @@ void
    Opl3_CutVoice(BYTE bVoice, BYTE bIsInstantCut)
 {
    WORD wOffset = bVoice, wOpOffset;
+   noteStruct *lpNS = &((glpPatch + m_Voice[bVoice].bPatch)->note);
+   BYTE bOp = lpNS->bOp;
 
    if (bVoice >= (NUM2VOICES / 2))
       wOffset += (0x100 - (NUM2VOICES / 2));
@@ -1573,8 +1603,54 @@ void
    // set op1 sustain to high
    if (bIsInstantCut)
    {
-      wOpOffset = gw2OpOffset[ bVoice ][ 1 ] ; // assuming 2op
-      Opl3_ChipWrite( 0x80 + wOpOffset, 0xFF) ; // set SR to high
+      if (bOp == PATCH_1_4OP)
+      {
+         BYTE alg = (lpNS->bAtC0[0] & 0x01) | ((lpNS->bAtC0[1] & 0x01)<<1);
+
+         //Check carriers for 4op patch
+         switch(alg)
+         {
+            case 3:
+               wOpOffset = gw2OpOffset[ bVoice ][ 0 ] ;
+               Opl3_ChipWrite( 0x80 + wOpOffset, 0xFF) ; // set SR to high
+               wOpOffset = gw2OpOffset[ bVoice +3 ][ 0 ] ;
+               Opl3_ChipWrite( 0x80 + wOpOffset, 0xFF) ; // set SR to high
+               wOpOffset = gw2OpOffset[ bVoice +3 ][ 1 ] ;
+               Opl3_ChipWrite( 0x80 + wOpOffset, 0xFF) ; // set SR to high
+               break;
+
+            case 2:
+               wOpOffset = gw2OpOffset[ bVoice ][ 1 ] ;
+               Opl3_ChipWrite( 0x80 + wOpOffset, 0xFF) ; // set SR to high
+               wOpOffset = gw2OpOffset[ bVoice +3 ][ 1 ] ;
+               Opl3_ChipWrite( 0x80 + wOpOffset, 0xFF) ; // set SR to high
+               break;
+
+            case 1:
+               wOpOffset = gw2OpOffset[ bVoice ][ 0 ] ;
+               Opl3_ChipWrite( 0x80 + wOpOffset, 0xFF) ; // set SR to high
+               //fall through
+
+            case 0:
+               wOpOffset = gw2OpOffset[ bVoice +3 ][ 1 ] ;
+               Opl3_ChipWrite( 0x80 + wOpOffset, 0xFF) ; // set SR to high
+               break;
+         }
+
+         
+      }
+      else
+      {
+         wOpOffset = gw2OpOffset[ bVoice ][ 1 ] ; // assuming 2op
+         Opl3_ChipWrite( 0x80 + wOpOffset, 0xFF) ; // set SR to high
+
+         // if AM mode
+         if (lpNS->bAtC0[0] & 0x01)
+         {
+            wOpOffset = gw2OpOffset[ bVoice ][ 0 ] ; // assuming 2op
+            Opl3_ChipWrite( 0x80 + wOpOffset, 0xFF) ; // set SR to high
+         }
+      }
    }
 
    Opl3_ChipWrite(AD_BLOCK + wOffset,
@@ -1621,6 +1697,7 @@ bool
       m_bAttack[i] = 64;
       m_bRelease[i] = 64;
       m_bBrightness[i] = 64;
+      m_bModWheel[i] = 0;
    };
 
 //#ifdef DISABLE_HW_SUPPORT
@@ -1634,10 +1711,57 @@ bool
    return true;
 }
 
+void
+   OPLSynth::
+   Opl3_LFOUpdate(BYTE bVoice)
+{
+   WORD   wTemp, wOffset;
+   DWORD  newLFOVal;
+   double timeLapse = 0.00025*PI*(double)(m_dwCurSample-m_Voice[bVoice].dwStartTime);
+
+   // 100Hz sine wave with half semitone magnitude by default
+   // (mod*32)sin((1/100)*FSAMP * curSample)
+   newLFOVal = (DWORD)floor(0.5 + (m_bModWheel[m_Voice[bVoice].bChannel]*32)*sin(timeLapse));
+   if (newLFOVal == m_Voice[bVoice].dwLFOVal)
+      return;
+
+   m_Voice[bVoice].dwLFOVal = newLFOVal;
+
+   wTemp = Opl3_MIDINote2FNum(m_Voice[ bVoice ].bNote, m_Voice[bVoice].bChannel, m_Voice[bVoice].dwLFOVal);
+   m_Voice[ bVoice ].bBlock[ 0 ] =
+      (m_Voice[ bVoice ].bBlock[ 0 ] & (BYTE) 0xe0) |
+      (BYTE) (wTemp >> 8) ;
+
+   wOffset = bVoice;
+   if (bVoice >= (NUM2VOICES / 2))
+      wOffset += (0x100 - (NUM2VOICES / 2));
+
+   Opl3_ChipWrite(AD_BLOCK + wOffset, m_Voice[ bVoice ].bBlock[ 0 ] ) ;
+   Opl3_ChipWrite(AD_FNUMBER + wOffset, (BYTE) wTemp ) ;
+   
+} // end of Opl3_PitchBend
+
 void 
    OPLSynth::
    GetSample(short *sample, int len)
 {
+   BYTE i;
+
+   // Perform stepping of pitch LFO
+   //for (i = 0; i < len; ++i)
+   //{
+   //   if (i%(FSAMP/100)==0)
+   //   {
+   // Step through each channel
+   for (i = 0; i < NUM2VOICES; i++)
+   {
+      Opl3_LFOUpdate(i);
+   }
+      //}
+   //}
+
+   m_dwCurSample += len;
+
 //#ifdef DISABLE_HW_SUPPORT
    m_Miniport.adlib_getsample(sample,len);
 //#endif /*DISABLE_HW_SUPPORT*/

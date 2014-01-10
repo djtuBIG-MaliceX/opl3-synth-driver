@@ -20,6 +20,8 @@ BYTE BCODE gbPercMap[128][2] =
    {120, 0  },   {121, 0  },   {122, 0  },   {123, 0  },   {124, 0  },   {125, 0  },   {126, 0  },   {127, 0  },
 };
 
+BOOLEAN IsRhythmMode = false;
+
 // Operator voices
 patchStruct glpPatch[] = 
 {

@@ -66,7 +66,6 @@ inline void VGMLog_CmdWrite(BYTE Cmd, BYTE Reg, BYTE Data)
 {
 	DWORD DelayDiff, CurTime;
 	WORD WrtDly;
-   double tempCalc;
 	
    if (hFileVGM == NULL) return;
 
@@ -74,8 +73,6 @@ inline void VGMLog_CmdWrite(BYTE Cmd, BYTE Reg, BYTE Data)
    CurTime = VGMSmplPlayed;
 
 	//DelayDiff = CurTime - LastVgmDelay;
-   //tempCalc = FMToVGMSamples * (CurTime - LastVgmDelay);  // ceiling for now
-   //DelayDiff = (fmod(tempCalc, 1) >= 0.5) ? (DWORD)ceil(tempCalc) : (DWORD)(tempCalc);
    DelayDiff = (DWORD)floor((FMToVGMSamples * (CurTime - LastVgmDelay) + 0.5));
    //DelayDiff = (DWORD)(FMToVGMSamples * CurTime - FMToVGMSamples * LastVgmDelay);
 
@@ -112,6 +109,8 @@ void VGMLog_IncrementSamples(int len)
 //Stop the logger
 void VGMLog_Close()
 {
+   DWORD TotalSamples = (DWORD)floor(VGMSmplPlayed * FMToVGMSamples + 0.5);
+
    if (hFileVGM == NULL) return;
 
    VGMLog_CmdWrite(0x66, 0x00, 0x00);
@@ -119,7 +118,8 @@ void VGMLog_Close()
    fseek(hFileVGM, 0x04, SEEK_SET);
    fwrite(&AbsVol, sizeof(UINT32), 0x01, hFileVGM);
    fseek(hFileVGM, 0x18, SEEK_SET);
-   fwrite(&VGMSmplPlayed, 0x04, 0x01, hFileVGM);
+   
+   fwrite(&TotalSamples, 0x04, 0x01, hFileVGM);
    fclose(hFileVGM);
 
 #ifdef _DEBUG
