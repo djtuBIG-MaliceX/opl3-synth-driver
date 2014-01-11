@@ -723,6 +723,8 @@ void
    m_Voice[ wTemp ].bSusHeld = 0;
    m_Voice[ wTemp ].dwTime = ++m_dwCurTime ;
    m_Voice[ wTemp ].dwStartTime = m_dwCurSample;
+   m_Voice[ wTemp ].dwLFOVal = 0;
+   m_Voice[ wTemp ].dwDetuneEG = 0; // TODO
 
    if (b4Op)
    {
@@ -771,6 +773,8 @@ void
       m_Voice[ wTemp2 ].bSusHeld = 0;
       m_Voice[ wTemp2 ].dwTime = ++m_dwCurTime ;
       m_Voice[ wTemp2 ].dwStartTime = m_dwCurSample;
+      m_Voice[ wTemp2 ].dwLFOVal = 0; // TODO
+      m_Voice[ wTemp2 ].dwDetuneEG = 0; // TODO
    }
    else
       Opl3_Set4OpFlag((BYTE)wTemp, false, PATCH_1_2OP);
@@ -1263,7 +1267,7 @@ void
       {
          j = 0 ;
          //wTemp[ j ] = Opl3_CalcFAndB( Opl3_CalcBend( m_Voice[ i ].dwOrigPitch[ j ], iBend ) ) ;
-         wTemp[ j ] = Opl3_MIDINote2FNum(m_Voice[ i ].bNote, bChannel, m_Voice[ i ].dwLFOVal);
+         wTemp[ j ] = Opl3_MIDINote2FNum(m_Voice[ i ].bNote, bChannel, (m_Voice[ i ].dwLFOVal + m_Voice[ i ].dwDetuneEG));
          m_Voice[ i ].bBlock[ j ] =
             (m_Voice[ i ].bBlock[ j ] & (BYTE) 0xe0) |
             (BYTE) (wTemp[ j ] >> 8) ;
@@ -1700,8 +1704,16 @@ bool
       m_bModWheel[i] = 0;
    };
 
+   for (i = 0; i < NUM2VOICES; ++i)
+   {
+      m_Voice[i].dwLFOVal = 0;
+      m_Voice[i].dwDetuneEG = 0;
+      m_Voice[i].bChannel = ~0;
+   }
+
 //#ifdef DISABLE_HW_SUPPORT
-   m_Miniport.adlib_init();
+   //m_Miniport.adlib_init();
+   m_Miniport = opl_init();
 //#else
    OPL_Hardware_Detection();
    OPL_HW_Init(); // start hardware
@@ -1715,19 +1727,34 @@ void
    OPLSynth::
    Opl3_LFOUpdate(BYTE bVoice)
 {
-   WORD   wTemp, wOffset;
-   DWORD  newLFOVal;
-   double timeLapse = 0.00025*PI*(double)(m_dwCurSample-m_Voice[bVoice].dwStartTime);
+   WORD  wTemp, wOffset;
+   long  newLFOVal = m_Voice[bVoice].dwLFOVal, 
+         newDetuneEG = m_Voice[bVoice].dwDetuneEG;
+   DWORD timeDiff = m_dwCurSample-m_Voice[bVoice].dwStartTime;
+   double timeLapse = 0.00025*3.14159265358979323846*(double)(timeDiff);
 
    // 100Hz sine wave with half semitone magnitude by default
    // (mod*32)sin((1/100)*FSAMP * curSample)
-   newLFOVal = (DWORD)floor(0.5 + (m_bModWheel[m_Voice[bVoice].bChannel]*32)*sin(timeLapse));
-   if (newLFOVal == m_Voice[bVoice].dwLFOVal)
+   if (m_bModWheel[m_Voice[bVoice].bChannel] > 0)
+      newLFOVal = (DWORD)floor(0.5 + (m_bModWheel[m_Voice[bVoice].bChannel]*32)*sin(timeLapse));
+
+   // Linear envelope generator hack  (TODO: improve)
+   wTemp = gbPercMap[m_Voice[bVoice].bPatch-128][2] & 0xFF;
+   if ((m_wDrumMode & (1<<m_Voice[bVoice].bChannel)) > 0 && wTemp > 0
+      && (m_Voice[bVoice].bOn || m_Voice[bVoice].bSusHeld))   // only continue it if the note is held
+   {
+      newDetuneEG = (long)((signed char)wTemp * 0.25 * (timeDiff));
+   }
+
+   if (newLFOVal == m_Voice[bVoice].dwLFOVal && newDetuneEG == m_Voice[bVoice].dwDetuneEG)
       return;
 
    m_Voice[bVoice].dwLFOVal = newLFOVal;
+   m_Voice[bVoice].dwDetuneEG = newDetuneEG;
 
-   wTemp = Opl3_MIDINote2FNum(m_Voice[ bVoice ].bNote, m_Voice[bVoice].bChannel, m_Voice[bVoice].dwLFOVal);
+   newLFOVal += newDetuneEG;
+
+   wTemp = Opl3_MIDINote2FNum(m_Voice[ bVoice ].bNote, m_Voice[bVoice].bChannel, newLFOVal);
    m_Voice[ bVoice ].bBlock[ 0 ] =
       (m_Voice[ bVoice ].bBlock[ 0 ] & (BYTE) 0xe0) |
       (BYTE) (wTemp >> 8) ;
@@ -1763,7 +1790,8 @@ void
    m_dwCurSample += len;
 
 //#ifdef DISABLE_HW_SUPPORT
-   m_Miniport.adlib_getsample(sample,len);
+   //m_Miniport.adlib_getsample(sample,len);
+   opl_getoutput(m_Miniport, sample, len);
 //#endif /*DISABLE_HW_SUPPORT*/
 
    // Increment logger sample history
@@ -1843,7 +1871,8 @@ inline void
 {
 #ifdef DISABLE_HW_SUPPORT
    // Write to software chip
-   m_Miniport.adlib_write(idx,val);
+   //m_Miniport.adlib_write(idx,val);
+   opl_writereg(m_Miniport,idx,val);
 
 #else
 

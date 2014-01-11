@@ -6,7 +6,7 @@
 #include "stdafx.h"
 #ifndef OPL3SYNTH_H
 #define OPL3SYNTH_H
-#include "opl.h"
+#include "opl3.h"
 #include "opl_hw.h"
 #include "vgm_logging.h"
 
@@ -118,7 +118,8 @@ typedef struct _voiceStruct {
 
    // for EG/LFO
    DWORD   dwStartTime;
-   DWORD   dwLFOVal;
+   long   dwLFOVal;
+   long   dwDetuneEG;
 } voiceStruct;
 
 
@@ -203,7 +204,8 @@ static DWORD BCODE gdwPitch[12] = {
 class OPLSynth
 {
 private:
-   OPL     m_Miniport;
+   //OPL     m_Miniport;
+   void*     m_Miniport;
 
    // midi stuff
    voiceStruct m_Voice[NUM2VOICES];  /* info on what voice is where */
