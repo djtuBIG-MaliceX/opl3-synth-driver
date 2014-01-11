@@ -10,10 +10,10 @@
 #include "OPLSynth.h"
 
 // TODO - Determine way to read configuration for existing bank file before playback
-#include "patch.h"
+//#include "patch.h"
 //#include "mauipatch.h"
 //#include "fmsynthpatch.h"
-//#include "2x2patchtest.h"
+#include "2x2patchtest.h"
 //#include "ctmidipatch.h"
 
 void
@@ -342,7 +342,7 @@ void
             {
                m_Voice[wTemp+3].bOn = FALSE;
                m_Voice[wTemp+3].bSusHeld = FALSE;
-               m_Voice[wTemp+3].dwTime = m_dwCurTime;
+               m_Voice[wTemp+3].dwTime = ++m_dwCurTime;
             }
             break;
 
@@ -1660,7 +1660,7 @@ void
    m_Voice[ bVoice ].bOn = FALSE ;
    m_Voice[ bVoice ].bBlock[ 0 ] &= 0x1f ;
    m_Voice[ bVoice ].bBlock[ 1 ] &= 0x1f ;
-   m_Voice[ bVoice ].dwTime = m_dwCurTime ;
+   m_Voice[ bVoice ].dwTime = ++m_dwCurTime ;
    m_Voice[ bVoice ].bSusHeld = FALSE ;
 }
 
