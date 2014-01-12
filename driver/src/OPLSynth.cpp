@@ -83,8 +83,12 @@ void
 
          break;
      
-      case 1: // Modulation
+      case 1: // Modulation Wheel
          m_bModWheel[bChannel] = bVelocity;
+         break;
+
+      case 5: // Portamento Time
+         Opl3_SetPortamento(bChannel, bVelocity);
          break;
 
       case 6: // Data Entry (CC98-101 dependent)
@@ -112,9 +116,16 @@ void
          Opl3_ChannelVolume(bChannel,gbVelocityAtten[(BYTE)((m_curVol[bChannel] >> 1) * ((float)m_iExpThres[bChannel]/0x7F))]);
          break;
 
-      case 64:
+      case 64:  // Sustain Pedal
          /* Change the sustain level */
          Opl3_SetSustain(bChannel, bVelocity);
+         break;
+
+      case 65:  // Portamento Pedal
+         m_wPortaMode = (bVelocity > 0x3F) ?
+            m_wPortaMode | (1<<bChannel) :
+            m_wPortaMode & ~(1<<bChannel) ;
+
          break;
 
       case 72:  // Release
@@ -1545,6 +1556,19 @@ void
 
 void
    OPLSynth::
+   Opl3_SetPortamento(BYTE bChannel, BYTE bPortaTime)
+{
+   if ((m_wPortaMode & (1<<bChannel)) > 0)
+   {
+      m_bPortaTime[bChannel] = bPortaTime;
+
+      // Set current pitch etc.
+
+   }
+}
+
+void
+   OPLSynth::
    Opl3_BoardReset()
 {
    BYTE i;
@@ -1782,7 +1806,9 @@ void
    // Step through each channel
    for (i = 0; i < NUM2VOICES; i++)
    {
-      Opl3_LFOUpdate(i);
+      // Only execute once initialized
+      if (m_Voice[i].bChannel != (BYTE)~0)
+         Opl3_LFOUpdate(i);
    }
       //}
    //}
@@ -1888,10 +1914,13 @@ void
    OPLSynth::
    close()
 {
+   // Reset board
+   Opl3_BoardReset();
+   VGMLog_Close();
+
 #ifndef DISABLE_HW_SUPPORT
    OPL_HW_Close();
 #endif /*DISABLE_HW_SUPPORT*/
-   VGMLog_Close();
 }
 
 // Some stupid f***ing reason using this breaks playback, with or without anything in it

@@ -235,6 +235,8 @@ private:
    
    WORD    m_wMonoMode;    /* Flag for bend mode, bitmasked (LSB=ch1) */
    WORD    m_wDrumMode;    /* Flag for drum mode, bitmasked (LSB=ch1) */
+   WORD    m_wPortaMode;   /* Flag for bporta mode, bitmasked (LSB=ch1) */
+   BYTE    m_bPortaTime[NUMMIDICHN];  /* Number of getsample requests before reaching note */
    BYTE    m_bLastVoiceUsed[NUMMIDICHN]; /* Needed for legato in mono mode */
 
    BYTE    m_bPatch[NUMMIDICHN];   /* patch number mapped to */
@@ -273,6 +275,7 @@ private:
    void Opl3_FMNote(WORD wNote, noteStruct *lpSN, BYTE bChannel, WORD wNote2);
    void Opl3_SetSustain(BYTE bChannel, BYTE bSusLevel);
    void Opl3_CutVoice(BYTE bVoice, BYTE bIsInstantCut);
+   void Opl3_SetPortamento(BYTE bChannel, BYTE bPortaTime);
    void Opl3_CalcPatchModifiers(noteStruct *lpSN, BYTE bChannel);
    void Opl3_BoardReset(void);
    bool Opl3_IsPatchEmpty(BYTE bPatch);
