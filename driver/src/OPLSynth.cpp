@@ -313,13 +313,24 @@ void
    OPLSynth::
    Opl3_NoteOff(BYTE bPatch, BYTE bNote, BYTE bChannel, BYTE bSustain)
 {
-
    patchStruct *lpPS = glpPatch + (BYTE)bPatch; ;
    WORD         wTemp, wTemp2 ;
    BYTE         b4Op = (BYTE)(lpPS->note.bOp != PATCH_1_2OP);
 
    // Find the note slot
    wTemp = Opl3_FindFullSlot( bNote, bChannel ) ;
+   
+   // Remove note instance
+   for (std::vector<BYTE>::iterator it = m_noteHistory[bChannel].begin();
+         it != m_noteHistory[bChannel].end();
+         ++it)
+   {
+      if ((*it) == bNote)
+      {
+         m_noteHistory[bChannel].erase(it);
+         break;
+      }
+   }
 
    if (wTemp != 0xffff)
    {
@@ -686,12 +697,14 @@ void
          bool is4OpVoice = false;
 
          for (i = 0; i < NUM4VOICES; ++i)
+         {
             if (gb4OpVoices[i] == wTemp)
             {
                is4OpVoice = true;
                break;
             }
-         
+         }
+
          if (!is4OpVoice)
          {
             wTemp = Opl3_FindEmptySlot4Op(bPatch);
@@ -704,8 +717,14 @@ void
          wTemp = (wTemp == bChannel) ? wTemp : 
                  //(NS.bOp == PATCH_1_4OP) ? Opl3_FindEmptySlot4Op(bPatch) :
                  Opl3_FindEmptySlot(bPatch);
+         m_Voice[wTemp].bPrevNote = m_Voice[wTemp].bNote;
       }
       
+      m_Voice[wTemp].bPortaSampTime = m_bPortaTime[bChannel];
+      m_Voice[wTemp].bPortaSampCnt = m_bPortaTime[bChannel];
+      m_Voice[wTemp].bPrevNote = m_Voice[wTemp].bNote;
+      if (bNote == m_Voice[wTemp].bNote)
+         m_Voice[wTemp].bPortaSampCnt = 0;
 
       /*if (b4Op)
       {
@@ -735,7 +754,7 @@ void
    m_Voice[ wTemp ].dwTime = ++m_dwCurTime ;
    m_Voice[ wTemp ].dwStartTime = m_dwCurSample;
    m_Voice[ wTemp ].dwLFOVal = 0;
-   m_Voice[ wTemp ].dwDetuneEG = 0; // TODO
+   m_Voice[ wTemp ].dwDetuneEG = 0;
 
    if (b4Op)
    {
@@ -748,6 +767,16 @@ void
             wTemp2 = (wTemp2 != (WORD)~0) ? wTemp2 : Opl3_FindEmptySlot( bPatch );
             Opl3_Set4OpFlag((BYTE)wTemp, false, PATCH_2_2OP);
             Opl3_Set4OpFlag((BYTE)wTemp2, false, PATCH_2_2OP);
+
+            if (m_wMonoMode & (1<<bChannel))
+            {
+               m_Voice[wTemp2].bPrevNote = m_Voice[wTemp].bNote;
+               m_Voice[wTemp2].bPortaSampTime = m_bPortaTime[bChannel];
+               m_Voice[wTemp2].bPortaSampCnt = m_bPortaTime[bChannel];
+               if (m_Voice[wTemp2].bPrevNote == m_Voice[wTemp].bNote)
+                  m_Voice[wTemp2].bPortaSampCnt = 0;
+               
+            }
             break;
 
          case PATCH_1_4OP:
@@ -784,8 +813,8 @@ void
       m_Voice[ wTemp2 ].bSusHeld = 0;
       m_Voice[ wTemp2 ].dwTime = ++m_dwCurTime ;
       m_Voice[ wTemp2 ].dwStartTime = m_dwCurSample;
-      m_Voice[ wTemp2 ].dwLFOVal = 0; // TODO
-      m_Voice[ wTemp2 ].dwDetuneEG = 0; // TODO
+      m_Voice[ wTemp2 ].dwLFOVal = 0;
+      m_Voice[ wTemp2 ].dwDetuneEG = 0;
    }
    else
       Opl3_Set4OpFlag((BYTE)wTemp, false, PATCH_1_2OP);
@@ -800,6 +829,10 @@ void
    {
       m_Voice[ wTemp2 ].bVoiceID = bVoiceID;
    }
+
+   // Add to note history as most recent note
+   m_noteHistory[bChannel].push_back(bNote);
+
 } // end of Opl3_NoteOn()
 
 void
@@ -1300,7 +1333,7 @@ void
 //     Special thanks to ValleyBell for MidiPlay sources for adaption
 //
 //  Parameters:
-//     BYTE note     - MIDI note number
+//     double note   - MIDI note number (promoted from BYTE)
 //     BYTE bChannel - channel
 //     long dwLFOVal - current magnitude of the modulation waveform
 //
@@ -1309,7 +1342,7 @@ void
 // ===========================================================================
 WORD
    OPLSynth::
-   Opl3_MIDINote2FNum(BYTE note, BYTE bChannel, long dwLFOVal)
+   Opl3_MIDINote2FNum(double note, BYTE bChannel, long dwLFOVal)
 {
 	double freqVal, curNote;
 	signed char BlockVal;
@@ -1726,6 +1759,7 @@ bool
       m_bRelease[i] = 64;
       m_bBrightness[i] = 64;
       m_bModWheel[i] = 0;
+      m_noteHistory[i].clear();
    };
 
    for (i = 0; i < NUM2VOICES; ++i)
@@ -1733,6 +1767,7 @@ bool
       m_Voice[i].dwLFOVal = 0;
       m_Voice[i].dwDetuneEG = 0;
       m_Voice[i].bChannel = ~0;
+      m_Voice[i].dwTime = 0;
    }
 
 //#ifdef DISABLE_HW_SUPPORT
@@ -1755,7 +1790,24 @@ void
    long  newLFOVal = m_Voice[bVoice].dwLFOVal, 
          newDetuneEG = m_Voice[bVoice].dwDetuneEG;
    DWORD timeDiff = m_dwCurSample-m_Voice[bVoice].dwStartTime;
-   double timeLapse = 0.00025*3.14159265358979323846*(double)(timeDiff);
+   double timeLapse = 0.00025*3.14159265358979323846*(double)(timeDiff),
+          noteDiff = 0;
+
+   // Portamento update first
+   if (m_Voice[bVoice].bPortaSampCnt > 0)
+   {
+      --m_Voice[bVoice].bPortaSampCnt;
+      noteDiff = (double)lin_intp(
+         (m_Voice[bVoice].bPortaSampTime)-m_Voice[bVoice].bPortaSampCnt,
+         0,
+         m_Voice[bVoice].bPortaSampTime,
+         m_Voice[bVoice].bPrevNote, 
+         m_Voice[bVoice].bNote
+      );
+         
+      /*noteDiff = m_Voice[bVoice].dwNoteFactor*(m_Voice[bVoice].bPortaSampTime 
+         - m_Voice[bVoice].bPortaSampCnt) - 1;*/
+   }
 
    // 100Hz sine wave with half semitone magnitude by default
    // (mod*32)sin((1/100)*FSAMP * curSample)
@@ -1770,7 +1822,8 @@ void
       newDetuneEG = (long)((signed char)wTemp * 0.25 * (timeDiff));
    }
 
-   if (newLFOVal == m_Voice[bVoice].dwLFOVal && newDetuneEG == m_Voice[bVoice].dwDetuneEG)
+   if (newLFOVal == m_Voice[bVoice].dwLFOVal && newDetuneEG == m_Voice[bVoice].dwDetuneEG 
+      && m_Voice[bVoice].bPortaSampCnt == 0 && noteDiff == 0)
       return;
 
    m_Voice[bVoice].dwLFOVal = newLFOVal;
@@ -1778,7 +1831,8 @@ void
 
    newLFOVal += newDetuneEG;
 
-   wTemp = Opl3_MIDINote2FNum(m_Voice[ bVoice ].bNote, m_Voice[bVoice].bChannel, newLFOVal);
+   wTemp = Opl3_MIDINote2FNum((noteDiff)?noteDiff:m_Voice[ bVoice ].bNote,
+      m_Voice[bVoice].bChannel, newLFOVal);
    m_Voice[ bVoice ].bBlock[ 0 ] =
       (m_Voice[ bVoice ].bBlock[ 0 ] & (BYTE) 0xe0) |
       (BYTE) (wTemp >> 8) ;

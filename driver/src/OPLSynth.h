@@ -95,14 +95,16 @@ typedef struct _noteStruct
 } noteStruct;
 
 
-typedef struct _patchStruct {
+typedef struct _patchStruct
+{
    noteStruct note;            /* note. This is all in the structure at the moment */
 } patchStruct;
 
 
 /* MIDI */
 
-typedef struct _voiceStruct {
+typedef struct _voiceStruct 
+{
    BYTE    bVoiceID;               /* used to identify note allocations */
    BYTE    bNote;                  /* note played */
    BYTE    bChannel;               /* channel played on */
@@ -117,9 +119,21 @@ typedef struct _voiceStruct {
    BYTE    bSusHeld;               /* turned off, but held on by sustain */
 
    // for EG/LFO
-   DWORD   dwStartTime;
+   DWORD  dwStartTime;
    long   dwLFOVal;
    long   dwDetuneEG;
+
+   // for portamento
+   /*WORD  dwCurFreq;
+   WORD  dwStartFreq;
+   WORD  dwEndFreq;*/
+   BYTE   bPrevNote;
+   BYTE   bPortaSampTime;
+   BYTE   bPortaSampCnt;
+   
+
+   //double dfPortaRatio;
+   
 } voiceStruct;
 
 
@@ -214,6 +228,7 @@ private:
    /* volume */
    WORD    m_wSynthAttenL;        /* in 1.5dB steps */
    WORD    m_wSynthAttenR;        /* in 1.5dB steps */
+   std::vector<BYTE> m_noteHistory[NUMMIDICHN];
 
    /* support for volume property */
    LONG    m_MinVolValue;      // Minimum value for volume controller
@@ -262,7 +277,7 @@ private:
    void Opl3_ChannelNotesOff(BYTE bChannel);
    WORD Opl3_FindFullSlot(BYTE bNote, BYTE bChannel);
    //WORD Opl3_CalcFAndB (DWORD dwPitch);
-   WORD Opl3_MIDINote2FNum(BYTE note, BYTE bChannel, long dwLFOVal);
+   WORD Opl3_MIDINote2FNum(double note, BYTE bChannel, long dwLFOVal);
    void Opl3_ProcessDataEntry(BYTE bVal, BYTE bChannel);
    void Opl3_Set4OpFlag(BYTE bVoice, bool bSetFlag, BYTE bOp);
    //DWORD Opl3_CalcBend (DWORD dwOrig, short iBend);
