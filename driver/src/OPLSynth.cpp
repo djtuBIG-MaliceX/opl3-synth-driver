@@ -768,12 +768,12 @@ void
             Opl3_Set4OpFlag((BYTE)wTemp, false, PATCH_2_2OP);
             Opl3_Set4OpFlag((BYTE)wTemp2, false, PATCH_2_2OP);
 
-            if (m_wMonoMode & (1<<bChannel))
+            if ((m_wMonoMode & (1<<bChannel)) > 0)
             {
-               m_Voice[wTemp2].bPrevNote = m_Voice[wTemp].bNote;
+               m_Voice[wTemp2].bPrevNote = m_Voice[wTemp2].bNote;
                m_Voice[wTemp2].bPortaSampTime = m_bPortaTime[bChannel];
                m_Voice[wTemp2].bPortaSampCnt = m_bPortaTime[bChannel];
-               if (m_Voice[wTemp2].bPrevNote == m_Voice[wTemp].bNote)
+               if (m_Voice[wTemp2].bPrevNote == m_Voice[wTemp2].bNote)
                   m_Voice[wTemp2].bPortaSampCnt = 0;
                
             }
@@ -1743,12 +1743,14 @@ bool
 
    m_wMonoMode = 0;  // Set all channels to polyphonic mode
    m_wDrumMode = (1<<9);  // Set ch10 to drum by default
+   m_wPortaMode = 0;
 
    b4OpVoiceSet = 0; // disable 4op mode by default
 
    /* start attenuations at -3 dB, which is 90 MIDI level */
    for (i = 0; i < NUMMIDICHN; i++)
    {
+      m_bSustain[i] = 0;
       m_bChanAtten[i] = 4;      // default attenuation value
       m_bStereoMask[i] = 0xff;  // center
       m_iBendRange[i] = 2;      // -/+ 2 semitones
@@ -1760,14 +1762,14 @@ bool
       m_bBrightness[i] = 64;
       m_bModWheel[i] = 0;
       m_noteHistory[i].clear();
+      m_iBend[i] = 0;
+      m_bPortaTime[i] = 0;
    };
 
    for (i = 0; i < NUM2VOICES; ++i)
    {
-      m_Voice[i].dwLFOVal = 0;
-      m_Voice[i].dwDetuneEG = 0;
+      memset(&m_Voice[i], 0, sizeof(voiceStruct));
       m_Voice[i].bChannel = ~0;
-      m_Voice[i].dwTime = 0;
    }
 
 //#ifdef DISABLE_HW_SUPPORT
