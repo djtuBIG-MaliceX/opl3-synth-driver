@@ -253,6 +253,7 @@ private:
    WORD    m_wPortaMode;   /* Flag for bporta mode, bitmasked (LSB=ch1) */
    BYTE    m_bPortaTime[NUMMIDICHN];  /* Number of getsample requests before reaching note */
    BYTE    m_bLastVoiceUsed[NUMMIDICHN]; /* Needed for legato in mono mode */
+   BYTE    m_bLastNoteUsed[NUMMIDICHN];  /* Needed for portamento */
 
    BYTE    m_bPatch[NUMMIDICHN];   /* patch number mapped to */
    BYTE    m_bSustain[NUMMIDICHN];   /* Is sustain in effect on this channel? */

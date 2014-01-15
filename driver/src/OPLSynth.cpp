@@ -356,15 +356,25 @@ void
          case PATCH_1_4OP: // note cut on second voice is not necessary but need to be verified.
             wTemp2 = /*(lpPS->note.bAtC0[1] & 0x1) ? Opl3_FindSecondVoice((BYTE)wTemp, m_Voice[wTemp].bVoiceID) :*/ (wTemp+3);
 
-            Opl3_CutVoice((BYTE)wTemp, FALSE);
-
-            /*if (wTemp2 != (WORD)~0 && (lpPS->note.bAtC0[1] & 0x1))
-               Opl3_CutVoice((BYTE)wTemp2, FALSE);
-            else*/
+            if ((m_wMonoMode & (1<<bChannel)) > 0 &&
+                m_noteHistory[bChannel].size() > 0)
             {
-               m_Voice[wTemp+3].bOn = FALSE;
-               m_Voice[wTemp+3].bSusHeld = FALSE;
-               m_Voice[wTemp+3].dwTime = ++m_dwCurTime;
+               int prevNote = (*m_noteHistory[bChannel].rbegin());
+               m_noteHistory[bChannel].pop_back();
+               Opl3_NoteOn(bPatch, prevNote, bChannel, m_Voice[wTemp].bVelocity, m_iBend[bChannel]);
+            }
+            else
+            {
+               Opl3_CutVoice((BYTE)wTemp, FALSE);
+
+               /*if (wTemp2 != (WORD)~0 && (lpPS->note.bAtC0[1] & 0x1))
+                  Opl3_CutVoice((BYTE)wTemp2, FALSE);
+               else*/
+               {
+                  m_Voice[wTemp+3].bOn = FALSE;
+                  m_Voice[wTemp+3].bSusHeld = FALSE;
+                  m_Voice[wTemp+3].dwTime = ++m_dwCurTime;
+               }
             }
             break;
 
@@ -372,20 +382,37 @@ void
             // obtain voice with identical binding ID
             wTemp2 = Opl3_FindSecondVoice((BYTE)wTemp, m_Voice[wTemp].bVoiceID);
             
-            Opl3_CutVoice((BYTE)wTemp, FALSE);
-
-            if (wTemp2 != (WORD)~0)
+            if ((m_wMonoMode & (1<<bChannel)) > 0 &&
+                m_noteHistory[bChannel].size() > 0)
             {
-               Opl3_CutVoice((BYTE)wTemp2, FALSE);
-               break;
+               int prevNote = (*m_noteHistory[bChannel].rbegin());
+               m_noteHistory[bChannel].pop_back();
+               Opl3_NoteOn(bPatch, prevNote, bChannel, m_Voice[wTemp].bVelocity, m_iBend[bChannel]);
             }
+            else
+            {
+               Opl3_CutVoice((BYTE)wTemp, FALSE);
 
+               if (wTemp2 != (WORD)~0)
+               {
+                  Opl3_CutVoice((BYTE)wTemp2, FALSE);
+                  break;
+               }
+            }
          // fall through
 
          case PATCH_1_2OP:
             // shut off the note portion
             // we have the note slot, turn it off.
-            Opl3_CutVoice((BYTE)wTemp, FALSE);
+            if ((m_wMonoMode & (1<<bChannel)) > 0 &&
+                m_noteHistory[bChannel].size() > 0)
+            {
+               int prevNote = (*m_noteHistory[bChannel].rbegin());
+               m_noteHistory[bChannel].pop_back();
+               Opl3_NoteOn(bPatch, prevNote, bChannel, m_Voice[wTemp].bVelocity, m_iBend[bChannel]);
+            }
+            else
+               Opl3_CutVoice((BYTE)wTemp, FALSE);
             break;
       }
 
@@ -719,12 +746,6 @@ void
                  Opl3_FindEmptySlot(bPatch);
          m_Voice[wTemp].bPrevNote = m_Voice[wTemp].bNote;
       }
-      
-      m_Voice[wTemp].bPortaSampTime = m_bPortaTime[bChannel];
-      m_Voice[wTemp].bPortaSampCnt = m_bPortaTime[bChannel];
-      m_Voice[wTemp].bPrevNote = m_Voice[wTemp].bNote;
-      if (bNote == m_Voice[wTemp].bNote)
-         m_Voice[wTemp].bPortaSampCnt = 0;
 
       /*if (b4Op)
       {
@@ -740,6 +761,13 @@ void
       wTemp = (NS.bOp == PATCH_1_4OP /*&& (NS.bAtC0[1] & 0x1) == 0*/) ?
          Opl3_FindEmptySlot4Op(bPatch) : Opl3_FindEmptySlot( bPatch );
    }
+
+   // Portamento
+   m_Voice[wTemp].bPortaSampTime = m_bPortaTime[bChannel];
+   m_Voice[wTemp].bPortaSampCnt = m_bPortaTime[bChannel];
+   m_Voice[wTemp].bPrevNote = m_bLastNoteUsed[bChannel] ; //m_Voice[wTemp].bNote;
+   if (bNote == m_Voice[wTemp].bNote || m_bLastNoteUsed[bChannel] == (BYTE)0xFF)
+      m_Voice[wTemp].bPortaSampCnt = 0;
 
    m_Voice[ wTemp ].bNote = bNote ;
    m_Voice[ wTemp ].bChannel = bChannel ;
@@ -770,10 +798,11 @@ void
 
             if ((m_wMonoMode & (1<<bChannel)) > 0)
             {
-               m_Voice[wTemp2].bPrevNote = m_Voice[wTemp2].bNote;
+               m_Voice[wTemp2].bPrevNote = m_bLastNoteUsed[bChannel] ;//m_Voice[wTemp2].bNote;
                m_Voice[wTemp2].bPortaSampTime = m_bPortaTime[bChannel];
                m_Voice[wTemp2].bPortaSampCnt = m_bPortaTime[bChannel];
-               if (m_Voice[wTemp2].bPrevNote == m_Voice[wTemp2].bNote)
+               if (m_Voice[wTemp2].bPrevNote == m_Voice[wTemp2].bNote ||
+                   m_bLastNoteUsed[wTemp2] == (BYTE)0xFF)
                   m_Voice[wTemp2].bPortaSampCnt = 0;
                
             }
@@ -825,6 +854,7 @@ void
 
    m_bLastVoiceUsed[bChannel] = (BYTE)wTemp; // save voice ref
    m_Voice[ wTemp ].bVoiceID = ++bVoiceID;
+   m_bLastNoteUsed[bChannel] = bNote;
    if (b4Op)
    {
       m_Voice[ wTemp2 ].bVoiceID = bVoiceID;
@@ -1764,6 +1794,8 @@ bool
       m_noteHistory[i].clear();
       m_iBend[i] = 0;
       m_bPortaTime[i] = 0;
+      m_bLastVoiceUsed[i] = 0xFF;
+      m_bLastNoteUsed[i] = 0xFF;
    };
 
    for (i = 0; i < NUM2VOICES; ++i)
