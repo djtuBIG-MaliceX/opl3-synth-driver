@@ -135,7 +135,7 @@ void
          {
             if (m_Voice[i].bChannel == bChannel)
             {
-               char bOffset = (char)lin_intp(m_bRelease[bChannel], 0, 127, (-8), 8);
+               char bOffset = (char)lin_intp(m_bRelease[bChannel], 0, 127, (-16), 16);
                
                if (!bOffset) 
                   continue;
@@ -165,7 +165,7 @@ void
          {
             if (m_Voice[i].bChannel == bChannel)
             {
-               char bOffset = (char)lin_intp(m_bAttack[bChannel], 0, 127, (-8), 8);
+               char bOffset = (char)lin_intp(m_bAttack[bChannel], 0, 127, (-16), 16);
                WORD wOffset;
                BYTE bInst = glpPatch[m_Voice[i].bPatch].note.op[1].bAt60;
                char bTemp = ((bInst & 0xF0)>>4);
@@ -766,7 +766,8 @@ void
    m_Voice[wTemp].dwPortaSampTime = (DWORD)floor(0.5 + pow(((double)m_bPortaTime[bChannel]*0.4), 1.5)); //m_bPortaTime[bChannel];
    m_Voice[wTemp].dwPortaSampCnt = m_Voice[wTemp].dwPortaSampTime; //m_bPortaTime[bChannel];
    m_Voice[wTemp].bPrevNote = m_bLastNoteUsed[bChannel] ; //m_Voice[wTemp].bNote;
-   if (bNote == m_bLastNoteUsed[bChannel] || m_bLastNoteUsed[bChannel] == (BYTE)0xFF)
+   if (bNote == m_bLastNoteUsed[bChannel] || m_bLastNoteUsed[bChannel] == (BYTE)0xFF
+      || (m_wPortaMode & (1<<bChannel)) == 0)
       m_Voice[wTemp].dwPortaSampCnt = 0;
 
    m_Voice[ wTemp ].bNote = bNote ;
@@ -801,8 +802,8 @@ void
                m_Voice[wTemp2].bPrevNote = m_bLastNoteUsed[bChannel] ;//m_Voice[wTemp2].bNote;
                m_Voice[wTemp2].dwPortaSampTime = (DWORD)floor(0.5 + pow(((double)m_bPortaTime[bChannel]*0.4), 1.5)); //m_bPortaTime[bChannel];
                m_Voice[wTemp2].dwPortaSampCnt = m_Voice[wTemp2].dwPortaSampTime; //m_bPortaTime[bChannel];
-               if (bNote == m_bLastNoteUsed[bChannel] ||
-                   m_bLastNoteUsed[bChannel] == (BYTE)0xFF)
+               if (bNote == m_bLastNoteUsed[bChannel] || (m_wPortaMode & (1<<bChannel)) == 0
+                || m_bLastNoteUsed[bChannel] == (BYTE)0xFF)
                   m_Voice[wTemp2].dwPortaSampCnt = 0;
                
             }
@@ -947,7 +948,7 @@ void
    char bOffset;
 
    //Attack
-   bOffset = (char)lin_intp(m_bAttack[bChannel], 0, 127, (-8), 8);
+   bOffset = (char)lin_intp(m_bAttack[bChannel], 0, 127, (-16), 16);
    if (bOffset)
    {
       for (int i = 0; i < NUMOPS; i+=2)
@@ -972,7 +973,7 @@ void
    }
 
    //Release
-   bOffset = (char)lin_intp(m_bRelease[bChannel], 0, 127, (-8), 8);
+   bOffset = (char)lin_intp(m_bRelease[bChannel], 0, 127, (-16), 16);
    if (bOffset)
    {
       for (int i = 0; i < NUMOPS; ++i)
