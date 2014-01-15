@@ -763,11 +763,11 @@ void
    }
 
    // Portamento
-   m_Voice[wTemp].bPortaSampTime = m_bPortaTime[bChannel];
-   m_Voice[wTemp].bPortaSampCnt = m_bPortaTime[bChannel];
+   m_Voice[wTemp].dwPortaSampTime = (DWORD)floor(0.5 + pow(((double)m_bPortaTime[bChannel]*0.4), 1.5)); //m_bPortaTime[bChannel];
+   m_Voice[wTemp].dwPortaSampCnt = m_Voice[wTemp].dwPortaSampTime; //m_bPortaTime[bChannel];
    m_Voice[wTemp].bPrevNote = m_bLastNoteUsed[bChannel] ; //m_Voice[wTemp].bNote;
-   if (bNote == m_Voice[wTemp].bNote || m_bLastNoteUsed[bChannel] == (BYTE)0xFF)
-      m_Voice[wTemp].bPortaSampCnt = 0;
+   if (bNote == m_bLastNoteUsed[bChannel] || m_bLastNoteUsed[bChannel] == (BYTE)0xFF)
+      m_Voice[wTemp].dwPortaSampCnt = 0;
 
    m_Voice[ wTemp ].bNote = bNote ;
    m_Voice[ wTemp ].bChannel = bChannel ;
@@ -799,11 +799,11 @@ void
             if ((m_wMonoMode & (1<<bChannel)) > 0)
             {
                m_Voice[wTemp2].bPrevNote = m_bLastNoteUsed[bChannel] ;//m_Voice[wTemp2].bNote;
-               m_Voice[wTemp2].bPortaSampTime = m_bPortaTime[bChannel];
-               m_Voice[wTemp2].bPortaSampCnt = m_bPortaTime[bChannel];
-               if (m_Voice[wTemp2].bPrevNote == m_Voice[wTemp2].bNote ||
-                   m_bLastNoteUsed[wTemp2] == (BYTE)0xFF)
-                  m_Voice[wTemp2].bPortaSampCnt = 0;
+               m_Voice[wTemp2].dwPortaSampTime = (DWORD)floor(0.5 + pow(((double)m_bPortaTime[bChannel]*0.4), 1.5)); //m_bPortaTime[bChannel];
+               m_Voice[wTemp2].dwPortaSampCnt = m_Voice[wTemp2].dwPortaSampTime; //m_bPortaTime[bChannel];
+               if (bNote == m_bLastNoteUsed[bChannel] ||
+                   m_bLastNoteUsed[bChannel] == (BYTE)0xFF)
+                  m_Voice[wTemp2].dwPortaSampCnt = 0;
                
             }
             break;
@@ -1158,6 +1158,8 @@ void
 {
    int i;
 
+   m_noteHistory[bChannel].clear();
+   
    for (i = 0; i < NUM2VOICES; i++)
    {
       if ((m_Voice[ i ].bOn) && (m_Voice[ i ].bChannel == bChannel))
@@ -1623,10 +1625,25 @@ void
 {
    if ((m_wPortaMode & (1<<bChannel)) > 0)
    {
+      BYTE bOldPortaTime = m_bPortaTime[bChannel],
+           i;
+      DWORD dwPortaScaledTime = (DWORD)floor(0.5 + pow(((double)bPortaTime*0.4), 1.5));
+
       m_bPortaTime[bChannel] = bPortaTime;
 
-      // Set current pitch etc.
+      // Set current porta pitch to new value if smaller
+      for (i = 0; i < NUM2VOICES; ++i)
+      {
+         // Rescale counter to align with current pitch as long it has had a note on
+         if (m_Voice[i].bChannel == bChannel && m_Voice[i].dwTime > 0)
+         {
+            DWORD dwOldScaledTime = (DWORD)floor(0.5 + pow(((double)bOldPortaTime*0.4), 1.5));
 
+            m_Voice[i].dwPortaSampTime = dwPortaScaledTime; //bPortaTime;
+            m_Voice[i].dwPortaSampCnt = (DWORD)floor(0.5 + lin_intp(m_Voice[i].dwPortaSampCnt,
+               0, dwOldScaledTime/*bOldPortaTime*/, 0, dwPortaScaledTime/*bPortaTime*/));
+         }
+      }
    }
 }
 
@@ -1780,6 +1797,7 @@ bool
    /* start attenuations at -3 dB, which is 90 MIDI level */
    for (i = 0; i < NUMMIDICHN; i++)
    {
+      m_bPatch[i] = 0;
       m_bSustain[i] = 0;
       m_bChanAtten[i] = 4;      // default attenuation value
       m_bStereoMask[i] = 0xff;  // center
@@ -1828,18 +1846,23 @@ void
           noteDiff = 0;
 
    // Portamento update first
-   if (m_Voice[bVoice].bPortaSampCnt > 0)
+   if (m_Voice[bVoice].dwPortaSampCnt > 0)
    {
-      --m_Voice[bVoice].bPortaSampCnt;
+      const double PORTA_DEC_RATE = 3.333;
+
+      //--m_Voice[bVoice].bPortaSampCnt;
+      m_Voice[bVoice].dwPortaSampCnt = ((m_Voice[bVoice].dwPortaSampCnt-PORTA_DEC_RATE) <= 0) ?
+         0 : (DWORD)floor(0.5 + m_Voice[bVoice].dwPortaSampCnt-PORTA_DEC_RATE);
+
       noteDiff = (double)lin_intp(
-         (m_Voice[bVoice].bPortaSampTime)-m_Voice[bVoice].bPortaSampCnt,
+         (m_Voice[bVoice].dwPortaSampTime - m_Voice[bVoice].dwPortaSampCnt),
          0,
-         m_Voice[bVoice].bPortaSampTime,
+         m_Voice[bVoice].dwPortaSampTime,
          m_Voice[bVoice].bPrevNote, 
          m_Voice[bVoice].bNote
       );
          
-      /*noteDiff = m_Voice[bVoice].dwNoteFactor*(m_Voice[bVoice].bPortaSampTime 
+      /*noteDiff = m_Voice[bVoice].dwNoteFactor*(m_Voice[bVoice].dwPortaSampTime 
          - m_Voice[bVoice].bPortaSampCnt) - 1;*/
    }
 
@@ -1857,7 +1880,7 @@ void
    }
 
    if (newLFOVal == m_Voice[bVoice].dwLFOVal && newDetuneEG == m_Voice[bVoice].dwDetuneEG 
-      && m_Voice[bVoice].bPortaSampCnt == 0 && noteDiff == 0)
+      && m_Voice[bVoice].dwPortaSampCnt == 0 && noteDiff == 0)
       return;
 
    m_Voice[bVoice].dwLFOVal = newLFOVal;

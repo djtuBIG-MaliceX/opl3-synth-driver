@@ -128,9 +128,9 @@ typedef struct _voiceStruct
    WORD  dwStartFreq;
    WORD  dwEndFreq;*/
    BYTE   bPrevNote;
-   BYTE   bPortaSampTime;
-   BYTE   bPortaSampCnt;
-   
+   DWORD dwPortaSampTime;
+   //BYTE   bPortaSampCnt;
+   DWORD dwPortaSampCnt;
 
    //double dfPortaRatio;
    
