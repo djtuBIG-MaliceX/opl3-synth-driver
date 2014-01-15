@@ -10,10 +10,10 @@
 #include "OPLSynth.h"
 
 // TODO - Determine way to read configuration for existing bank file before playback
-//#include "patch.h"
+#include "patch.h"
 //#include "mauipatch.h"
 //#include "fmsynthpatch.h"
-#include "2x2patchtest.h"
+//#include "2x2patchtest.h"
 //#include "ctmidipatch.h"
 
 void
