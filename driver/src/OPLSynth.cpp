@@ -813,9 +813,25 @@ void
             Opl3_Set4OpFlag((BYTE)wTemp, false, PATCH_2_2OP);
             Opl3_Set4OpFlag((BYTE)wTemp2, false, PATCH_2_2OP);
 
+            // Portamento 2nd voice
             if ((m_wMonoMode & (1<<bChannel)) > 0)
             {
-               m_Voice[wTemp2].bPrevNote = m_bLastNoteUsed[bChannel] ;//m_Voice[wTemp2].bNote;
+               if ((m_Voice[wTemp2].bOn || m_Voice[wTemp2].bSusHeld) && (m_wPortaMode & (1<<bChannel)) > 0
+                  && m_Voice[wTemp2].dwPortaSampCnt > 0 && (m_wMonoMode & (1<<bChannel)) > 0)
+               {
+                  DWORD curSampRange = m_Voice[wTemp2].dwPortaSampTime,
+                        curSampCnt = m_Voice[wTemp2].dwPortaSampCnt;
+
+                  m_Voice[wTemp2].bPrevNote = (BYTE)floor(0.5 + (double)lin_intp(
+                     (curSampRange - curSampCnt),
+                     0,
+                     curSampRange,
+                     m_Voice[wTemp2].bPrevNote, 
+                     m_Voice[wTemp2].bNote));
+               }
+               else
+                  m_Voice[wTemp2].bPrevNote = m_bLastNoteUsed[bChannel] ;//m_Voice[wTemp2].bNote;
+
                m_Voice[wTemp2].dwPortaSampTime = (DWORD)floor(0.5 + pow(((double)m_bPortaTime[bChannel]*0.4), 1.5)); //m_bPortaTime[bChannel];
                m_Voice[wTemp2].dwPortaSampCnt = m_Voice[wTemp2].dwPortaSampTime; //m_bPortaTime[bChannel];
                if (bNote == m_bLastNoteUsed[bChannel] || (m_wPortaMode & (1<<bChannel)) == 0
