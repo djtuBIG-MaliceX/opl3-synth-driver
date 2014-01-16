@@ -222,6 +222,19 @@ void
          m_RPN[bChannel][1] = bVelocity;
          break;
 
+      case 118: // Set VGM log loop marker
+         VGMLog_MarkLoopStartNow();
+         break;
+
+      case 119: // Toggle VGM logging
+      {
+         bool logFlag = bIsLogging;
+         bIsLogging = (bVelocity > 0x3F) ? true : false;
+         if (logFlag != bIsLogging)
+            (!bIsLogging) ? VGMLog_Close() : VGMLog_Init();
+         break;
+      }
+
       case 126: // Mono mode on
          Opl3_ChannelNotesOff(bChannel);
          m_wMonoMode |= (1<<bChannel);
@@ -1817,6 +1830,7 @@ bool
    int i;
 
    // init some members
+   bIsLogging = false;
    m_dwCurTime = 1;    /* for note on/off * /
    /* volume */
    m_wSynthAttenL = 0;        /* in 1.5dB steps */
@@ -1867,7 +1881,7 @@ bool
    OPL_Hardware_Detection();
    OPL_HW_Init(); // start hardware
 //#endif /*DISABLE_HW_SUPPORT*/
-   VGMLog_Init();
+   //VGMLog_Init();
    Opl3_BoardReset();
    return true;
 }
@@ -1970,7 +1984,8 @@ void
 //#endif /*DISABLE_HW_SUPPORT*/
 
    // Increment logger sample history
-   VGMLog_IncrementSamples(len);
+   if (bIsLogging)
+      VGMLog_IncrementSamples(len);
 }
 
 
@@ -2056,7 +2071,8 @@ inline void
 
 #endif /*DISABLE_HW_SUPPORT*/
 
-   VGMLog_CmdWrite((0x5E | (idx>>8)), (BYTE)idx, val);
+   if (bIsLogging)
+      VGMLog_CmdWrite((0x5E | (idx>>8)), (BYTE)idx, val);
 }
 
 void 
@@ -2065,7 +2081,9 @@ void
 {
    // Reset board
    Opl3_BoardReset();
-   VGMLog_Close();
+
+   if (bIsLogging)
+      VGMLog_Close();
 
 #ifndef DISABLE_HW_SUPPORT
    OPL_HW_Close();

@@ -221,6 +221,8 @@ private:
    //OPL     m_Miniport;
    void*     m_Miniport;
 
+   bool  bIsLogging;
+
    // midi stuff
    voiceStruct m_Voice[NUM2VOICES];  /* info on what voice is where */
    DWORD m_dwCurTime;    /* for note on/off */

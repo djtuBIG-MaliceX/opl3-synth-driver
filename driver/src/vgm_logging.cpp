@@ -4,9 +4,8 @@
 static const double FMToVGMSamples = 0.887038377986966;
 
 static VGM_HEADER VGMHead;
-static DWORD ClockAdd, LastVgmDelay;
+static DWORD ClockAdd, LastVgmDelay, VGMSmplPlayed, LoopSamples, LoopMarker;
 static FILE *hFileVGM = NULL;
-static DWORD VGMSmplPlayed;
 static WCHAR TempLogPath[BUFSIZ];
 
 void VGMLog_Init()
@@ -44,21 +43,37 @@ void VGMLog_Init()
    if (VGMHead.lngHzYMF262)
       VGMHead.lngHzYMF262 = VGMHead.lngHzYMF262 | ClockAdd;
 
-   ExpandEnvironmentStrings(L"%TEMP%\\opl3vgmlog.vgm", (LPWSTR)&TempLogPath, BUFSIZ);
-   _wfopen_s(&hFileVGM, TempLogPath, L"wb");
-   
-   //strcpy_s(TempLogPath, getenv("TEMP"));
-   //hFileVGM = fopen(TempLogPath, "wb");
-
    if (hFileVGM == NULL)
    {
-      //hFileVGM = NULL;
-      MessageBox(NULL, L"Handle for opl3SynthLog.vgm failed.", L"VGM Logger", MB_OK | MB_ICONEXCLAMATION);
-      return;
-   }
+      ExpandEnvironmentStrings(L"%TEMP%\\opl3vgmlog.vgm", (LPWSTR)&TempLogPath, BUFSIZ);
+      _wfopen_s(&hFileVGM, TempLogPath, L"wb");
+   
+      //strcpy_s(TempLogPath, getenv("TEMP"));
+      //hFileVGM = fopen(TempLogPath, "wb");
+
+      if (hFileVGM == NULL)
+      {
+         //hFileVGM = NULL;
+         MessageBox(NULL, L"Handle for opl3SynthLog.vgm failed.", L"VGM Logger", MB_OK | MB_ICONEXCLAMATION);
+         return;
+      }
+      
+   } else
+      rewind(hFileVGM);
+
    fwrite(&VGMHead, 0x01, sizeof(VGM_HEADER), hFileVGM);
    LastVgmDelay = 0;
    VGMSmplPlayed = 0;
+   LoopMarker = 0;
+   LoopSamples = 0;
+
+   // TODO hax my anus
+   fputc(0x5F, hFileVGM);
+   fputc(0x05, hFileVGM);
+   fputc(0x01, hFileVGM);
+   fputc(0x5E, hFileVGM);
+   fputc(0x04, hFileVGM);
+   fputc(0x60, hFileVGM);
 }
 
 // helper function
@@ -101,6 +116,7 @@ inline void VGMLog_CmdWrite(BYTE Cmd, BYTE Reg, BYTE Data)
 
 void VGMLog_IncrementSamples(int len)
 {
+   if (hFileVGM == NULL) return;
    //VGMSmplPlayed += (DWORD)(len * FMToVGMSamples);
    VGMSmplPlayed += len;
 }
@@ -117,16 +133,33 @@ void VGMLog_Close()
    UINT32 AbsVol = (UINT32)(ftell(hFileVGM) - 0x04);
    fseek(hFileVGM, 0x04, SEEK_SET);
    fwrite(&AbsVol, sizeof(UINT32), 0x01, hFileVGM);
-   fseek(hFileVGM, 0x18, SEEK_SET);
    
+   fseek(hFileVGM, 0x18, SEEK_SET);
    fwrite(&TotalSamples, 0x04, 0x01, hFileVGM);
+
+   // TODO fix issues with loop marker handling
+   if (LoopMarker > 0 || LoopSamples > 0)
+   {
+      fseek(hFileVGM, 0x1C, SEEK_SET);
+      fwrite(&LoopMarker, 0x04, 0x01, hFileVGM);
+      fwrite(&LoopSamples, 0x04, 0x01, hFileVGM);
+   }
+
    fclose(hFileVGM);
+   hFileVGM = NULL;
 
 #ifdef _DEBUG
    MessageBox(NULL, L"File opl3SynthLog.vgm saved.", L"VGM Logger", MB_OK | MB_ICONINFORMATION);
 #endif //_DEBUG
 }
 
+void VGMLog_MarkLoopStartNow()
+{
+   if (hFileVGM == NULL) return;
+
+   LoopSamples = (DWORD)floor(VGMSmplPlayed * FMToVGMSamples + 0.5);
+   LoopMarker = (DWORD)ftell(hFileVGM);
+}
 
 /*OPL_Write() / adlib_wite() etc. guide
 static inline void OPL_Write(BYTE ChipID, WORD Register, BYTE Data)
