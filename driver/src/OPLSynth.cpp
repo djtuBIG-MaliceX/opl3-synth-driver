@@ -334,7 +334,8 @@ void
 
    if (wTemp != 0xffff)
    {
-      if (bSustain)
+      // Set voice to sustain unless mono-legato and more than one note is still being held
+      if (bSustain && (!(m_wMonoMode & (1<<bChannel)) || !m_noteHistory[bChannel].size()))
       {
          // This channel is sustained, don't really turn the note off,
          // just flag it.
@@ -633,7 +634,7 @@ void
    Opl3_NoteOn(BYTE bPatch, BYTE bNote, BYTE bChannel, BYTE bVelocity, long iBend)
 {
    WORD             wTemp, i, j, wTemp2 = ~0 ;
-   BYTE             b4Op, /*bTemp, */bMode, bStereo ;
+   BYTE             b4Op, /*bTemp, */bMode, bStereo;
    patchStruct      *lpPS ;
    DWORD            /*dwBasicPitch, */dwPitch[ 2 ] ;
    noteStruct       NS;
@@ -782,8 +783,8 @@ void
 
    m_Voice[wTemp].dwPortaSampTime = (DWORD)floor(0.5 + pow(((double)m_bPortaTime[bChannel]*0.4), 1.5)); //m_bPortaTime[bChannel];
    m_Voice[wTemp].dwPortaSampCnt = m_Voice[wTemp].dwPortaSampTime; //m_bPortaTime[bChannel];
-   if (bNote == m_bLastNoteUsed[bChannel] || m_bLastNoteUsed[bChannel] == (BYTE)0xFF
-      || (m_wPortaMode & (1<<bChannel)) == 0)
+   if ((bNote == m_bLastNoteUsed[bChannel] /*&& !m_Voice[bChannel].bOn && !m_Voice[bChannel].bSusHeld*/)
+      || m_bLastNoteUsed[bChannel] == (BYTE)0xFF || (m_wPortaMode & (1<<bChannel)) == 0)
       m_Voice[wTemp].dwPortaSampCnt = 0;
 
    m_Voice[ wTemp ].bNote = bNote ;
@@ -797,9 +798,11 @@ void
    m_Voice[ wTemp ].bBlock[1] = NS.bAtB0[ 1 ] ;
    m_Voice[ wTemp ].bSusHeld = 0;
    m_Voice[ wTemp ].dwTime = ++m_dwCurTime ;
-   m_Voice[ wTemp ].dwStartTime = m_dwCurSample;
    m_Voice[ wTemp ].dwLFOVal = 0;
    m_Voice[ wTemp ].dwDetuneEG = 0;
+   if (((m_wMonoMode & (1<<bChannel)) > 0 && !(m_Voice[wTemp].bOn) && !(m_Voice[wTemp].bSusHeld) && m_noteHistory[bChannel].size() == 0) 
+       || !(m_wMonoMode & (1<<bChannel)))
+      m_Voice[ wTemp ].dwStartTime = m_dwCurSample;
 
    if (b4Op)
    {
@@ -834,8 +837,8 @@ void
 
                m_Voice[wTemp2].dwPortaSampTime = (DWORD)floor(0.5 + pow(((double)m_bPortaTime[bChannel]*0.4), 1.5)); //m_bPortaTime[bChannel];
                m_Voice[wTemp2].dwPortaSampCnt = m_Voice[wTemp2].dwPortaSampTime; //m_bPortaTime[bChannel];
-               if (bNote == m_bLastNoteUsed[bChannel] || (m_wPortaMode & (1<<bChannel)) == 0
-                || m_bLastNoteUsed[bChannel] == (BYTE)0xFF)
+               if ((bNote == m_bLastNoteUsed[bChannel] /*&& !m_Voice[bChannel].bOn && !m_Voice[bChannel].bSusHeld*/)
+                || (m_wPortaMode & (1<<bChannel)) == 0 || m_bLastNoteUsed[bChannel] == (BYTE)0xFF)
                   m_Voice[wTemp2].dwPortaSampCnt = 0;
                
             }
@@ -874,9 +877,11 @@ void
       m_Voice[ wTemp2 ].bBlock[1] = NS.bAtB0[ 1 ] ;
       m_Voice[ wTemp2 ].bSusHeld = 0;
       m_Voice[ wTemp2 ].dwTime = ++m_dwCurTime ;
-      m_Voice[ wTemp2 ].dwStartTime = m_dwCurSample;
       m_Voice[ wTemp2 ].dwLFOVal = 0;
       m_Voice[ wTemp2 ].dwDetuneEG = 0;
+      if (((m_wMonoMode & (1<<bChannel)) > 0 && !(m_Voice[wTemp2].bOn) && !(m_Voice[wTemp2].bSusHeld) && m_noteHistory[bChannel].size() == 0) 
+       || !(m_wMonoMode & (1<<bChannel)))
+         m_Voice[ wTemp2 ].dwStartTime = m_dwCurSample;
    }
    else
       Opl3_Set4OpFlag((BYTE)wTemp, false, PATCH_1_2OP);

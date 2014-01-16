@@ -193,7 +193,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <OutputFile>$(OutDir)opl3emu.dll</OutputFile>
+      <OutputFile>$(OutDir)opl3hw.dll</OutputFile>
       <ModuleDefinitionFile>src/winmm_drv.def</ModuleDefinitionFile>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
@@ -280,7 +280,7 @@
     </ClCompile>
     <Link>
       <AdditionalDependencies>winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <OutputFile>$(OutDir)opl3emu.dll</OutputFile>
+      <OutputFile>$(OutDir)opl3hw.dll</OutputFile>
       <Version>
       </Version>
       <ModuleDefinitionFile>src/winmm_drv.def</ModuleDefinitionFile>
