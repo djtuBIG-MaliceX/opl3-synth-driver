@@ -4,7 +4,7 @@
 static const double FMToVGMSamples = 0.887038377986966;
 
 static VGM_HEADER VGMHead;
-static DWORD ClockAdd, LastVgmDelay, VGMSmplPlayed, LoopSamples, LoopMarker;
+static DWORD ClockAdd, LastVgmDelay, VGMSmplPlayed, SamplesBeforeLoop, LoopMarker;
 static FILE *hFileVGM = NULL;
 static WCHAR TempLogPath[BUFSIZ];
 
@@ -65,7 +65,7 @@ void VGMLog_Init()
    LastVgmDelay = 0;
    VGMSmplPlayed = 0;
    LoopMarker = 0;
-   LoopSamples = 0;
+   SamplesBeforeLoop = 0;
 
    // TODO hax my anus
    fputc(0x5F, hFileVGM);
@@ -138,8 +138,9 @@ void VGMLog_Close()
    fwrite(&TotalSamples, 0x04, 0x01, hFileVGM);
 
    // TODO fix issues with loop marker handling
-   if (LoopMarker > 0 || LoopSamples > 0)
+   if (LoopMarker > 0)
    {
+      DWORD LoopSamples = (TotalSamples - SamplesBeforeLoop);
       fseek(hFileVGM, 0x1C, SEEK_SET);
       fwrite(&LoopMarker, 0x04, 0x01, hFileVGM);
       fwrite(&LoopSamples, 0x04, 0x01, hFileVGM);
@@ -157,8 +158,8 @@ void VGMLog_MarkLoopStartNow()
 {
    if (hFileVGM == NULL) return;
 
-   LoopSamples = (DWORD)floor(VGMSmplPlayed * FMToVGMSamples + 0.5);
-   LoopMarker = (DWORD)ftell(hFileVGM);
+   SamplesBeforeLoop = (DWORD)floor(VGMSmplPlayed * FMToVGMSamples + 0.5);
+   LoopMarker = (DWORD)(ftell(hFileVGM) - 0x1C);
 }
 
 /*OPL_Write() / adlib_wite() etc. guide
