@@ -10,10 +10,10 @@
 #include "OPLSynth.h"
 
 // TODO - Determine way to read configuration for existing bank file before playback
-#include "patch.h"
+//#include "patch.h"
 //#include "mauipatch.h"
 //#include "fmsynthpatch.h"
-//#include "2x2patchtest.h"
+#include "2x2patchtest.h"
 //#include "ctmidipatch.h"
 
 void
@@ -1520,16 +1520,16 @@ WORD
 
    // Now, look for a slot of the oldest note with
    // the same patch
-   dwOldest = 0xffffffff ;
-   found = 0xffff ;
-   for (i = 0; i < NUM2VOICES; i++)
-      if ((m_Voice[ i ].bPatch == bPatch) && (m_Voice[ i ].dwTime < dwOldest))
-      {
-         dwOldest = m_Voice[ i ].dwTime ;
-         found = i ;
-      }
-   if (found != 0xffff)
-      return ( found ) ;
+   //dwOldest = 0xffffffff ;
+   //found = 0xffff ;
+   //for (i = 0; i < NUM2VOICES; i++)
+   //   if ((m_Voice[ i ].bPatch == bPatch) && (m_Voice[ i ].dwTime < dwOldest))
+   //   {
+   //      dwOldest = m_Voice[ i ].dwTime ;
+   //      found = i ;
+   //   }
+   //if (found != 0xffff)
+   //   return ( found ) ;
 
    // Now, just look for the oldest voice
    found = 0 ;
@@ -1592,18 +1592,18 @@ WORD
    if (found != 0xffff)
       return ( found ) ;
 
-   // Now, look for a slot of the oldest note with
-   // the same patch
-   dwOldest = 0xffffffff ;
-   found = 0xffff ;
-   for (i = 0; i < NUM4VOICES; i++)
-      if ((m_Voice[ gb4OpVoices[ i ] ].bPatch == bPatch) && (m_Voice[ gb4OpVoices[ i ] ].dwTime < dwOldest))
-      {
-         dwOldest = m_Voice[ gb4OpVoices[ i ] ].dwTime ;
-         found = gb4OpVoices[ i ] ;
-      }
-   if (found != 0xffff)
-      return ( found ) ;
+   //// Now, look for a slot of the oldest note with
+   //// the same patch
+   //dwOldest = 0xffffffff ;
+   //found = 0xffff ;
+   //for (i = 0; i < NUM4VOICES; i++)
+   //   if ((m_Voice[ gb4OpVoices[ i ] ].bPatch == bPatch) && (m_Voice[ gb4OpVoices[ i ] ].dwTime < dwOldest))
+   //   {
+   //      dwOldest = m_Voice[ gb4OpVoices[ i ] ].dwTime ;
+   //      found = gb4OpVoices[ i ] ;
+   //   }
+   //if (found != 0xffff)
+   //   return ( found ) ;
 
    // Now, just look for the oldest voice
    found = 0 ;
