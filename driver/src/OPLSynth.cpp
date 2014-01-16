@@ -744,7 +744,7 @@ void
          wTemp = (wTemp == bChannel) ? wTemp : 
                  //(NS.bOp == PATCH_1_4OP) ? Opl3_FindEmptySlot4Op(bPatch) :
                  Opl3_FindEmptySlot(bPatch);
-         m_Voice[wTemp].bPrevNote = m_Voice[wTemp].bNote;
+         //m_Voice[wTemp].bPrevNote = m_Voice[wTemp].bNote;
       }
 
       /*if (b4Op)
@@ -763,9 +763,25 @@ void
    }
 
    // Portamento
+   // If mono mode and incomplete, take current position
+   if ((m_Voice[wTemp].bOn || m_Voice[wTemp].bSusHeld) && (m_wPortaMode & (1<<bChannel)) > 0
+      && m_Voice[wTemp].dwPortaSampCnt > 0 && (m_wMonoMode & (1<<bChannel)) > 0)
+   {
+      DWORD curSampRange = m_Voice[wTemp].dwPortaSampTime,
+            curSampCnt = m_Voice[wTemp].dwPortaSampCnt;
+
+      m_Voice[wTemp].bPrevNote = (BYTE)floor(0.5 + (double)lin_intp(
+         (curSampRange - curSampCnt),
+         0,
+         curSampRange,
+         m_Voice[wTemp].bPrevNote, 
+         m_Voice[wTemp].bNote));
+   }
+   else
+      m_Voice[wTemp].bPrevNote = m_bLastNoteUsed[bChannel] ; //m_Voice[wTemp].bNote;
+
    m_Voice[wTemp].dwPortaSampTime = (DWORD)floor(0.5 + pow(((double)m_bPortaTime[bChannel]*0.4), 1.5)); //m_bPortaTime[bChannel];
    m_Voice[wTemp].dwPortaSampCnt = m_Voice[wTemp].dwPortaSampTime; //m_bPortaTime[bChannel];
-   m_Voice[wTemp].bPrevNote = m_bLastNoteUsed[bChannel] ; //m_Voice[wTemp].bNote;
    if (bNote == m_bLastNoteUsed[bChannel] || m_bLastNoteUsed[bChannel] == (BYTE)0xFF
       || (m_wPortaMode & (1<<bChannel)) == 0)
       m_Voice[wTemp].dwPortaSampCnt = 0;
