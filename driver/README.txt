@@ -11,6 +11,18 @@ Git Repository: https://bitbucket.org/djtubig-malicex/opl3-synth-driver
 
 Changelog
 ---------
+[17-JAN-2013]
+ * VGM Logging support (CC119=127 for ON, CC119=0 for OFF.  Saves to %TEMP%\opl3vgmlog.vgm for now)
+ * Fixed intermittent 4-op -> 2x2op/2op voice stealing issues
+ * Fixed voice-stealing problems on patch change (MS's oldest-by-patch policy was flawed)
+ * Tweaked Attack/Release range
+ * Portamento (CC5/CC65) support for both poly and mono.  Using EXP start-end time policy, and sustained pitch tracking.  100Hz update.
+ * Modulation wheel (CC1) support.  LFO policy is per-voice except for mono legato which follows on previous voice until silence. 100Hz update.
+ * Experimental linear pitch envelope support (currently possible with drum patch map only; see 2x2patchtest.h)  100Hz update.
+ * Channel Volume = 0 non-zero velocity should still allocate a voice.  (thanks DracoNihil)
+ * Changes to initialization code structure.
+ * Fixed project solution to spit out differentiating filenames depending on use for hardware or emu.
+ 
 [5-JAN-2013]
  * Hardware OPL Passthrough via inpout32.dll (x86/64-compatible) implemented!
    MAKE SURE YOU INSTALL INPOUT32.DLL BEFORE INSTALLING THE OPL3HW BUILD!!!
