@@ -1051,6 +1051,8 @@ void
          lpSN->op[0+i].bAt40 &= ~0x3F;        // clear old output level
          bTemp = (char)bTemp - bOffset;
          lpSN->op[0+i].bAt40 |= (bTemp > 0x3F) ? 0x3F : (bTemp > 0) ? bTemp : 0;
+
+
       }
    }
 }
