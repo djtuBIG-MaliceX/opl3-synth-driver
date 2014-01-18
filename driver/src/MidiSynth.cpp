@@ -500,9 +500,9 @@ namespace OPL3Emu
 
    void MidiSynth::Close()
    {
+      waveOut.Pause();
       synthEvent.Wait();
       synth->close();
-      waveOut.Pause();
       waveOut.Close();
 
       // Cleanup memory

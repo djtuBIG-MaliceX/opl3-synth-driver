@@ -264,9 +264,9 @@ STDAPI_(DWORD) modMessage(DWORD uDeviceID, DWORD uMsg, DWORD_PTR dwUser,
 		
       if (synthOpened)
       {
-         //midiSynth.Reset();
-         midiSynth.Close();
-         synthOpened = false;
+         midiSynth.Reset();
+         //midiSynth.Close();
+         //synthOpened = false;
       }
 		return CloseDriver(driver, uDeviceID, uMsg, dwUser, dwParam1, dwParam2);
 
