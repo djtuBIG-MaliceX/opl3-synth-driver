@@ -1,15 +1,31 @@
 
 #include "vgm_logging.h"
 
-static const double FMToVGMSamples = 0.887038377986966;
+//static const double FMToVGMSamples = 0.887038377986966;
+static const long double FMToVGMSamples = ((long double)44100.0 / 49716.0);
 
 static VGM_HEADER VGMHead;
-static DWORD ClockAdd, LastVgmDelay, VGMSmplPlayed, SamplesBeforeLoop, LoopMarker;
+static DWORD ClockAdd, VGMSmplPlayed, SamplesBeforeLoop, LoopMarker;
+static DWORD LastPBSample, LastVgmSmpl;
 static FILE *hFileVGM = NULL;
 static WCHAR TempLogPath[BUFSIZ];
 
+typedef struct
+{
+   UINT8
+      CmdChip,
+      RegMSB,
+      RegLSB;
+} vgmcmd_t;
+
 void VGMLog_Init()
 {
+   LastVgmSmpl = 0;
+   LastPBSample = 0;
+   //VGMSmplPlayed = 0;
+   LoopMarker = 0;
+   SamplesBeforeLoop = 0;
+
    memset(&VGMHead, 0x00, sizeof(VGM_HEADER));
    /*switch(DROInf.iHardwareType)
    {
@@ -62,10 +78,6 @@ void VGMLog_Init()
       rewind(hFileVGM);
 
    fwrite(&VGMHead, 0x01, sizeof(VGM_HEADER), hFileVGM);
-   LastVgmDelay = 0;
-   VGMSmplPlayed = 0;
-   LoopMarker = 0;
-   SamplesBeforeLoop = 0;
 
    // TODO hax my anus
    fputc(0x5F, hFileVGM);
@@ -76,26 +88,31 @@ void VGMLog_Init()
    fputc(0x60, hFileVGM);
 }
 
-// helper function
-inline void VGMLog_CmdWrite(BYTE Cmd, BYTE Reg, BYTE Data)
+inline void VGMLog_FlushWait()
 {
-	DWORD DelayDiff, CurTime;
+   DWORD CurPBSmpl, CurVGMSmpl;
+   DWORD DelayDiff, CurTime;
 	WORD WrtDly;
 	
-   if (hFileVGM == NULL) return;
+   if (hFileVGM == NULL) 
+      return;
 
    // Save current time before processing
-   CurTime = VGMSmplPlayed;
+   //CurTime = VGMSmplPlayed;
+   CurPBSmpl = LastPBSample;	// multithreading safety
+   CurVGMSmpl = (DWORD)floor(FMToVGMSamples * CurPBSmpl + 0.5);
+   DelayDiff = CurVGMSmpl - LastVgmSmpl;
+   LastVgmSmpl = CurVGMSmpl;
 
 	//DelayDiff = CurTime - LastVgmDelay;
-   DelayDiff = (DWORD)floor((FMToVGMSamples * (CurTime - LastVgmDelay) + 0.5));
+   //DelayDiff = (DWORD)floor((FMToVGMSamples * (CurTime - LastVgmDelay) + 0.5));
    //DelayDiff = (DWORD)(FMToVGMSamples * CurTime - FMToVGMSamples * LastVgmDelay);
 
    // Write long waits
 	while(DelayDiff)
 	{
 		if (DelayDiff > 0xFFFF)
-			WrtDly = 0xFFFF;
+         WrtDly = 0xFFFF;
 		else
 			WrtDly = (WORD)DelayDiff;
 
@@ -103,8 +120,18 @@ inline void VGMLog_CmdWrite(BYTE Cmd, BYTE Reg, BYTE Data)
 		fwrite(&WrtDly, 0x02, 0x01, hFileVGM);
 		DelayDiff -= WrtDly;
 	}
-	LastVgmDelay = CurTime;	//PlayingTime;
-	
+	//LastVgmDelay = CurTime;	//PlayingTime;
+}
+
+// helper function
+inline void VGMLog_CmdWrite(BYTE Cmd, BYTE Reg, BYTE Data)
+{
+   if (hFileVGM == NULL) 
+      return;
+
+   // Save current time before processing
+   VGMLog_FlushWait();
+
 	fputc(Cmd, hFileVGM);
 	if (Cmd == 0x66)  // EOF
 		return;
@@ -116,31 +143,86 @@ inline void VGMLog_CmdWrite(BYTE Cmd, BYTE Reg, BYTE Data)
 
 void VGMLog_IncrementSamples(int len)
 {
-   if (hFileVGM == NULL) return;
+   if (hFileVGM == NULL)
+      return;
    //VGMSmplPlayed += (DWORD)(len * FMToVGMSamples);
-   VGMSmplPlayed += len;
+   LastPBSample += len;
 }
 
+DWORD VGMLog_CountSamplesFromOffset(DWORD offset)
+{
+   vgmcmd_t cmdBuf;
+   DWORD DelayCount = 0;
+
+   if (hFileVGM == NULL)
+      return ~0;
+
+   fseek(hFileVGM, offset, SEEK_SET);
+   
+   while (!feof(hFileVGM))
+   {
+      if ((fread_s(&cmdBuf, sizeof(vgmcmd_t), sizeof(vgmcmd_t), 0x01, hFileVGM)) != sizeof(vgmcmd_t))
+         break;
+
+      // Assuming all commands logged (except for EOF)
+      switch (cmdBuf.CmdChip)
+      {
+         case 0x62:	// 1/60s delay
+				DelayCount += 735;
+				break;
+			case 0x63:	// 1/50s delay
+				DelayCount += 882;
+				break;
+			case 0x61:	// xx Sample Delay
+         {
+            WORD delayVal;
+				memcpy(&delayVal, &cmdBuf.RegMSB, 0x02);
+            DelayCount += delayVal;
+				break;
+         }
+
+         default:  // ignore all other commands
+            break;
+      }
+   }
+
+   return DelayCount;
+}
 
 //Stop the logger
 void VGMLog_Close()
 {
-   DWORD TotalSamples = (DWORD)floor(VGMSmplPlayed * FMToVGMSamples + 0.5);
-
-   if (hFileVGM == NULL) return;
+   DWORD TotalSamples = LastVgmSmpl;
+      //TotalSamplesConv = (DWORD)floor(VGMSmplPlayed * FMToVGMSamples + 0.5),
+      //VGMSamplesRecount;
+   
+   if (hFileVGM == NULL) 
+      return;
 
    VGMLog_CmdWrite(0x66, 0x00, 0x00);
+   TotalSamples = LastVgmSmpl;
+
+   //fputc(0x66, hFileVGM);
    UINT32 AbsVol = (UINT32)(ftell(hFileVGM) - 0x04);
    fseek(hFileVGM, 0x04, SEEK_SET);
    fwrite(&AbsVol, sizeof(UINT32), 0x01, hFileVGM);
    
+   // Recount samples (needed due to cumulative rounding errors from 49716 -> 44100)
+   //  - no longer necessar..  thanks ValleyBell!
+   //TotalSamples = VGMLog_CountSamplesFromOffset(sizeof(VGM_HEADER));
+
+   // Write VGM total sample count
    fseek(hFileVGM, 0x18, SEEK_SET);
    fwrite(&TotalSamples, 0x04, 0x01, hFileVGM);
 
-   // TODO fix issues with loop marker handling
+   // Write VGM loop sample count
    if (LoopMarker > 0)
    {
-      DWORD LoopSamples = (TotalSamples - SamplesBeforeLoop);
+      //DWORD LoopSamples = (DWORD)floor(((TotalSamples - SamplesBeforeLoop) * FMToVGMSamples) + 0.5);
+      DWORD LoopSamples = (DWORD)(TotalSamples - SamplesBeforeLoop);
+      //DWORD LoopSamples = VGMLog_CountSamplesFromOffset(LoopMarker);
+
+      //DWORD LoopSamples = (DWORD)floor((TotalSamplesConv - (SamplesBeforeLoop * FMToVGMSamples)) + 0.5);
       fseek(hFileVGM, 0x1C, SEEK_SET);
       fwrite(&LoopMarker, 0x04, 0x01, hFileVGM);
       fwrite(&LoopSamples, 0x04, 0x01, hFileVGM);
@@ -156,9 +238,12 @@ void VGMLog_Close()
 
 void VGMLog_MarkLoopStartNow()
 {
-   if (hFileVGM == NULL) return;
+   if (hFileVGM == NULL) 
+      return;
 
-   SamplesBeforeLoop = (DWORD)floor(VGMSmplPlayed * FMToVGMSamples + 0.5);
+   //SamplesBeforeLoop = (DWORD)floor(VGMSmplPlayed * FMToVGMSamples + 0.5);
+   VGMLog_FlushWait();
+   SamplesBeforeLoop = LastVgmSmpl;
    LoopMarker = (DWORD)(ftell(hFileVGM) - 0x1C);
 }
 
