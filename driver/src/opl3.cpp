@@ -373,7 +373,8 @@ void EG_Generate(OPL3 *opl, int op)
 		if(opl->OPs[op].EG_out>=511)
 		{
 			opl->OPs[op].EG_out = 511;
-			opl->OPs[op].EG_state = EG_OFF;
+         if (!opl->OPs[op].key)
+			   opl->OPs[op].EG_state = EG_OFF;
 		}
 		break;
 	}
@@ -393,12 +394,14 @@ void EG_KeyOn(OPL3 *opl, int op)
 	if(opl->OPs[op].EG_state == EG_RELEASE || opl->OPs[op].EG_state == EG_OFF)
 	{
 		opl->OPs[op].EG_state = EG_ATTACK;
+      opl->OPs[op].key = 1;
 		PG_Reset(opl,op);
 	}
 }
 
 void EG_KeyOff(OPL3 *opl, int op)
 {
+   opl->OPs[op].key = 0;
 	if(opl->OPs[op].EG_state != EG_OFF)
 		opl->OPs[op].EG_state = EG_RELEASE;
 }
@@ -408,6 +411,7 @@ void EG_Reset(OPL3 *opl, int op)
 	opl->OPs[op].EG_state = EG_OFF;
 	opl->OPs[op].EG_out = 511;
 	opl->OPs[op].EG_mout = 511;
+   opl->OPs[op].key = 0;
 }
 
 //
