@@ -1698,7 +1698,8 @@ void
                0, dwOldScaledTime/*bOldPortaTime*/, 0, dwPortaScaledTime/*bPortaTime*/));
          }
       }
-   }
+   } else
+      m_bPortaTime[bChannel] = bPortaTime;
 }
 
 void
