@@ -375,7 +375,8 @@ void
             {
                int prevNote = (*m_noteHistory[bChannel].rbegin());
                m_noteHistory[bChannel].pop_back();
-               Opl3_NoteOn(bPatch, prevNote, bChannel, m_Voice[wTemp].bVelocity, m_iBend[bChannel]);
+               if (!(m_wDrumMode & (1<<bChannel)) && bChannel != DRUMCHANNEL)
+                  Opl3_NoteOn(bPatch, prevNote, bChannel, m_Voice[wTemp].bVelocity, m_iBend[bChannel]);
             }
             else
             {
@@ -401,7 +402,8 @@ void
             {
                int prevNote = (*m_noteHistory[bChannel].rbegin());
                m_noteHistory[bChannel].pop_back();
-               Opl3_NoteOn(bPatch, prevNote, bChannel, m_Voice[wTemp].bVelocity, m_iBend[bChannel]);
+               if (!(m_wDrumMode & (1<<bChannel)) && bChannel != DRUMCHANNEL)
+                  Opl3_NoteOn(bPatch, prevNote, bChannel, m_Voice[wTemp].bVelocity, m_iBend[bChannel]);
                break;
             }
             else
@@ -424,7 +426,8 @@ void
             {
                int prevNote = (*m_noteHistory[bChannel].rbegin());
                m_noteHistory[bChannel].pop_back();
-               Opl3_NoteOn(bPatch, prevNote, bChannel, m_Voice[wTemp].bVelocity, m_iBend[bChannel]);
+               if (!(m_wDrumMode & (1<<bChannel)) && bChannel != DRUMCHANNEL)
+                  Opl3_NoteOn(bPatch, prevNote, bChannel, m_Voice[wTemp].bVelocity, m_iBend[bChannel]);
             }
             else
                Opl3_CutVoice((BYTE)wTemp, FALSE);
@@ -551,7 +554,7 @@ void
    BYTE            b4Op = (BYTE)(lpSN->bOp != PATCH_1_2OP);
 
    // Do not send note off to allow for mono mode legato
-   if ( !(m_wMonoMode & (1<<bChannel)) )
+   if ( !(m_wMonoMode & (1<<bChannel)) || (m_wDrumMode & (1<<bChannel) || bChannel == DRUMCHANNEL))
    {
       // write out a note off, just to make sure...
       wOffset = wNote;
@@ -762,11 +765,14 @@ void
          //m_Voice[wTemp].bPrevNote = m_Voice[wTemp].bNote;
       }
 
-      /*if (b4Op)
-      {
-         wTemp2 = Opl3_FindSecondVoice((BYTE)wTemp, m_Voice[m_bLastVoiceUsed[bChannel]].bVoiceID);
-         wTemp2 = (wTemp2 != (WORD)~0) ? wTemp2 : Opl3_FindEmptySlot( bPatch );
-      }*/
+      // If percussion voice not ended, kill it
+      //if ((m_wDrumMode & (1<<bChannel)) > 0 || bChannel == DRUMCHANNEL)
+      //{
+      //   if (m_Voice[wTemp].bOn || m_Voice[wTemp].bSusHeld)
+      //   {
+      //      Opl3_CutVoice(wTemp, TRUE);
+      //   }
+      //}
       // TODO: configuration flag for locking to 1:1 channel mapping.
    } 
    
@@ -814,7 +820,7 @@ void
    m_Voice[ wTemp ].dwTime = ++m_dwCurTime ;
    m_Voice[ wTemp ].dwLFOVal = 0;
    m_Voice[ wTemp ].dwDetuneEG = 0;
-   if (((m_wMonoMode & (1<<bChannel)) > 0 && m_noteHistory[bChannel].size() == 0) 
+   if (((m_wMonoMode & (1<<bChannel)) > 0 && m_noteHistory[bChannel].size() == 0 || (m_wDrumMode & (1<<bChannel) || bChannel == DRUMCHANNEL)) 
        || !(m_wMonoMode & (1<<bChannel)))
       m_Voice[ wTemp ].dwStartTime = m_dwCurSample;
 
@@ -830,32 +836,42 @@ void
             Opl3_Set4OpFlag((BYTE)wTemp, false, PATCH_2_2OP);
             Opl3_Set4OpFlag((BYTE)wTemp2, false, PATCH_2_2OP);
 
-            // Portamento 2nd voice
+            
             //if ((m_wMonoMode & (1<<bChannel)) > 0)
             //{
-               if ((m_Voice[wTemp2].bOn || m_Voice[wTemp2].bSusHeld) && (m_wPortaMode & (1<<bChannel)) > 0
-                  && m_Voice[wTemp2].dwPortaSampCnt > 0 && (m_wMonoMode & (1<<bChannel)) > 0)
-               {
-                  DWORD curSampRange = m_Voice[wTemp2].dwPortaSampTime,
-                        curSampCnt = m_Voice[wTemp2].dwPortaSampCnt;
-
-                  m_Voice[wTemp2].bPrevNote = (BYTE)floor(0.5 + (double)lin_intp(
-                     (curSampRange - curSampCnt),
-                     0,
-                     curSampRange,
-                     m_Voice[wTemp2].bPrevNote, 
-                     m_Voice[wTemp2].bNote));
-               }
-               else
-                  m_Voice[wTemp2].bPrevNote = m_bLastNoteUsed[bChannel] ;//m_Voice[wTemp2].bNote;
-
-               m_Voice[wTemp2].dwPortaSampTime = (DWORD)floor(0.5 + pow(((double)m_bPortaTime[bChannel]*0.4), 1.5)); //m_bPortaTime[bChannel];
-               m_Voice[wTemp2].dwPortaSampCnt = m_Voice[wTemp2].dwPortaSampTime; //m_bPortaTime[bChannel];
-               if ((bNote == m_bLastNoteUsed[bChannel] /*&& !m_Voice[bChannel].bOn && !m_Voice[bChannel].bSusHeld*/)
-                || (m_wPortaMode & (1<<bChannel)) == 0 || m_bLastNoteUsed[bChannel] == (BYTE)0xFF)
-                  m_Voice[wTemp2].dwPortaSampCnt = 0;
-               
+            //   // If percussion voice not ended, kill it
+            //   if ((m_wDrumMode & (1<<bChannel)) > 0 || bChannel == DRUMCHANNEL)
+            //   {
+            //      if (m_Voice[wTemp2].bOn || m_Voice[wTemp2].bSusHeld)
+            //      {
+            //         Opl3_CutVoice(wTemp2, TRUE);
+            //      }
+            //   }
             //}
+
+            // Portamento 2nd voice
+            if ((m_Voice[wTemp2].bOn || m_Voice[wTemp2].bSusHeld) && (m_wPortaMode & (1<<bChannel)) > 0
+               && m_Voice[wTemp2].dwPortaSampCnt > 0 && (m_wMonoMode & (1<<bChannel)) > 0)
+            {
+               DWORD curSampRange = m_Voice[wTemp2].dwPortaSampTime,
+                     curSampCnt = m_Voice[wTemp2].dwPortaSampCnt;
+
+               m_Voice[wTemp2].bPrevNote = (BYTE)floor(0.5 + (double)lin_intp(
+                  (curSampRange - curSampCnt),
+                  0,
+                  curSampRange,
+                  m_Voice[wTemp2].bPrevNote, 
+                  m_Voice[wTemp2].bNote));
+            }
+            else
+               m_Voice[wTemp2].bPrevNote = m_bLastNoteUsed[bChannel] ;//m_Voice[wTemp2].bNote;
+
+            m_Voice[wTemp2].dwPortaSampTime = (DWORD)floor(0.5 + pow(((double)m_bPortaTime[bChannel]*0.4), 1.5)); //m_bPortaTime[bChannel];
+            m_Voice[wTemp2].dwPortaSampCnt = m_Voice[wTemp2].dwPortaSampTime; //m_bPortaTime[bChannel];
+            if ((bNote == m_bLastNoteUsed[bChannel] /*&& !m_Voice[bChannel].bOn && !m_Voice[bChannel].bSusHeld*/)
+               || (m_wPortaMode & (1<<bChannel)) == 0 || m_bLastNoteUsed[bChannel] == (BYTE)0xFF)
+               m_Voice[wTemp2].dwPortaSampCnt = 0;
+               
             break;
 
          case PATCH_1_4OP:
@@ -893,7 +909,7 @@ void
       m_Voice[ wTemp2 ].dwTime = ++m_dwCurTime ;
       m_Voice[ wTemp2 ].dwLFOVal = 0;
       m_Voice[ wTemp2 ].dwDetuneEG = 0;
-      if (((m_wMonoMode & (1<<bChannel)) > 0 && m_noteHistory[bChannel].size() == 0) 
+      if (((m_wMonoMode & (1<<bChannel)) > 0 && m_noteHistory[bChannel].size() == 0 || (m_wDrumMode & (1<<bChannel) || bChannel == DRUMCHANNEL)) 
        || !(m_wMonoMode & (1<<bChannel)))
          m_Voice[ wTemp2 ].dwStartTime = m_dwCurSample;
    }
