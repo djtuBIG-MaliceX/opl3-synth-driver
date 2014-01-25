@@ -11,7 +11,7 @@ Git Repository: https://bitbucket.org/djtubig-malicex/opl3-synth-driver
 
 Changelog
 ---------
-[17-JAN-2013]
+[17-JAN-2014]
  * VGM Logging support (CC119=127 for ON, CC119=0 for OFF.  Saves to %TEMP%\opl3vgmlog.vgm for now)
  * Fixed intermittent 4-op -> 2x2op/2op voice stealing issues
  * Fixed voice-stealing problems on patch change (MS's oldest-by-patch policy was flawed)

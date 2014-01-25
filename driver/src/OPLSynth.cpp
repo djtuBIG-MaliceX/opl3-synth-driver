@@ -402,6 +402,7 @@ void
                int prevNote = (*m_noteHistory[bChannel].rbegin());
                m_noteHistory[bChannel].pop_back();
                Opl3_NoteOn(bPatch, prevNote, bChannel, m_Voice[wTemp].bVelocity, m_iBend[bChannel]);
+               break;
             }
             else
             {
@@ -813,7 +814,7 @@ void
    m_Voice[ wTemp ].dwTime = ++m_dwCurTime ;
    m_Voice[ wTemp ].dwLFOVal = 0;
    m_Voice[ wTemp ].dwDetuneEG = 0;
-   if (((m_wMonoMode & (1<<bChannel)) > 0 && !(m_Voice[wTemp].bOn) && !(m_Voice[wTemp].bSusHeld) && m_noteHistory[bChannel].size() == 0) 
+   if (((m_wMonoMode & (1<<bChannel)) > 0 && m_noteHistory[bChannel].size() == 0) 
        || !(m_wMonoMode & (1<<bChannel)))
       m_Voice[ wTemp ].dwStartTime = m_dwCurSample;
 
@@ -830,8 +831,8 @@ void
             Opl3_Set4OpFlag((BYTE)wTemp2, false, PATCH_2_2OP);
 
             // Portamento 2nd voice
-            if ((m_wMonoMode & (1<<bChannel)) > 0)
-            {
+            //if ((m_wMonoMode & (1<<bChannel)) > 0)
+            //{
                if ((m_Voice[wTemp2].bOn || m_Voice[wTemp2].bSusHeld) && (m_wPortaMode & (1<<bChannel)) > 0
                   && m_Voice[wTemp2].dwPortaSampCnt > 0 && (m_wMonoMode & (1<<bChannel)) > 0)
                {
@@ -854,7 +855,7 @@ void
                 || (m_wPortaMode & (1<<bChannel)) == 0 || m_bLastNoteUsed[bChannel] == (BYTE)0xFF)
                   m_Voice[wTemp2].dwPortaSampCnt = 0;
                
-            }
+            //}
             break;
 
          case PATCH_1_4OP:
@@ -892,7 +893,7 @@ void
       m_Voice[ wTemp2 ].dwTime = ++m_dwCurTime ;
       m_Voice[ wTemp2 ].dwLFOVal = 0;
       m_Voice[ wTemp2 ].dwDetuneEG = 0;
-      if (((m_wMonoMode & (1<<bChannel)) > 0 && !(m_Voice[wTemp2].bOn) && !(m_Voice[wTemp2].bSusHeld) && m_noteHistory[bChannel].size() == 0) 
+      if (((m_wMonoMode & (1<<bChannel)) > 0 && m_noteHistory[bChannel].size() == 0) 
        || !(m_wMonoMode & (1<<bChannel)))
          m_Voice[ wTemp2 ].dwStartTime = m_dwCurSample;
    }
