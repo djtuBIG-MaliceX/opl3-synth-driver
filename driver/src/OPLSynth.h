@@ -114,7 +114,7 @@ typedef struct _voiceStruct
    BYTE    bVelocity;              /* velocity */
    DWORD   dwTime;                 /* time that was turned on/off;
                                    0 time indicates that its not in use */
-   DWORD   dwOrigPitch[2];         /* original pitch, for pitch bend */
+   //DWORD   dwOrigPitch[2];         /* original pitch, for pitch bend */
    BYTE    bBlock[2];              /* value sent to the block */
    BYTE    bSusHeld;               /* turned off, but held on by sustain */
 
@@ -124,9 +124,6 @@ typedef struct _voiceStruct
    long   dwDetuneEG;
 
    // for portamento
-   /*WORD  dwCurFreq;
-   WORD  dwStartFreq;
-   WORD  dwEndFreq;*/
    BYTE   bPrevNote;
    DWORD dwPortaSampTime;
    //BYTE   bPortaSampCnt;
@@ -193,6 +190,13 @@ static BYTE gb4OpVoices[] =
 #define RHY_CH_TOM (0x08)
 #define RHY_CH_HH (0x09)
 #define RHY_CH_CY (0x0A)
+
+// MIDI mode constants
+#define MIDIMODE_GM1 (0x01)
+#define MIDIMODE_GM2 (0x02)
+#define MIDIMODE_GS  (0x03)
+#define MIDIMODE_XG  (0x04)
+
 
 static BYTE gbVelocityAtten[64] = 
 {
@@ -267,6 +271,7 @@ private:
    BYTE    m_bBrightness[NUMMIDICHN];  /*Scaled to modify modulator instrument TL*/
 
    BYTE    b4OpVoiceSet;               /*Bitvector to indicate bits 0-6 as channel flags for 4-op voice mode.*/
+   BYTE    m_MIDIMode;                 /*System Exclusive MIDI command mode (TODO: dynamically set defaults)*/
 
    void Opl3_ChannelVolume(BYTE bChannel, WORD wAtten);
    void Opl3_SetPan(BYTE bChannel, BYTE bPan);
@@ -299,6 +304,7 @@ private:
    bool Opl3_IsPatchEmpty(BYTE bPatch);
    void Opl3_LFOUpdate(BYTE bVoice);
 public:
+   void SoftCommandReset(void);
    void WriteMidiData(DWORD dwData);
    bool Init(void);
    void GetSample(short *samplem, int len);

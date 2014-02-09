@@ -235,15 +235,20 @@ void
          break;
       }
 
+      case 121: // Reset all controllers
+         Opl3_ChannelNotesOff(bChannel);
+         //SoftCommandReset(); // TODO do not do full reset
+         break;
+
       case 126: // Mono mode on
          Opl3_ChannelNotesOff(bChannel);
-         m_wMonoMode |= (1<<bChannel);
+         m_wMonoMode |= (1<<bChannel);  // latch bit flag for channel mono mode
          m_bLastVoiceUsed[bChannel] = bChannel; // Assign to midi-voice channel 1:1; last two channels only used if overflow for poly mode.
          break;
 
       case 127: // Poly mode on
          Opl3_ChannelNotesOff(bChannel);
-         m_wMonoMode &= ~(1<<bChannel);
+         m_wMonoMode &= ~(1<<bChannel);  // unset bit flag for channel mono mode
          break;
 
       default:
@@ -653,7 +658,7 @@ void
    WORD             wTemp, i, j, wTemp2 = ~0 ;
    BYTE             b4Op, /*bTemp, */bMode, bStereo;
    patchStruct      *lpPS ;
-   DWORD            /*dwBasicPitch, */dwPitch[ 2 ] ;
+   //DWORD            dwBasicPitch, dwPitch[ 2 ] ;
    noteStruct       NS;
   
    // Increment voice allocation ID (needed for pairing operator pairs for 2x2op patches)
@@ -812,8 +817,8 @@ void
    m_Voice[ wTemp ].bPatch = bPatch ;
    m_Voice[ wTemp ].bVelocity = bVelocity ;
    m_Voice[ wTemp ].bOn = TRUE ;
-   m_Voice[ wTemp ].dwOrigPitch[0] = dwPitch[ 0 ] ;  // not including bend
-   m_Voice[ wTemp ].dwOrigPitch[1] = dwPitch[ 1 ] ;  // not including bend
+   //m_Voice[ wTemp ].dwOrigPitch[0] = dwPitch[ 0 ] ;  // not including bend
+   //m_Voice[ wTemp ].dwOrigPitch[1] = dwPitch[ 1 ] ;  // not including bend
    m_Voice[ wTemp ].bBlock[0] = NS.bAtB0[ 0 ] ;
    m_Voice[ wTemp ].bBlock[1] = NS.bAtB0[ 1 ] ;
    m_Voice[ wTemp ].bSusHeld = 0;
@@ -901,8 +906,8 @@ void
       m_Voice[ wTemp2 ].bPatch = bPatch ;
       m_Voice[ wTemp2 ].bVelocity = bVelocity ;
       m_Voice[ wTemp2 ].bOn = TRUE ;
-      m_Voice[ wTemp2 ].dwOrigPitch[0] = dwPitch[ 0 ] ;  // not including bend
-      m_Voice[ wTemp2 ].dwOrigPitch[1] = dwPitch[ 1 ] ;  // not including bend
+      //m_Voice[ wTemp2 ].dwOrigPitch[0] = dwPitch[ 0 ] ;  // not including bend
+      //m_Voice[ wTemp2 ].dwOrigPitch[1] = dwPitch[ 1 ] ;  // not including bend
       m_Voice[ wTemp2 ].bBlock[0] = NS.bAtB0[ 0 ] ;
       m_Voice[ wTemp2 ].bBlock[1] = NS.bAtB0[ 1 ] ;
       m_Voice[ wTemp2 ].bSusHeld = 0;
@@ -1081,20 +1086,28 @@ void
    WORD rpn = (WORD)(m_RPN[bChannel][0])|(m_RPN[bChannel][1] << 8) & (WORD)(0xFF);
    DWORD dwTemp;
 
-   // Pitch Bend Range extension
-   if (rpn == (WORD)0x0000)
+   switch(rpn)
    {
-      // Calculate base bend value then apply
+      case (WORD)0x0000:   // Pitch Bend Range extension
 
-      // TODO determine what's wrong - how is it becoming 0 at all?
-      m_iBendRange[bChannel] = (!m_iBendRange[bChannel]) ? 2 : m_iBendRange[bChannel];
+         // Calculate base bend value then apply
+         m_iBendRange[bChannel] = (!m_iBendRange[bChannel]) ? 2 : m_iBendRange[bChannel];
 
-      dwTemp = ((long)m_iBend[bChannel] / m_iBendRange[bChannel]);
-      m_iBendRange[bChannel] = val & 0x7f;
-      dwTemp *= m_iBendRange[bChannel];
-      m_iBend[bChannel] = (long) (dwTemp);
+         dwTemp = ((long)m_iBend[bChannel] / m_iBendRange[bChannel]);
+         m_iBendRange[bChannel] = val & 0x7f;
+         dwTemp *= m_iBendRange[bChannel];
+         m_iBend[bChannel] = (long) (dwTemp);
 
-      Opl3_PitchBend(bChannel, m_iBend[bChannel]);
+         Opl3_PitchBend(bChannel, m_iBend[bChannel]);
+         break;
+
+      case (WORD)0x0001:   // Fine tune
+         break;
+
+      case (WORD)0x0002:   // Coarse tune
+         break;
+
+
    }
          
 }
@@ -1860,39 +1873,9 @@ bool
    m_MaxVolValue  = 0x00000000;    //  maximum  0    (dB) * 0x10000
    m_VolStepDelta = 0x0000C000;    //  steps of 0.75 (dB) * 0x10000
 
-   m_wMonoMode = 0;  // Set all channels to polyphonic mode
-   m_wDrumMode = (1<<9);  // Set ch10 to drum by default
-   m_wPortaMode = 0;
+   m_MIDIMode = MIDIMODE_XG;
 
-   b4OpVoiceSet = 0; // disable 4op mode by default
-
-   /* start attenuations at -3 dB, which is 90 MIDI level */
-   for (i = 0; i < NUMMIDICHN; i++)
-   {
-      m_bPatch[i] = 0;
-      m_bSustain[i] = 0;
-      m_bChanAtten[i] = 4;      // default attenuation value
-      m_bStereoMask[i] = 0xff;  // center
-      m_iBendRange[i] = 2;      // -/+ 2 semitones
-      memset(m_RPN[i], -1, sizeof(WORD));  
-      m_iExpThres[i] = 0x7F;
-      m_curVol[i] = 100;
-      m_bAttack[i] = 64;
-      m_bRelease[i] = 64;
-      m_bBrightness[i] = 64;
-      m_bModWheel[i] = 0;
-      m_noteHistory[i].clear();
-      m_iBend[i] = 0;
-      m_bPortaTime[i] = 0;
-      m_bLastVoiceUsed[i] = 0xFF;
-      m_bLastNoteUsed[i] = 0xFF;
-   };
-
-   for (i = 0; i < NUM2VOICES; ++i)
-   {
-      memset(&m_Voice[i], 0, sizeof(voiceStruct));
-      m_Voice[i].bChannel = ~0;
-   }
+   SoftCommandReset();
 
 //#ifdef DISABLE_HW_SUPPORT
    //m_Miniport.adlib_init();
@@ -2042,10 +2025,11 @@ void
         bufpos[2] == 0x10 && 
         bufpos[3] == 0x42 && 
         bufpos[4] == 0x12 && 
-        (bufpos[5] == 0x40 || bufpos[5] == 0x00) &&
+        //(bufpos[5] == 0x40 || bufpos[5] == 0x00) &&
         bufpos[6] == 0x00 && 
         bufpos[7] == 0x7F && 
-        (bufpos[9] == 0x41 || bufpos[9] == 0x01 || bufpos[9] == 0x01)
+        // ignore GS pos 8 as it's not needed here (SCxx mode)
+        ((bufpos[5] == 0x40 && bufpos[9] == 0x41) || (bufpos[5] == 0x00 && (bufpos[9] == 0x01 || bufpos[9] == 0x00)))
        ) ||
        
        len == 9 && // XG Reset
@@ -2067,7 +2051,7 @@ void
     */
 
    /*
-    * General MIDI Level 2 System Exclusive (MODE 2 - default)
+    * General MIDI Level 2 System Exclusive (MODE 2)
     *  - Allow bank switching
     *  - CC71-74 enabled
     *  - Drum bank select 127 disabled - must use NRPN
@@ -2082,7 +2066,7 @@ void
     */
 
    /*
-    * Yamaha XG System Exclusive (MODE 4)
+    * Yamaha XG System Exclusive (MODE 4) - default
     *  - Allow bank switching
     *  - Allow bank-switchable MIDI channels for drum bank
     *  - CC71-74 enabled
@@ -2092,39 +2076,61 @@ void
    //TODO: common reset routines to all channels
    if (IsResetSysex)
    {
-      for (int i = 0; i < NUM2VOICES; ++i)
-      {
-         Opl3_CutVoice(i, TRUE);
-         m_Voice[i].bPatch = 0;
-         m_Voice[i].dwTime = 0;
-      }
+      m_MIDIMode = 
+         (len == 6) ? bufpos[4] :  // will correspond to either MIDIMODE_GM1 or MIDIMORDE_GM2
+         (len == 11) ? MIDIMODE_GS :
+         (len == 9) ? MIDIMODE_XG :
+         0x00;
 
-      for (int i = 0; i < NUMMIDICHN; ++i)
-      {
-         m_iBend[i] = 0;
-         m_iBendRange[i] = 2;
-         m_curVol[i] = 100;
-         m_iExpThres[i] = 127;
-         m_bLastNoteUsed[i] = ~0;         
-         m_bLastVoiceUsed[i] = ~0;
-         m_bLastNoteUsed[i] = ~0;
-         m_bPatch[i] = 0;
-         m_bSustain[i] = 0;
-         m_bPortaTime[i] = 0;
-         m_bStereoMask[i] = 0xff;
-         m_bModWheel[i] = 0;
-         m_bRelease[i] = 64;
-         m_bAttack[i] = 64;
-         m_bBrightness[i] = 64;
-         m_noteHistory[i].clear();
-         memset(m_RPN, -1, sizeof(WORD));
-      }
-      
-      m_wDrumMode = (1<<9);
-      m_wMonoMode = 0;
-      m_wPortaMode = 0;
-      m_dwCurTime = 0;
+      SoftCommandReset();
    }
+
+   else
+   {
+      // Do something!
+   }
+}
+
+void
+   OPLSynth::
+   SoftCommandReset()
+{
+   for (int i = 0; i < NUM2VOICES; ++i)
+   {
+      Opl3_CutVoice(i, TRUE);
+      //m_Voice[i].bPatch = 0;
+      //m_Voice[i].dwTime = 0;
+      memset(&m_Voice[i], 0, sizeof(voiceStruct));
+      m_Voice[i].bChannel = ~0;
+   }
+
+   for (int i = 0; i < NUMMIDICHN; ++i)
+   {
+      m_iBend[i] = 0;          // central value
+      m_iBendRange[i] = 2;     // -/+2 semitones
+      m_curVol[i] = 100;       // CC7 = 100
+      m_iExpThres[i] = 127;    // CC11 = max
+      m_bChanAtten[i] = 4;     // default attenuation value
+      m_bLastNoteUsed[i] = ~0;         
+      m_bLastVoiceUsed[i] = ~0;
+      m_bLastNoteUsed[i] = ~0;
+      m_bPatch[i] = 0;
+      m_bSustain[i] = 0;
+      m_bPortaTime[i] = 0;
+      m_bStereoMask[i] = 0xff;
+      m_bModWheel[i] = 0;
+      m_bRelease[i] = 64;
+      m_bAttack[i] = 64;
+      m_bBrightness[i] = 64;
+      m_noteHistory[i].clear();
+      memset(m_RPN, -1, sizeof(WORD));
+   }
+      
+   b4OpVoiceSet = 0;         // disable 4op mode by default
+   m_wDrumMode = (1<<9);     // Ch10 Drums
+   m_wMonoMode = 0;          // Set all channels to polyphonic mode
+   m_wPortaMode = 0;
+   m_dwCurTime = 0;
 }
 
 inline void
