@@ -27,7 +27,7 @@ typedef signed long		LONG;
 #define AsULMUL(a, b) ((DWORD)((DWORD)(a) * (DWORD)(b)))
 #define AsLSHL(a, b) ((DWORD)((DWORD)(a) << (DWORD)(b)))
 #define AsULSHR(a, b) ((DWORD)((DWORD)(a) >> (DWORD)(b)))
-#define lin_intp(x, xmin, xmax, ymin, ymax) (ymin+((double)(ymax-ymin)*((double)(x-xmin)/(double)(xmax-xmin))))
+#define lin_intp(x, xmin, xmax, ymin, ymax) (ymin+((double)((ymax)-(ymin))*((double)((x)-(xmin))/(double)((xmax)-(xmin)))))
 
 #define AsMemCopy CopyMemory
 
@@ -235,6 +235,7 @@ private:
    WORD    m_wSynthAttenL;        /* in 1.5dB steps */
    WORD    m_wSynthAttenR;        /* in 1.5dB steps */
    std::vector<BYTE> m_noteHistory[NUMMIDICHN];
+   BYTE   m_bRPNCount[NUMMIDICHN];
 
    /* support for volume property */
    LONG    m_MinVolValue;      // Minimum value for volume controller
@@ -253,6 +254,8 @@ private:
    BYTE    m_RPN[NUMMIDICHN][2];      /* RPN WORD */
    BYTE    m_iBendRange[NUMMIDICHN];  /* Bend range as dictated by CC100=0, CC101=0, CC6=n, where n= +/- range of semitones */
    BYTE    m_bModWheel[NUMMIDICHN];   /* Modulation wheel setting */
+   BYTE    m_bCoarseTune[NUMMIDICHN]; /* -64 to +63 semitones coarse tuning */
+   BYTE    m_bFineTune[NUMMIDICHN];   /* -1 to +1 semitones tuning */
    
    WORD    m_wMonoMode;    /* Flag for bend mode, bitmasked (LSB=ch1) */
    WORD    m_wDrumMode;    /* Flag for drum mode, bitmasked (LSB=ch1) */

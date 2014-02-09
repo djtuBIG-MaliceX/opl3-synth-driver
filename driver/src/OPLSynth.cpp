@@ -213,13 +213,13 @@ void
 
       case 98:  // NRPN LSB
       case 99:  // NRPN MSB
+         m_bRPNCount[bChannel] = 0;
          break;
 
       case 100: // RPN LSB
-         m_RPN[bChannel][0] = bVelocity;
-         break;
       case 101: // RPN MSB
-         m_RPN[bChannel][1] = bVelocity;
+         m_RPN[bChannel][(bNote & 0x01)] = bVelocity;
+         ++m_bRPNCount[bChannel];
          break;
 
       case 118: // Set VGM log loop marker
@@ -271,15 +271,7 @@ void
    case 0xe0:  // pitch bend
       dwTemp = ((WORD)bNote << 0) | ((WORD)bVelocity << 7);
 		dwTemp -= 0x2000;
-      //dwTemp += 0x8000;
-      dwTemp *= (m_iBendRange[bChannel]);
-      //dwTemp *= (12<<1);
-      m_iBend[bChannel] = (long) (dwTemp);
-      
-      //wTemp = ((WORD) bVelocity << 9) | ((WORD) bNote << 2);
-      ////m_iBend[bChannel] = (short) (WORD) (wTemp + 0x7fff);
-      //m_iBend[bChannel] = (long) (DWORD) (wTemp + 0x8000);
-      Opl3_PitchBend(bChannel, m_iBend[bChannel]);
+      Opl3_PitchBend(bChannel, (long)dwTemp);
       break;
    };
    return;
@@ -1086,28 +1078,38 @@ void
    WORD rpn = (WORD)(m_RPN[bChannel][0])|(m_RPN[bChannel][1] << 8) & (WORD)(0xFF);
    DWORD dwTemp;
 
-   switch(rpn)
+   if (m_bRPNCount[bChannel] >= 2)
    {
-      case (WORD)0x0000:   // Pitch Bend Range extension
+      m_bRPNCount[bChannel] = 2;
 
-         // Calculate base bend value then apply
-         m_iBendRange[bChannel] = (!m_iBendRange[bChannel]) ? 2 : m_iBendRange[bChannel];
+      switch(rpn)
+      {
+         case (WORD)0x0000:   // Pitch Bend Range extension
+            // Calculate base bend value then apply
+            ///////////m_iBendRange[bChannel] = (!m_iBendRange[bChannel]) ? 2 : m_iBendRange[bChannel];
+            //dwTemp = (m_iBendRange[bChannel]) ? ((long)m_iBend[bChannel] / m_iBendRange[bChannel]) : 0;
+            m_iBendRange[bChannel] = val & 0x7f;
+            //dwTemp = (dwTemp > 0) ? dwTemp * m_iBendRange[bChannel] : ((long)m_iBend[bChannel] * m_iBendRange[bChannel]);
+            //m_iBend[bChannel] = (long) (dwTemp);
 
-         dwTemp = ((long)m_iBend[bChannel] / m_iBendRange[bChannel]);
-         m_iBendRange[bChannel] = val & 0x7f;
-         dwTemp *= m_iBendRange[bChannel];
-         m_iBend[bChannel] = (long) (dwTemp);
+            // Update pitch bend
+            Opl3_PitchBend(bChannel, m_iBend[bChannel]);
+            break;
 
-         Opl3_PitchBend(bChannel, m_iBend[bChannel]);
-         break;
+         case (WORD)0x0001:   // Fine tune
+            m_bFineTune[bChannel] = val & 0x7f;
 
-      case (WORD)0x0001:   // Fine tune
-         break;
+            // Update pitch bend
+            Opl3_PitchBend(bChannel, m_iBend[bChannel]);
+            break;
 
-      case (WORD)0x0002:   // Coarse tune
-         break;
+         case (WORD)0x0002:   // Coarse tune
+            m_bCoarseTune[bChannel] = val & 0x7f;
 
-
+            // Update pitch bend
+            Opl3_PitchBend(bChannel, m_iBend[bChannel]);
+            break;
+      }
    }
          
 }
@@ -1415,13 +1417,14 @@ void
    WORD   i, wTemp[ 2 ], wOffset, j ;
 //   DWORD  dwNew ;
 
-   // Remember the current bend..
+   // Remember the current bend value
    m_iBend[ bChannel ] = iBend;
 
    // Loop through all the notes looking for
    // the correct channel.  Anything with the
    // correct channel gets its pitch bent...
    for (i = 0; i < NUM2VOICES; i++)
+   {
       if (m_Voice[ i ].bChannel == bChannel/* && (m_Voice [ i ].bOn || m_bSustain[bChannel])*/)
       {
          j = 0 ;
@@ -1438,6 +1441,7 @@ void
          Opl3_ChipWrite(AD_BLOCK + wOffset, m_Voice[ i ].bBlock[ 0 ] ) ;
          Opl3_ChipWrite(AD_FNUMBER + wOffset, (BYTE) wTemp[ 0 ] ) ;
       }
+   }
 } // end of Opl3_PitchBend
 
 // ===========================================================================
@@ -1459,7 +1463,7 @@ WORD
    OPLSynth::
    Opl3_MIDINote2FNum(double note, BYTE bChannel, long dwLFOVal)
 {
-	double freqVal, curNote;
+	double freqVal, curNote, RPNTune;
 	signed char BlockVal;
 	WORD keyVal;
 //	signed long CurPitch;
@@ -1467,7 +1471,10 @@ WORD
    /*TODO: keep for later, may add other features */
 	//CurPitch = //MMstTuning + TempMid->TunePb + TempMid->Pitch + TempMid->ModPb;
 	
-	curNote = (double)(note + (m_iBend[bChannel] + dwLFOVal) / 8192.0); //Note + CurPitch / 8192.0;
+   RPNTune = ((signed)m_bCoarseTune[bChannel] - 64);
+   RPNTune += lin_intp(m_bFineTune[bChannel], 0, 127, (-1), 1);
+
+	curNote = (double)(note + RPNTune + (m_iBend[bChannel] * m_iBendRange[bChannel] + dwLFOVal) / 8192.0); //Note + CurPitch / 8192.0;
 	freqVal = 440.0 * pow(2.0, (curNote - 69) / 12.0);
 	//BlockVal = ((signed short int)CurNote / 12) - 1;
 	BlockVal = ((signed short int)(curNote + 6) / 12) - 2;
@@ -2123,6 +2130,9 @@ void
       m_bAttack[i] = 64;
       m_bBrightness[i] = 64;
       m_noteHistory[i].clear();
+      m_bCoarseTune[i] = 64;
+      m_bFineTune[i] = 64;
+      m_bRPNCount[i] = 0;
       memset(m_RPN, -1, sizeof(WORD));
    }
       
