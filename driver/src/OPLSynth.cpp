@@ -2014,35 +2014,67 @@ void
    PlaySysex(Bit8u *bufpos, DWORD len)
 {
    bool IsResetSysex = false;
-   std::string SysExVal((char*)bufpos);
+   //std::string SysExVal((char*)bufpos); 
 
    // For reference: http://homepage2.nifty.com/mkmk/midi_lab/exref.htm
    //            and http://www.bandtrax.com.au/sysex.htm
-   //GM          F0 7E 7F 09 01 F7 
-   //GM-2        F0 7E 7F 09 02 F7
-   //GS          F0 41 10 42 12 40 00 7F 00 41 F7 
-   //SC88 Mode 1 F0 41 10 42 12 00 00 7F 00 01 F7
-   //SC88 Mode 2 F0 41 10 42 12 00 00 7F 01 00 F7
-   //XG          F0 43 10 4C 00 00 7E 00 F7 
-   //TG300B      (SAME AS GS RESET)
+   //GM               F0 7E 7F 09 01 F7 
+   //GM-2             F0 7E 7F 09 02 F7
+   //SC55(GS)/TG300B  F0 41 10 42 12 40 00 7F 00 41 F7 
+   //SC88(GS) Mode1   F0 41 10 42 12 00 00 7F 00 01 F7
+   //SC88(GS) Mode2   F0 41 10 42 12 00 00 7F 01 00 F7
+   //XG               F0 43 10 4C 00 00 7E 00 F7 
 
+   // Ignore Sysex Continued or non-standard sysex events
+   if (bufpos[0] != 0xF0 || bufpos[len-1] != 0xF7)
+      return;
+
+   // TODO - portable, more efficient comparison method needed. (Cannot use memset due to endinaness)
+   if (len == 6 && // GM Reset
+       (bufpos[1] == 0x7E && 
+        bufpos[2] == 0x7F && 
+        bufpos[3] == 0x09
+        // ignore pos 4 here since it indicates GM Level
+       ) ||
+       
+       len == 11 && // GS Reset
+       (bufpos[1] == 0x41 &&
+        bufpos[2] == 0x10 && 
+        bufpos[3] == 0x42 && 
+        bufpos[4] == 0x12 && 
+        (bufpos[5] == 0x40 || bufpos[5] == 0x00) &&
+        bufpos[6] == 0x00 && 
+        bufpos[7] == 0x7F && 
+        (bufpos[9] == 0x41 || bufpos[9] == 0x01 || bufpos[9] == 0x01)
+       ) ||
+       
+       len == 9 && // XG Reset
+       (bufpos[1] == 0x43 && 
+        bufpos[2] == 0x10 &&
+        bufpos[3] == 0x4C && 
+        bufpos[4] == 0x00 && 
+        bufpos[5] == 0x00 &&
+        bufpos[6] == 0x7E && 
+        bufpos[7] == 0x00)
+      )
+      IsResetSysex = true;
 
 
    /*
-    * General MIDI System Exclusive
+    * General MIDI System Exclusive (MODE 1)
     *  - Do not allow bank switching at all (melodic or drum)
     *  - CC71-74 disabled
     */
 
    /*
-    * General MIDI Level 2 System Exclusive
+    * General MIDI Level 2 System Exclusive (MODE 2 - default)
     *  - Allow bank switching
     *  - CC71-74 enabled
     *  - Drum bank select 127 disabled - must use NRPN
     */
 
    /*
-    * Rolands GS System Exclusive
+    * Rolands GS System Exclusive (MODE 3)
     *  - Allow bank switching
     *  - Drum bank select 127 disabled - must use NRPN
     *  - CC71-74 enabled (TG300b-mode compatibility)
@@ -2050,7 +2082,7 @@ void
     */
 
    /*
-    * Yamaha XG System Exclusive
+    * Yamaha XG System Exclusive (MODE 4)
     *  - Allow bank switching
     *  - Allow bank-switchable MIDI channels for drum bank
     *  - CC71-74 enabled
@@ -2071,7 +2103,27 @@ void
       {
          m_iBend[i] = 0;
          m_iBendRange[i] = 2;
+         m_curVol[i] = 100;
+         m_iExpThres[i] = 127;
+         m_bLastNoteUsed[i] = ~0;         
+         m_bLastVoiceUsed[i] = ~0;
+         m_bLastNoteUsed[i] = ~0;
+         m_bPatch[i] = 0;
+         m_bSustain[i] = 0;
+         m_bPortaTime[i] = 0;
+         m_bStereoMask[i] = 0xff;
+         m_bModWheel[i] = 0;
+         m_bRelease[i] = 64;
+         m_bAttack[i] = 64;
+         m_bBrightness[i] = 64;
+         m_noteHistory[i].clear();
+         memset(m_RPN, -1, sizeof(WORD));
       }
+      
+      m_wDrumMode = (1<<9);
+      m_wMonoMode = 0;
+      m_wPortaMode = 0;
+      m_dwCurTime = 0;
    }
 }
 
