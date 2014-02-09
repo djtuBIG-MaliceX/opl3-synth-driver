@@ -237,7 +237,7 @@ void
 
       case 121: // Reset all controllers
          Opl3_ChannelNotesOff(bChannel);
-         //SoftCommandReset(); // TODO do not do full reset
+         //Opl3_SoftCommandReset(); // TODO do not do full reset
          break;
 
       case 126: // Mono mode on
@@ -1882,8 +1882,6 @@ bool
 
    m_MIDIMode = MIDIMODE_XG;
 
-   SoftCommandReset();
-
 //#ifdef DISABLE_HW_SUPPORT
    //m_Miniport.adlib_init();
    m_Miniport = opl_init();
@@ -1893,6 +1891,8 @@ bool
 //#endif /*DISABLE_HW_SUPPORT*/
    //VGMLog_Init();
    Opl3_BoardReset();
+   Opl3_SoftCommandReset();
+
    return true;
 }
 
@@ -2089,7 +2089,7 @@ void
          (len == 9) ? MIDIMODE_XG :
          0x00;
 
-      SoftCommandReset();
+      Opl3_SoftCommandReset();
    }
 
    else
@@ -2100,7 +2100,7 @@ void
 
 void
    OPLSynth::
-   SoftCommandReset()
+   Opl3_SoftCommandReset()
 {
    for (int i = 0; i < NUM2VOICES; ++i)
    {
@@ -2133,7 +2133,7 @@ void
       m_bCoarseTune[i] = 64;
       m_bFineTune[i] = 64;
       m_bRPNCount[i] = 0;
-      memset(m_RPN, -1, sizeof(WORD));
+      memset(m_RPN[i], -1, sizeof(WORD));
    }
       
    b4OpVoiceSet = 0;         // disable 4op mode by default

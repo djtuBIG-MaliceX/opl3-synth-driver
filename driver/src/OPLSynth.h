@@ -307,7 +307,7 @@ private:
    bool Opl3_IsPatchEmpty(BYTE bPatch);
    void Opl3_LFOUpdate(BYTE bVoice);
 public:
-   void SoftCommandReset(void);
+   void Opl3_SoftCommandReset(void);
    void WriteMidiData(DWORD dwData);
    bool Init(void);
    void GetSample(short *samplem, int len);
