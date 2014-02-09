@@ -1076,7 +1076,7 @@ void
    Opl3_ProcessDataEntry(BYTE val, BYTE bChannel)
 {
    WORD rpn = (WORD)(m_RPN[bChannel][0])|(m_RPN[bChannel][1] << 8) & (WORD)(0xFF);
-   DWORD dwTemp;
+   //DWORD dwTemp;
 
    if (m_bRPNCount[bChannel] >= 2)
    {
@@ -1867,8 +1867,6 @@ bool
    OPLSynth::
    Init()
 {
-   int i;
-
    // init some members
    bIsLogging = false;
    m_dwCurTime = 1;    /* for note on/off * /
@@ -2004,6 +2002,15 @@ void
    PlaySysex(Bit8u *bufpos, DWORD len)
 {
    bool IsResetSysex = false;
+   const BYTE resetArray[6][12] =
+   {
+      {0xF0, 0x7E, 0x7F, 0x09, 0x01, 0xF7},
+      {0xF0, 0x7E, 0x7F, 0x09, 0x02, 0xF7},
+      {0xF0, 0x41, 0x10, 0x42, 0x12, 0x40, 0x00, 0x7F, 0x00, 0x41, 0xF7},
+      {0xF0, 0x41, 0x10, 0x42, 0x12, 0x00, 0x00, 0x7F, 0x00, 0x01, 0xF7},
+      {0xF0, 0x41, 0x10, 0x42, 0x12, 0x00, 0x00, 0x7F, 0x01, 0x00, 0xF7},
+      {0xF0, 0x43, 0x10, 0x4C, 0x00, 0x00, 0x7E, 0x00, 0xF7},
+   };
    //std::string SysExVal((char*)bufpos); 
 
    // For reference: http://homepage2.nifty.com/mkmk/midi_lab/exref.htm
@@ -2020,6 +2027,7 @@ void
       return;
 
    // TODO - portable, more efficient comparison method needed. (Cannot use memset due to endinaness)
+   /*
    if (len == 6 && // GM Reset
        (bufpos[1] == 0x7E && 
         bufpos[2] == 0x7F && 
@@ -2047,6 +2055,11 @@ void
         bufpos[5] == 0x00 &&
         bufpos[6] == 0x7E && 
         bufpos[7] == 0x00)
+      )
+      */
+   if (len == 6  && (memcmp(resetArray[0], bufpos, len) || memcmp(resetArray[1], bufpos, len)) ||
+       len == 11 && (memcmp(resetArray[2], bufpos, len) || memcmp(resetArray[4], bufpos, len) || memcmp(resetArray[5], bufpos, len)) ||
+       len == 9  && (memcmp(resetArray[6], bufpos, len))
       )
       IsResetSysex = true;
 
