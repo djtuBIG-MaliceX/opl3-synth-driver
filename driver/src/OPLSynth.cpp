@@ -661,7 +661,7 @@ void
    Opl3_NoteOn(BYTE bPatch, BYTE bNote, BYTE bChannel, BYTE bVelocity, long iBend)
 {
    WORD             wTemp, i, j, wTemp2 = ~0 ;
-   BYTE             b4Op, /*bTemp, */bMode, bStereo;
+   BYTE             b4Op, /*bTemp, */bMode, bStereo, bRhyPatch;
    patchStruct      *lpPS ;
    //DWORD            dwBasicPitch, dwPitch[ 2 ] ;
    noteStruct       NS;
@@ -692,8 +692,9 @@ void
 
    RtlCopyMemory( (LPSTR) &NS, (LPSTR) &lpPS -> note, sizeof( noteStruct ) ) ;
    
-   // TODO: 4op patch mode
-   b4Op = (BYTE)(NS.bOp != PATCH_1_2OP) ;
+   // Check if 4op patch and is not a rhythm mode patch
+   bRhyPatch = !(NS.bRhythmMap < RHY_CH_BD || NS.bRhythmMap > RHY_CH_CY);
+   b4Op = (BYTE)(NS.bOp != PATCH_1_2OP && !bRhyPatch);
 
    for (j = 0; j < 2; j++)
    {
@@ -746,8 +747,30 @@ void
       //wTemp = m_Voice[m_bLastVoiceUsed[bChannel]].bChannel;
       wTemp = m_bLastVoiceUsed[bChannel];
       
+      // If a rhythm mode patch
+      if (bRhyPatch)
+      {
+         switch (NS.bRhythmMap)
+         {
+            case RHY_CH_BD:
+               break;
+
+            case RHY_CH_SD:
+               break;
+
+            case RHY_CH_TOM:
+               break;
+
+            case RHY_CH_HH:
+               break;
+
+            case RHY_CH_CY:
+               break;
+         }
+      }
+
       // safety measure for pure 4-op patches
-      if (NS.bOp == PATCH_1_4OP && ((wTemp > 2 && wTemp < 9) || wTemp > 11))
+      else if (NS.bOp == PATCH_1_4OP && ((wTemp > 2 && wTemp < 9) || wTemp > 11))
       {
          bool is4OpVoice = false;
 
