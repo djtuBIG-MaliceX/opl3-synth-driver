@@ -91,7 +91,8 @@ typedef struct _noteStruct
    normal pitch, 3 => octave below, etc. */
    BYTE    bAtC0[2];           /* sent to 0xc0, C3 */
    BYTE    bOp;                /* see PATCH_??? */
-   BYTE    bDummy;             /* place holder */
+   //BYTE    bDummy;             /* place holder */
+   BYTE    bRhythmMap;         /* see RHY_CH_??? */
 } noteStruct;
 
 
@@ -185,6 +186,7 @@ static BYTE gb4OpVoices[] =
 };
 
 // Rhythm mode channels
+// note: any other value is assumed a normal patch.
 #define RHY_CH_BD (0x06)
 #define RHY_CH_SD (0x07)
 #define RHY_CH_TOM (0x08)
@@ -295,8 +297,8 @@ private:
    //DWORD Opl3_CalcBend (DWORD dwOrig, long iBend);
    BYTE Opl3_CalcVolume (BYTE bOrigAtten, BYTE bChannel,BYTE bVelocity, BYTE bOper, BYTE bMode);
    BYTE Opl3_CalcStereoMask (BYTE bChannel);
-   WORD Opl3_FindEmptySlot(BYTE bPatch);
-   WORD Opl3_FindEmptySlot4Op(BYTE bPatch);
+   WORD Opl3_FindEmptySlot(BYTE bPatch, BYTE bChannel);
+   WORD Opl3_FindEmptySlot4Op(BYTE bPatch, BYTE bChannel);
    void Opl3_SetVolume(BYTE bChannel);
    void Opl3_FMNote(WORD wNote, noteStruct *lpSN, BYTE bChannel, WORD wNote2);
    void Opl3_SetSustain(BYTE bChannel, BYTE bSusLevel);

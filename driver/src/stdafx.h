@@ -1,13 +1,12 @@
-// stdafx.h : include file for standard system include files,
-// or project specific include files that are used frequently, but
-// are changed infrequently
-//
 
-#pragma once
+#ifndef STDAFX_H
+#define STDAFX_H
+
+#pragma pack(1)
 
 #include "targetver.h"
 
-#define WIN32_LEAN_AND_MEAN             // Exclude rarely-used stuff from Windows headers
+#define WIN32_LEAN_AND_MEAN   // Exclude rarely-used stuff from Windows headers
 // Windows Header Files:
 #include <windows.h>
 #include <mmsystem.h>
@@ -25,5 +24,9 @@ extern "C" {
 #include <iostream>
 #include <cmath>
 #include <vector>
+
 #include "OPLSynth.h"
 #include "MidiSynth.h"
+
+#endif /*STDAFX_H*/
+

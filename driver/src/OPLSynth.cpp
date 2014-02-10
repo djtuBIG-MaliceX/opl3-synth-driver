@@ -749,7 +749,7 @@ void
 
          if (!is4OpVoice)
          {
-            wTemp = Opl3_FindEmptySlot4Op(bPatch);
+            wTemp = Opl3_FindEmptySlot4Op(bPatch, bChannel);
          }
       }
 
@@ -757,8 +757,8 @@ void
       else if (NS.bOp != PATCH_1_4OP)
       {
          wTemp = (wTemp == bChannel) ? wTemp : 
-                 //(NS.bOp == PATCH_1_4OP) ? Opl3_FindEmptySlot4Op(bPatch) :
-                 Opl3_FindEmptySlot(bPatch);
+                 //(NS.bOp == PATCH_1_4OP) ? Opl3_FindEmptySlot4Op(bPatch, bChannel) :
+                 Opl3_FindEmptySlot(bPatch, bChannel);
          //m_Voice[wTemp].bPrevNote = m_Voice[wTemp].bNote;
       }
 
@@ -777,7 +777,7 @@ void
    {
       // Find an empty slot, and use it...
       wTemp = (NS.bOp == PATCH_1_4OP /*&& (NS.bAtC0[1] & 0x1) == 0*/) ?
-         Opl3_FindEmptySlot4Op(bPatch) : Opl3_FindEmptySlot( bPatch );
+         Opl3_FindEmptySlot4Op(bPatch, bChannel) : Opl3_FindEmptySlot(bPatch, bChannel);
    }
 
    // Portamento
@@ -829,7 +829,7 @@ void
             wTemp2 = ((m_wMonoMode & (1<<bChannel)) > 0) ? // Get corresponding voice last used
                Opl3_FindSecondVoice((BYTE)wTemp, m_Voice[m_bLastVoiceUsed[bChannel]].bVoiceID) : 
                ~0;
-            wTemp2 = (wTemp2 != (WORD)~0) ? wTemp2 : Opl3_FindEmptySlot( bPatch );
+            wTemp2 = (wTemp2 != (WORD)~0) ? wTemp2 : Opl3_FindEmptySlot( bPatch, bChannel );
             Opl3_Set4OpFlag((BYTE)wTemp, false, PATCH_2_2OP);
             Opl3_Set4OpFlag((BYTE)wTemp2, false, PATCH_2_2OP);
 
@@ -886,7 +886,7 @@ void
                wTemp2 = ((m_wMonoMode & (1<<bChannel)) > 0) ? // Get corresponding voice last used
                Opl3_FindSecondVoice((BYTE)wTemp, m_Voice[m_bLastVoiceUsed[bChannel]].bVoiceID) : 
                ~0;
-               wTemp2 = (wTemp2 != (WORD)~0) ? wTemp2 : Opl3_FindEmptySlot( bPatch );
+               wTemp2 = (wTemp2 != (WORD)~0) ? wTemp2 : Opl3_FindEmptySlot( bPatch, bChannel );
                
                Opl3_Set4OpFlag((BYTE)wTemp, FALSE);
                break;
@@ -1546,8 +1546,9 @@ BYTE
 //------------------------------------------------------------------------
 WORD
    OPLSynth::
-   Opl3_FindEmptySlot(BYTE bPatch)
+   Opl3_FindEmptySlot(BYTE bPatch, BYTE bChannel)
 {
+   BYTE   bChnVoiceCnt = 0;
    WORD   i, found ;
    DWORD  dwOldest ;
 
@@ -1570,6 +1571,21 @@ WORD
    if (found != 0xffff)
       return ( found ) ;
 
+   // Custom:  Search for oldest note on same channel, but only allocate if there 
+   //          are more than 2 notes currently held on same channel
+   found = 0;
+   dwOldest = 0xFFFF;
+   for (i = 0; i < NUM2VOICES; ++i)
+      if (m_Voice[ i ].dwTime < dwOldest && m_Voice[ i ].bChannel == bChannel)
+      {
+         dwOldest = m_Voice[ i ].dwTime;
+         found = i;
+         if (m_Voice[ i ].bOn && !m_Voice[ i ].bSusHeld) ++bChnVoiceCnt;
+      }
+
+   if (found != 0xFFFF && bChnVoiceCnt > ((glpPatch[bPatch].note.bOp == PATCH_2_2OP) ? 4 : 2))
+      return ( found );
+
    // Now, look for a slot of the oldest note with
    // the same patch
    //dwOldest = 0xffffffff ;
@@ -1581,12 +1597,12 @@ WORD
    //      found = i ;
    //   }
    //if (found != 0xffff)
-   //   return ( found ) ;
+   //   return ( found ) 
 
    // Now, just look for the oldest voice
    found = 0 ;
    dwOldest = m_Voice[ found ].dwTime ;
-   for (i = (found + 1); i < NUM2VOICES; i++)
+   for (i = 0/*(found + 1)*/; i < NUM2VOICES; i++)
       if (m_Voice[ i ].dwTime < dwOldest)
       {
          dwOldest = m_Voice[ i ].dwTime ;
@@ -1619,8 +1635,9 @@ WORD
 //------------------------------------------------------------------------
 WORD
    OPLSynth::
-   Opl3_FindEmptySlot4Op(BYTE bPatch)
+   Opl3_FindEmptySlot4Op(BYTE bPatch, BYTE bChannel)
 {
+   BYTE   bChnVoiceCnt = 0;
    WORD   i, found ;
    DWORD  dwOldest ;
 
@@ -1644,6 +1661,22 @@ WORD
    if (found != 0xffff)
       return ( found ) ;
 
+   // Custom:  Search for oldest note on same channel, but only allocate if there 
+   //          are more than 2 notes currently held on same channel
+   found = 0;
+   dwOldest = 0xFFFF;
+   for (i = 0; i < NUM4VOICES; ++i)
+      if (m_Voice[ gb4OpVoices[ i ] ].dwTime < dwOldest && m_Voice[ gb4OpVoices[ i ] ].bChannel == bChannel)
+      {
+         dwOldest = m_Voice[ gb4OpVoices[ i ] ].dwTime;
+         found = i;
+         if (m_Voice[ gb4OpVoices[ i ] ].bOn && !m_Voice[ gb4OpVoices [ i ] ].bSusHeld) ++bChnVoiceCnt;
+      }
+
+   if (found != 0xFFFF && bChnVoiceCnt > 2)
+      return ( found );
+
+
    //// Now, look for a slot of the oldest note with
    //// the same patch
    //dwOldest = 0xffffffff ;
@@ -1660,7 +1693,7 @@ WORD
    // Now, just look for the oldest voice
    found = 0 ;
    dwOldest = m_Voice[ gb4OpVoices[ found ] ].dwTime ;
-   for (i = (found + 1); i < NUM4VOICES; i++)
+   for (i = 0; i < NUM4VOICES; i++)
       if (m_Voice[ gb4OpVoices[ i ] ].dwTime < dwOldest)
       {
          dwOldest = m_Voice[ gb4OpVoices[ i ] ].dwTime ;
@@ -2057,9 +2090,9 @@ void
         bufpos[7] == 0x00)
       )
       */
-   if (len == 6  && (memcmp(resetArray[0], bufpos, len) || memcmp(resetArray[1], bufpos, len)) ||
-       len == 11 && (memcmp(resetArray[2], bufpos, len) || memcmp(resetArray[4], bufpos, len) || memcmp(resetArray[5], bufpos, len)) ||
-       len == 9  && (memcmp(resetArray[6], bufpos, len))
+   if (len == 6  && (memcmp(resetArray[0], bufpos, len)==0 || memcmp(resetArray[1], bufpos, len)==0) ||
+       len == 11 && (memcmp(resetArray[2], bufpos, len)==0 || memcmp(resetArray[4], bufpos, len)==0 || memcmp(resetArray[5], bufpos, len)==0) ||
+       len == 9  && (memcmp(resetArray[6], bufpos, len)==0)
       )
       IsResetSysex = true;
 
@@ -2150,6 +2183,8 @@ void
    }
       
    b4OpVoiceSet = 0;         // disable 4op mode by default
+   Opl3_ChipWrite(AD_CONNECTION, (BYTE)(b4OpVoiceSet));
+
    m_wDrumMode = (1<<9);     // Ch10 Drums
    m_wMonoMode = 0;          // Set all channels to polyphonic mode
    m_wPortaMode = 0;
