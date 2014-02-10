@@ -190,8 +190,17 @@ static BYTE gb4OpVoices[] =
 #define RHY_CH_BD (0x06)
 #define RHY_CH_SD (0x07)
 #define RHY_CH_TOM (0x08)
-#define RHY_CH_HH (0x09)
-#define RHY_CH_CY (0x0A)
+#define RHY_CH_HH (0x09) //0x07
+#define RHY_CH_CY (0x0A) //0x08
+
+static BYTE gbRhyOpMask[] =
+{
+   0x03, // BD ch7
+   0x02, // SD ch8 op0
+   0x01, // TOM ch8 op1
+   0x01, // HH 
+   0x02  // CY
+};
 
 // MIDI mode constants
 #define MIDIMODE_GM1 (0x01)
@@ -266,6 +275,7 @@ private:
    BYTE    m_bLastVoiceUsed[NUMMIDICHN]; /* Needed for legato in mono mode */
    BYTE    m_bLastNoteUsed[NUMMIDICHN];  /* Needed for portamento */
 
+   BYTE    m_bBankSelect[NUMMIDICHN][2]; /* Currently set bank selects */
    BYTE    m_bPatch[NUMMIDICHN];   /* patch number mapped to */
    BYTE    m_bSustain[NUMMIDICHN];   /* Is sustain in effect on this channel? */
 
@@ -285,6 +295,7 @@ private:
    //void Opl3_NoteOn(BYTE bPatch,BYTE bNote, BYTE bChannel, BYTE bVelocity,short iBend);
    void Opl3_NoteOn(BYTE bPatch,BYTE bNote, BYTE bChannel, BYTE bVelocity,long iBend);
    void Opl3_NoteOff(BYTE bPatch,BYTE bNote, BYTE bChannel, BYTE bSustain);
+   void Opl3_UpdateBankSelect(BYTE bSigBit, BYTE bChannel, BYTE val);
    WORD Opl3_FindSecondVoice(BYTE bFirstVoice, BYTE bVoiceID);
    void Opl3_AllNotesOff(void);
    void Opl3_ChannelNotesOff(BYTE bChannel);

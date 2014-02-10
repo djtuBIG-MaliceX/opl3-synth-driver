@@ -74,13 +74,7 @@ void
       {
 
       case 0: // Bank Select MSB
-         //only care for setting percussion for now
-         // TODO: dynamic selection for switchable patches
-
-         m_wDrumMode = (bVelocity == 0x7F) ?
-            m_wDrumMode | (1<<bChannel) :
-            m_wDrumMode &~(1<<bChannel) ;
-
+         Opl3_UpdateBankSelect(0, bChannel, bVelocity);
          break;
      
       case 1: // Modulation Wheel
@@ -114,6 +108,14 @@ void
          m_iExpThres[bChannel] = bVelocity;
          /* set expression threshold. should influence bChannel.gbVelocityAtten[curVol>>1] range */
          Opl3_ChannelVolume(bChannel,gbVelocityAtten[(BYTE)((m_curVol[bChannel] >> 1) * ((float)m_iExpThres[bChannel]/0x7F))]);
+         break;
+
+      case 32:  // Bank Select LSB
+         Opl3_UpdateBankSelect(1, bChannel, bVelocity);
+         break;
+         
+      case 38:  // Data Entry LSB
+         // TODO handle for MidiPlay-compatible register invocation
          break;
 
       case 64:  // Sustain Pedal
@@ -431,9 +433,20 @@ void
             break;
       }
 
-      
-      
    }
+}
+
+
+void
+   OPLSynth::
+   Opl3_UpdateBankSelect(BYTE bSigBit, BYTE bChannel, BYTE val)
+{
+   m_bBankSelect[bChannel][bSigBit] = val;
+
+   // Update drum mode setting
+   m_wDrumMode = (m_bBankSelect[bChannel][0] == 0x7F && m_bBankSelect[bChannel][1] == 0) ?
+      m_wDrumMode | (1<<bChannel) :
+      m_wDrumMode &~(1<<bChannel) ;
 }
 
 // ==========================================================================
@@ -2180,6 +2193,7 @@ void
       m_bFineTune[i] = 64;
       m_bRPNCount[i] = 0;
       memset(m_RPN[i], -1, sizeof(WORD));
+      memset(m_bBankSelect[i], ((i==9)?(127<<8):0), sizeof(WORD));
    }
       
    b4OpVoiceSet = 0;         // disable 4op mode by default
