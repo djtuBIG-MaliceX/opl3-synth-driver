@@ -86,7 +86,8 @@ void
          break;
 
       case 6: // Data Entry (CC98-101 dependent)
-         Opl3_ProcessDataEntry(bVelocity, bChannel);
+         m_bDataEnt[bChannel][1] = bVelocity;
+         Opl3_ProcessDataEntry(bChannel);
          break;
 
       case 7:
@@ -107,7 +108,7 @@ void
       case 11: 
          m_iExpThres[bChannel] = bVelocity;
          /* set expression threshold. should influence bChannel.gbVelocityAtten[curVol>>1] range */
-         Opl3_ChannelVolume(bChannel,bVelocity);
+         Opl3_ChannelVolume(bChannel,m_curVol[bChannel]);
          break;
 
       case 32:  // Bank Select LSB
@@ -116,6 +117,8 @@ void
          
       case 38:  // Data Entry LSB
          // TODO handle for MidiPlay-compatible register invocation
+         m_bDataEnt[bChannel][0] = bVelocity;
+         Opl3_ProcessDataEntry(bChannel);
          break;
 
       case 64:  // Sustain Pedal
@@ -229,7 +232,9 @@ void
 
       case 98:  // NRPN LSB
       case 99:  // NRPN MSB
+         m_NRPN[bChannel][(bNote & 0x01)] = bVelocity;
          m_bRPNCount[bChannel] = 0;
+         ++m_bNRPNCount[bChannel];
          break;
 
       case 100: // RPN LSB
@@ -1133,16 +1138,18 @@ void
 
 void
    OPLSynth::
-   Opl3_ProcessDataEntry(BYTE val, BYTE bChannel)
+   Opl3_ProcessDataEntry(BYTE bChannel)
 {
-   WORD rpn = (WORD)(m_RPN[bChannel][0])|(m_RPN[bChannel][1] << 8) & (WORD)(0xFF);
+   WORD rpn  = (WORD)(m_RPN[bChannel][0])|(m_RPN[bChannel][1] << 8) & (WORD)(0x7F7F),
+        nrpn = (WORD)(m_NRPN[bChannel][0])|(m_NRPN[bChannel][1] << 8) & (WORD)(0x7F7F);
    //DWORD dwTemp;
+   BYTE val = m_bDataEnt[bChannel][1];  // TODO repurpose?
 
    if (m_bRPNCount[bChannel] >= 2)
    {
       m_bRPNCount[bChannel] = 2;
 
-      switch(rpn)
+      switch (rpn)
       {
          case (WORD)0x0000:   // Pitch Bend Range extension
             // Calculate base bend value then apply
@@ -1170,6 +1177,30 @@ void
             Opl3_PitchBend(bChannel, m_iBend[bChannel]);
             break;
       }
+   }
+   
+   else if (m_bNRPNCount[bChannel] >= 2)
+   {
+      m_bNRPNCount[bChannel] = 2;
+
+      switch (m_NRPN[bChannel][1])
+      {
+         case 0x40:
+         case 0x41:
+         {
+            BYTE bInsNum = m_NRPN[bChannel][0],  // TODO determine by bank as well
+                 bSelOp  = val,
+                 bOpRegVal    = m_bDataEnt[bChannel][0];
+
+         }
+      }
+
+      //switch (nrpn)
+      //{
+      //   case (WORD)0x40
+      //   default:
+      //      break;
+      //}
    }
          
 }
@@ -1969,6 +2000,9 @@ bool
    m_MaxVolValue  = 0x00000000;    //  maximum  0    (dB) * 0x10000
    m_VolStepDelta = 0x0000C000;    //  steps of 0.75 (dB) * 0x10000
 
+   m_bMasterCoarseTune = 0;
+   m_dwMasterTune = 0;
+
    m_MIDIMode = MIDIMODE_XG;
 
 //#ifdef DISABLE_HW_SUPPORT
@@ -2266,76 +2300,119 @@ void
       }
    }
 
+   // Multipart data, nn=channel (00 to 0F)
    else if (bufpos[4] == 0x08)
    {
-      // Multipart data, nn=channel (00 to 0F)
+      BYTE bChannel = bufpos[5] & 0xF,
+           bVal     = bufpos[7] & 0x7F;
 
-      // Bank Select MSB
-      //F0 43 1n 4C 08 nn 01 xx F7
+      switch (bufpos[6])
+      {
+         // Bank Select MSB
+         //F0 43 1n 4C 08 nn 01 xx F7
+         case 0x01:
+            Opl3_UpdateBankSelect(1, bChannel, bVal);
+            break;
 
-      // Bank Select LSB
-      //F0 43 1n 4C 08 nn 02 xx F7
+         // Bank Select LSB
+         //F0 43 1n 4C 08 nn 02 xx F7
+         case 0x02:
+            Opl3_UpdateBankSelect(0, bChannel, bVal);
+            break;
+            
+         // Program Change
+         //F0 43 1n 4C 08 nn 03 xx F7
+         case 0x03:
+            m_bPatch[bChannel] = bVal;
+            break;
 
-      // Program Change
-      //F0 43 1n 4C 08 nn 03 xx F7
+         // Mono / Poly
+         //F0 43 1n 4C 08 nn 05 xx F7 (00 or 01, default=01-poly)
+         case 0x05:
+            m_wMonoMode = (bVal == 0) ?
+               m_wMonoMode |  (1<<bChannel) :
+               m_wMonoMode & ~(1<<bChannel);
 
-      // Mono / Poly
-      //F0 43 1n 4C 08 nn 05 xx F7 (00 or 01, default=01-poly)
+            break;
 
-      // Part mode (lazy implementation, enable drum mode for nonzero value)
-      //F0 43 1n 4C 08 nn 07 xx F7 (00-nomral, 01...nn=drum)
+         // Part mode (lazy implementation, enable drum mode for nonzero value)
+         //F0 43 1n 4C 08 nn 07 xx F7 (00-nomral, 01...nn=drum)
+         case 0x07:
+            m_wDrumMode = (bVal == 0) ?
+               m_wDrumMode & ~(1<<bChannel) :
+               m_wDrumMode |  (1<<bChannel);
 
-      // Note Shift (coarse tune.  lazy implementation: percussion will detune instead of shift notes and update instantaneously)
-      //F0 43 1n 4C 08 nn 08 xx F7 (default=40)
+            break;
 
-      // Detune (fine tune)
-      //F0 43 1n 4C 08 nn 09/0A xx xx F7  (default=08 00.  range=00 00 to 0F 0F)
+         // Note Shift (coarse tune.  lazy implementation: percussion will detune instead of shift notes and update instantaneously)
+         //F0 43 1n 4C 08 nn 08 xx F7 (default=40)
+         case 0x08:
+            m_bCoarseTune[bChannel] = bVal;
+            Opl3_PitchBend(bChannel, m_iBend[bChannel]);
+            break;
 
-      // Volume
-      //F0 43 1n 4C 08 nn 0B xx F7 (default=64, from 00 to 7F)
+         // Detune (fine tune)
+         //F0 43 1n 4C 08 nn 09/0A xx xx F7  (default=08 00.  range=00 00 to 0F 0F)
 
-      // Velocity Sensitivity (TODO?)
-      //F0 43 1n 4C 08 nn 0D xx F7 (default=40, from 00 to 7F)
+         // Volume
+         //F0 43 1n 4C 08 nn 0B xx F7 (default=64, from 00 to 7F)
+         case 0x0B:
+            m_curVol[bChannel] = bVal;
+            Opl3_ChannelVolume(bChannel, bVal);
+            break;
 
-      // Pan
-      //F0 43 1n 4C 08 nn 0E xx F7 (default=40, from 00 to 7F)
+         // Velocity Sensitivity (TODO?)
+         //F0 43 1n 4C 08 nn 0D xx F7 (default=40, from 00 to 7F)
 
-      // Vibrato Rate
-      //F0 43 1n 4C 08 nn 15 xx F7 (default=40, from 00 to 7F)
+         // Pan
+         //F0 43 1n 4C 08 nn 0E xx F7 (default=40, from 00 to 7F)
 
-      // Vibrato Depth
-      //F0 43 1n 4C 08 nn 16 xx F7 (default=40, from 00 to 7F)
+         // Vibrato Rate
+         //F0 43 1n 4C 08 nn 15 xx F7 (default=40, from 00 to 7F)
 
-      // Vibrato Delay
-      //F0 43 1n 4C 08 nn 17 xx F7 (default=40, from 00 to 7F)
+         // Vibrato Depth
+         //F0 43 1n 4C 08 nn 16 xx F7 (default=40, from 00 to 7F)
 
-      // LPF Cutoff (Brightness)
-      //F0 43 1n 4C 08 nn 18 xx F7 (default=40, from 00 to 7F)
+         // Vibrato Delay
+         //F0 43 1n 4C 08 nn 17 xx F7 (default=40, from 00 to 7F)
 
-      // Attack
-      //F0 43 1n 4C 08 nn 1A xx F7 (default=40, from 00 to 7F)
+         // LPF Cutoff (Brightness)
+         //F0 43 1n 4C 08 nn 18 xx F7 (default=40, from 00 to 7F)
 
-      // Decay  (NRPN 1H/64H)
-      //F0 43 1n 4C 08 nn 1B xx F7 (default=40, from 00 to 7F)
+         // Attack
+         //F0 43 1n 4C 08 nn 1A xx F7 (default=40, from 00 to 7F)
 
-      // Release
-      //F0 43 1n 4C 08 nn 1C xx F7 (default=40, from 00 to 7F)
+         // Decay  (NRPN 1H/64H)
+         //F0 43 1n 4C 08 nn 1B xx F7 (default=40, from 00 to 7F)
 
-      // Portamento switch
-      //F0 43 1n 4C 08 nn 67 xx F7 (default=00, from 00 to 01)
+         // Release
+         //F0 43 1n 4C 08 nn 1C xx F7 (default=40, from 00 to 7F)
 
-      // Portamento time
-      //F0 43 1n 4C 08 nn 68 xx F7 (default=00, from 00 to 7F)
+         // Portamento switch
+         //F0 43 1n 4C 08 nn 67 xx F7 (default=00, from 00 to 01)
+         case 0x67:
+            m_wPortaMode = (bVal > 0x3F) ?
+               m_wPortaMode | (1<<bChannel) :
+               m_wPortaMode & ~(1<<bChannel) ;
+            break;
 
-      // Pitch EG init level (not supported)
-      //F0 43 1n 4C 08 nn 69 xx F7 (default=40, from 00 to 7F)
+         // Portamento time
+         //F0 43 1n 4C 08 nn 68 xx F7 (default=00, from 00 to 7F)
+         case 0x68:
+            Opl3_SetPortamento(bChannel, bVal);
+            break;
 
-      // Pitch EG attack time (not supported) 6A
+         // Pitch EG init level (not supported)
+         //F0 43 1n 4C 08 nn 69 xx F7 (default=40, from 00 to 7F)
 
-      // Pitch EG Release level (not supported) 6B
+         // Pitch EG attack time (not supported) 6A
 
-      // Pitch EG Release Time (not supported) 6C
+         // Pitch EG Release level (not supported) 6B
 
+         // Pitch EG Release Time (not supported) 6C
+
+
+      }
 
       // Drum part commands
 
@@ -2384,6 +2461,8 @@ void
       m_bFineTune[i] = 64;
       m_bRPNCount[i] = 0;
       memset(m_RPN[i], -1, sizeof(WORD));
+      memset(m_NRPN[i], -1, sizeof(WORD));
+      memset(m_bDataEnt[i], -1, sizeof(WORD));
       memset(m_bBankSelect[i], ((i==9)?(127<<8):0), sizeof(WORD));
    }
       

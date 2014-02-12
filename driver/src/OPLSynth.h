@@ -245,7 +245,7 @@ private:
    /* volume */
    WORD    m_wSynthAttenL;     /* in 1.5dB steps */
    WORD    m_wSynthAttenR;     /* in 1.5dB steps */
-   BYTE    m_bMasterCoarseTune;      /* TODO Master Tuning level*/
+   char    m_bMasterCoarseTune;      /* TODO Master Tuning level*/
    double  m_dwMasterTune;     /* Master Tune */
 
    std::vector<BYTE> m_noteHistory[NUMMIDICHN];
@@ -267,6 +267,8 @@ private:
    BYTE    m_iExpThres[NUMMIDICHN];   /* 0 to 127 expression value */
    BYTE    m_curVol[NUMMIDICHN];      /* Volume control */
    BYTE    m_RPN[NUMMIDICHN][2];      /* RPN WORD */
+   BYTE    m_NRPN[NUMMIDICHN][2];     /* NRPN WORD */
+   BYTE    m_bDataEnt[NUMMIDICHN][2]; /* Data Entry MSB/LSB */
    BYTE    m_iBendRange[NUMMIDICHN];  /* Bend range as dictated by CC100=0, CC101=0, CC6=n, where n= +/- range of semitones */
    BYTE    m_bModWheel[NUMMIDICHN];   /* Modulation wheel setting */
    BYTE    m_bCoarseTune[NUMMIDICHN]; /* -64 to +63 semitones coarse tuning */
@@ -304,7 +306,7 @@ private:
    WORD Opl3_FindFullSlot(BYTE bNote, BYTE bChannel);
    //WORD Opl3_CalcFAndB (DWORD dwPitch);
    WORD Opl3_MIDINote2FNum(double note, BYTE bChannel, long dwLFOVal);
-   void Opl3_ProcessDataEntry(BYTE bVal, BYTE bChannel);
+   void Opl3_ProcessDataEntry(BYTE bChannel);
    void Opl3_Set4OpFlag(BYTE bVoice, bool bSetFlag, BYTE bOp);
    //DWORD Opl3_CalcBend (DWORD dwOrig, short iBend);
    BYTE Opl3_CalcVolume (BYTE bOrigAtten, BYTE bChannel,BYTE bVelocity, BYTE bOper, BYTE bMode);
