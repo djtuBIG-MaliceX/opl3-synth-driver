@@ -91,7 +91,7 @@ void VGMLog_Init()
 inline void VGMLog_FlushWait()
 {
    DWORD CurPBSmpl, CurVGMSmpl;
-   DWORD DelayDiff, CurTime;
+   DWORD DelayDiff;//, CurTime;
 	WORD WrtDly;
 	
    if (hFileVGM == NULL) 

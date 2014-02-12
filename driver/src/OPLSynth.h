@@ -15,8 +15,8 @@ typedef unsigned short  WORD;
 typedef unsigned long	DWORD, ULONG;
 typedef signed long		LONG;
 
-#define NUMPATCHES                      (256)
-#define DRUMCHANNEL                     (9)     /* midi channel 10 */
+#define NUMPATCHES      (256)
+#define DRUMCHANNEL     (9)     /* midi channel 10 */
 
 
 #define BCODE
@@ -63,9 +63,9 @@ typedef signed long		LONG;
 logarithmic attenuation */
 
 /* typedefs for MIDI patches */
-#define PATCH_1_4OP             (0) /* use 4-operator patch */
-#define PATCH_2_2OP             (1) /* use two 2-operator patches */
-#define PATCH_1_2OP             (2) /* use one 2-operator patch */
+#define PATCH_1_4OP  (0)        /* use 4-operator patch */
+#define PATCH_2_2OP  (1)        /* use two 2-operator patches */
+#define PATCH_1_2OP  (2)        /* use one 2-operator patch */
 
 #define NUM2VOICES   18
 #define NUM4VOICES   6 //9
@@ -82,7 +82,7 @@ typedef struct _operStruct
    BYTE    bAtE0;              /* flags send to 0xe0 */
 } operStruct;
 
-typedef struct _noteStruct 
+typedef struct _patchStruct 
 {
    operStruct op[NUMOPS];      /* operators */
    BYTE    bAtA0[2];           /* send to 0xA0, A3 */
@@ -93,13 +93,13 @@ typedef struct _noteStruct
    BYTE    bOp;                /* see PATCH_??? */
    //BYTE    bDummy;             /* place holder */
    BYTE    bRhythmMap;         /* see RHY_CH_??? */
-} noteStruct;
-
-
-typedef struct _patchStruct
-{
-   noteStruct note;            /* note. This is all in the structure at the moment */
 } patchStruct;
+
+
+//typedef struct _patchStruct
+//{
+//   noteStruct note;            /* note. This is all in the structure at the moment */
+//} patchStruct;
 
 
 /* MIDI */
@@ -225,7 +225,8 @@ static BYTE offsetSlot[] =
 };
 
 /* pitch values, from middle c, to octave above it */
-static DWORD BCODE gdwPitch[12] = {
+static DWORD BCODE gdwPitch[12] =
+{
    PITCH(C), PITCH(CSHARP), PITCH(D), PITCH(DSHARP),
    PITCH(E), PITCH(F), PITCH(FSHARP), PITCH(G),
    PITCH(GSHARP), PITCH(A), PITCH(ASHARP), PITCH(B)};
@@ -233,20 +234,24 @@ static DWORD BCODE gdwPitch[12] = {
 class OPLSynth
 {
 private:
-   //OPL     m_Miniport;
-   void*     m_Miniport;
+   //OPL   m_Miniport;
+   void*   m_Miniport;
 
-   bool  bIsLogging;
+   bool    bIsLogging;
 
    // midi stuff
    voiceStruct m_Voice[NUM2VOICES];  /* info on what voice is where */
-   DWORD m_dwCurTime;    /* for note on/off */
-   DWORD m_dwCurSample;  /* for software eg/lfo generators */
+   DWORD   m_dwCurTime;        /* for note on/off */
+   DWORD   m_dwCurSample;      /* for software eg/lfo generators */
    /* volume */
-   WORD    m_wSynthAttenL;        /* in 1.5dB steps */
-   WORD    m_wSynthAttenR;        /* in 1.5dB steps */
+   WORD    m_wSynthAttenL;     /* in 1.5dB steps */
+   WORD    m_wSynthAttenR;     /* in 1.5dB steps */
+   BYTE    m_bMasterCoarseTune;      /* TODO Master Tuning level*/
+   DWORD   m_dwMasterTune;     /* TODO Master Tune */
+
    std::vector<BYTE> m_noteHistory[NUMMIDICHN];
-   BYTE   m_bRPNCount[NUMMIDICHN];
+   BYTE    m_bRPNCount[NUMMIDICHN];
+   BYTE    m_bNRPNCount[NUMMIDICHN];
 
    /* support for volume property */
    LONG    m_MinVolValue;      // Minimum value for volume controller
@@ -258,7 +263,7 @@ private:
    BYTE    m_bChanAtten[NUMMIDICHN];       /* attenuation of each channel, in .75 db steps */
    BYTE    m_bStereoMask[NUMMIDICHN];      /* mask for left/right for stereo midi files */
 
-   //short   m_iBend[NUMMIDICHN];    /* bend for each channel */
+   //short   m_iBend[NUMMIDICHN];     /* bend for each channel */
    long    m_iBend[NUMMIDICHN];       /* bend for each channel */
    BYTE    m_iExpThres[NUMMIDICHN];   /* 0 to 127 expression value */
    BYTE    m_curVol[NUMMIDICHN];      /* Volume control */
@@ -268,21 +273,21 @@ private:
    BYTE    m_bCoarseTune[NUMMIDICHN]; /* -64 to +63 semitones coarse tuning */
    BYTE    m_bFineTune[NUMMIDICHN];   /* -1 to +1 semitones tuning */
    
-   WORD    m_wMonoMode;    /* Flag for bend mode, bitmasked (LSB=ch1) */
-   WORD    m_wDrumMode;    /* Flag for drum mode, bitmasked (LSB=ch1) */
-   WORD    m_wPortaMode;   /* Flag for bporta mode, bitmasked (LSB=ch1) */
-   BYTE    m_bPortaTime[NUMMIDICHN];  /* Number of getsample requests before reaching note */
+   WORD    m_wMonoMode;                  /* Flag for bend mode, bitmasked (LSB=ch1) */
+   WORD    m_wDrumMode;                  /* Flag for drum mode, bitmasked (LSB=ch1) */
+   WORD    m_wPortaMode;                 /* Flag for bporta mode, bitmasked (LSB=ch1) */
+   BYTE    m_bPortaTime[NUMMIDICHN];     /* Number of getsample requests before reaching note */
    BYTE    m_bLastVoiceUsed[NUMMIDICHN]; /* Needed for legato in mono mode */
    BYTE    m_bLastNoteUsed[NUMMIDICHN];  /* Needed for portamento */
 
    BYTE    m_bBankSelect[NUMMIDICHN][2]; /* Currently set bank selects */
-   BYTE    m_bPatch[NUMMIDICHN];   /* patch number mapped to */
-   BYTE    m_bSustain[NUMMIDICHN];   /* Is sustain in effect on this channel? */
+   BYTE    m_bPatch[NUMMIDICHN];         /* patch number mapped to */
+   BYTE    m_bSustain[NUMMIDICHN];       /* Is sustain in effect on this channel? */
 
    /*ADSR modifiers*/
-   BYTE    m_bAttack[NUMMIDICHN];      /*Scaled to modify carrier instrument AT*/
-   //BYTE    m_bDecay[NUMMIDICHN];
-   BYTE    m_bRelease[NUMMIDICHN];     /*Scaled to modify carrier instrument RL*/
+   BYTE    m_bAttack[NUMMIDICHN];      /*Scaled to modify carrier instrument AR*/
+   BYTE    m_bDecay[NUMMIDICHN];       /*Scaled to modify carrier instrument DR*/
+   BYTE    m_bRelease[NUMMIDICHN];     /*Scaled to modify carrier instrument RR*/
    BYTE    m_bBrightness[NUMMIDICHN];  /*Scaled to modify modulator instrument TL*/
 
    BYTE    b4OpVoiceSet;               /*Bitvector to indicate bits 0-6 as channel flags for 4-op voice mode.*/
@@ -290,9 +295,7 @@ private:
 
    void Opl3_ChannelVolume(BYTE bChannel, WORD wAtten);
    void Opl3_SetPan(BYTE bChannel, BYTE bPan);
-   //void Opl3_PitchBend(BYTE bChannel, short iBend);
    void Opl3_PitchBend(BYTE bChannel, long iBend);
-   //void Opl3_NoteOn(BYTE bPatch,BYTE bNote, BYTE bChannel, BYTE bVelocity,short iBend);
    void Opl3_NoteOn(BYTE bPatch,BYTE bNote, BYTE bChannel, BYTE bVelocity,long iBend);
    void Opl3_NoteOff(BYTE bPatch,BYTE bNote, BYTE bChannel, BYTE bSustain);
    void Opl3_UpdateBankSelect(BYTE bSigBit, BYTE bChannel, BYTE val);
@@ -305,20 +308,21 @@ private:
    void Opl3_ProcessDataEntry(BYTE bVal, BYTE bChannel);
    void Opl3_Set4OpFlag(BYTE bVoice, bool bSetFlag, BYTE bOp);
    //DWORD Opl3_CalcBend (DWORD dwOrig, short iBend);
-   //DWORD Opl3_CalcBend (DWORD dwOrig, long iBend);
    BYTE Opl3_CalcVolume (BYTE bOrigAtten, BYTE bChannel,BYTE bVelocity, BYTE bOper, BYTE bMode);
    BYTE Opl3_CalcStereoMask (BYTE bChannel);
    WORD Opl3_FindEmptySlot(BYTE bPatch, BYTE bChannel);
    WORD Opl3_FindEmptySlot4Op(BYTE bPatch, BYTE bChannel);
    void Opl3_SetVolume(BYTE bChannel);
-   void Opl3_FMNote(WORD wNote, noteStruct *lpSN, BYTE bChannel, WORD wNote2);
+   void Opl3_FMNote(WORD wNote, patchStruct *lpSN, BYTE bChannel, WORD wNote2);
    void Opl3_SetSustain(BYTE bChannel, BYTE bSusLevel);
    void Opl3_CutVoice(BYTE bVoice, BYTE bIsInstantCut);
    void Opl3_SetPortamento(BYTE bChannel, BYTE bPortaTime);
-   void Opl3_CalcPatchModifiers(noteStruct *lpSN, BYTE bChannel);
+   void Opl3_CalcPatchModifiers(patchStruct *lpSN, BYTE bChannel);
    void Opl3_BoardReset(void);
    bool Opl3_IsPatchEmpty(BYTE bPatch);
    void Opl3_LFOUpdate(BYTE bVoice);
+   void ProcessGSSysEx(Bit8u *bufpos, DWORD len);
+   void ProcessXGSysEx(Bit8u *bufpos, DWORD len);
 public:
    void Opl3_SoftCommandReset(void);
    void WriteMidiData(DWORD dwData);

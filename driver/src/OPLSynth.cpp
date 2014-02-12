@@ -128,6 +128,16 @@ void
             m_wPortaMode | (1<<bChannel) :
             m_wPortaMode & ~(1<<bChannel) ;
 
+         // TODO: check if porta pedal off updates currently gliding notes?
+
+         break;
+
+      case 66:  // Sostenuto PEdal
+         // TODO handle held sustaining notes
+         break;
+
+      case 71:  // "Harmonic content"
+         // TODO: Modify op0 FB parameter.
          break;
 
       case 72:  // Release
@@ -145,10 +155,10 @@ void
                for (int j = 0; j < 2; ++j)
                {
                   WORD wOffset = gw2OpOffset[ i ][ j ] ;
-                  BYTE bInst = glpPatch[m_Voice[i].bPatch].note.op[j].bAt80;
+                  BYTE bInst = glpPatch[m_Voice[i].bPatch].op[j].bAt80;
                   char bTemp = bInst & 0xF;
                   
-                  if (glpPatch[m_Voice[i].bPatch].note.bAtC0[0] & 0x01)
+                  if (glpPatch[m_Voice[i].bPatch].bAtC0[0] & 0x01)
                      continue;
 
                   bInst &= ~0xF;
@@ -169,7 +179,7 @@ void
             {
                char bOffset = (char)lin_intp(m_bAttack[bChannel], 0, 127, (-16), 16);
                WORD wOffset;
-               BYTE bInst = glpPatch[m_Voice[i].bPatch].note.op[1].bAt60;
+               BYTE bInst = glpPatch[m_Voice[i].bPatch].op[1].bAt60;
                char bTemp = ((bInst & 0xF0)>>4);
                
                if (!bOffset) 
@@ -181,7 +191,7 @@ void
                      continue;
 
                   wOffset = gw2OpOffset[ i ][ j ] ;
-                  bInst = glpPatch[m_Voice[i].bPatch].note.op[j].bAt60;
+                  bInst = glpPatch[m_Voice[i].bPatch].op[j].bAt60;
                   bTemp = ((bInst & 0xF0)>>4);
                
                   bInst &= ~0xF0;
@@ -201,7 +211,7 @@ void
             if (m_Voice[i].bChannel == bChannel)
             {
                WORD wOffset = gw2OpOffset[ i ][ 0 ] ;
-               BYTE bInst = glpPatch[m_Voice[i].bPatch].note.op[0].bAt40;
+               BYTE bInst = glpPatch[m_Voice[i].bPatch].op[0].bAt40;
                char bTemp = bInst & 0x3F;
                char bOffset = (char)lin_intp(m_bBrightness[bChannel], 0, 127, (-32), 32);
                bInst &= ~0x3F;
@@ -211,6 +221,10 @@ void
             }
          }
          //Opl3_UpdateBrightness(bChannel, bVelocity);
+         break;
+
+      case 75:  // Decay
+         // TODO: modify DR or SR setting on carrier
          break;
 
       case 98:  // NRPN LSB
@@ -325,9 +339,9 @@ void
    OPLSynth::
    Opl3_NoteOff(BYTE bPatch, BYTE bNote, BYTE bChannel, BYTE bSustain)
 {
-   patchStruct *lpPS = glpPatch + (BYTE)bPatch; ;
+   patchStruct *lpPS = &glpPatch[bPatch] ;
    WORD         wTemp, wTemp2 ;
-   BYTE         b4Op = (BYTE)(lpPS->note.bOp != PATCH_1_2OP);
+   BYTE         b4Op = (BYTE)(lpPS->bOp != PATCH_1_2OP);
 
    // Find the note slot
    wTemp = Opl3_FindFullSlot( bNote, bChannel ) ;
@@ -354,7 +368,7 @@ void
          m_Voice[wTemp].bSusHeld = 1;
          if (b4Op)
          {
-            wTemp2 = (lpPS->note.bOp == PATCH_2_2OP) ?
+            wTemp2 = (lpPS->bOp == PATCH_2_2OP) ?
                Opl3_FindSecondVoice((BYTE)wTemp, m_Voice[wTemp].bVoiceID) :
                wTemp + 3;
             if (wTemp2 != (WORD)~0) 
@@ -364,10 +378,10 @@ void
       }
 
       // if 2x2op / 4-op patch
-      switch(lpPS->note.bOp)
+      switch(lpPS->bOp)
       {
          case PATCH_1_4OP: // note cut on second voice is not necessary but need to be verified.
-            wTemp2 = /*(lpPS->note.bAtC0[1] & 0x1) ? Opl3_FindSecondVoice((BYTE)wTemp, m_Voice[wTemp].bVoiceID) :*/ (wTemp+3);
+            wTemp2 = (wTemp+3);
 
             if ((m_wMonoMode & (1<<bChannel)) > 0 &&
                 m_noteHistory[bChannel].size() > 0)
@@ -540,7 +554,7 @@ WORD
 //     WORD wNote
 //        the note number from 0 to NUMVOICES
 //
-//     noteStruct *lpSN
+//     patchStruct *lpSN
 //        structure containing information about what
 //        is to be played.
 //
@@ -556,7 +570,7 @@ WORD
 //------------------------------------------------------------------------
 void
    OPLSynth::
-   Opl3_FMNote(WORD wNote, noteStruct * lpSN, BYTE bChannel, WORD wNote2)
+   Opl3_FMNote(WORD wNote, patchStruct * lpSN, BYTE bChannel, WORD wNote2)
 {
    WORD            i ;
    WORD            wOffset ;
@@ -662,9 +676,9 @@ void
 {
    WORD             wTemp, i, j, wTemp2 = ~0 ;
    BYTE             b4Op, /*bTemp, */bMode, bStereo, bRhyPatch;
-   patchStruct      *lpPS ;
+   patchStruct      *lpPS, NS ;
    //DWORD            dwBasicPitch, dwPitch[ 2 ] ;
-   noteStruct       NS;
+   //noteStruct       NS;
   
    // Increment voice allocation ID (needed for pairing operator pairs for 2x2op patches)
    static BYTE      bVoiceID = 0;
@@ -690,7 +704,7 @@ void
    // the total level and pitch according to
    // the velocity, midi volume, and tuning.
 
-   RtlCopyMemory( (LPSTR) &NS, (LPSTR) &lpPS -> note, sizeof( noteStruct ) ) ;
+   RtlCopyMemory( (LPSTR) &NS, (LPSTR) lpPS, sizeof( patchStruct ) ) ;
    
    // Check if 4op patch and is not a rhythm mode patch
    bRhyPatch = !(NS.bRhythmMap < RHY_CH_BD || NS.bRhythmMap > RHY_CH_CY);
@@ -859,7 +873,7 @@ void
 
    if (b4Op)
    {
-      switch(lpPS->note.bOp)
+      switch(NS.bOp)
       {
          case PATCH_2_2OP:
             wTemp2 = ((m_wMonoMode & (1<<bChannel)) > 0) ? // Get corresponding voice last used
@@ -1024,7 +1038,7 @@ bool
    OPLSynth::
    Opl3_IsPatchEmpty(BYTE bPatch)
 {
-   noteStruct *lpPS = &((glpPatch + bPatch)->note);
+   patchStruct *lpPS = &glpPatch[bPatch];
    DWORD isEmpty = 0;
 
    for (BYTE i = 0; i < NUMOPS; ++i)
@@ -1042,7 +1056,7 @@ bool
 
 void
    OPLSynth::
-   Opl3_CalcPatchModifiers(noteStruct *lpSN, BYTE bChannel)
+   Opl3_CalcPatchModifiers(patchStruct *lpSN, BYTE bChannel)
 {
    char bTemp;
    char bOffset;
@@ -1334,7 +1348,7 @@ void
    )
 {
    WORD            i, j, wTemp, wOffset ;
-   noteStruct      *lpPS;
+   patchStruct     *lpPS;
    operStruct      opSt;
    BYTE            bMode, bStereo, bOffset ;
    char            bTemp;
@@ -1351,7 +1365,7 @@ void
       if ((m_Voice[ i ].bChannel == bChannel) || (bChannel == 0xff))
       {
          // Get a pointer to the patch
-         lpPS = &(glpPatch + m_Voice[ i ].bPatch) -> note ;
+         lpPS = &(glpPatch[ m_Voice[ i ].bPatch ]);
 
          // Modify level for each operator, IF they are carrier waves...
          bMode = (BYTE) ( (lpPS->bAtC0[0] & 0x01) * 2 + 4);
@@ -1619,7 +1633,7 @@ WORD
          if (m_Voice[ i ].bOn && !m_Voice[ i ].bSusHeld) ++bChnVoiceCnt;
       }
 
-   if (found != 0xFFFF && bChnVoiceCnt > ((glpPatch[bPatch].note.bOp == PATCH_2_2OP) ? 4 : 2))
+   if (found != 0xFFFF && bChnVoiceCnt > ((glpPatch[bPatch].bOp == PATCH_2_2OP) ? 4 : 2))
       return ( found );
 
    // Now, look for a slot of the oldest note with
@@ -1862,7 +1876,7 @@ void
    Opl3_CutVoice(BYTE bVoice, BYTE bIsInstantCut)
 {
    WORD wOffset = bVoice, wOpOffset;
-   noteStruct *lpNS = &((glpPatch + m_Voice[bVoice].bPatch)->note);
+   patchStruct *lpNS = &(glpPatch[ m_Voice[bVoice].bPatch]);
    BYTE bOp = lpNS->bOp;
 
    if (bVoice >= (NUM2VOICES / 2))
@@ -2080,6 +2094,21 @@ void
       {0xF0, 0x41, 0x10, 0x42, 0x12, 0x00, 0x00, 0x7F, 0x01, 0x00, 0xF7},
       {0xF0, 0x43, 0x10, 0x4C, 0x00, 0x00, 0x7E, 0x00, 0xF7},
    };
+
+   /* 
+    * F0 - Exclusive status
+    * xx - Manufacturer ID
+    * 1n - Device Number
+    * xx - Model ID
+    * aa - Address High
+    * aa - Address Mid
+    * aa - Address Low
+    * dd - Data
+    * ...
+    * dd - Data
+    * F7 - End of Exclusive
+    */
+
    //std::string SysExVal((char*)bufpos); 
 
    // For reference: http://homepage2.nifty.com/mkmk/midi_lab/exref.htm
@@ -2095,40 +2124,10 @@ void
    if (bufpos[0] != 0xF0 || bufpos[len-1] != 0xF7)
       return;
 
-   // TODO - portable, more efficient comparison method needed. (Cannot use memset due to endinaness)
-   /*
-   if (len == 6 && // GM Reset
-       (bufpos[1] == 0x7E && 
-        bufpos[2] == 0x7F && 
-        bufpos[3] == 0x09
-        // ignore pos 4 here since it indicates GM Level
-       ) ||
-       
-       len == 11 && // GS Reset
-       (bufpos[1] == 0x41 &&
-        bufpos[2] == 0x10 && 
-        bufpos[3] == 0x42 && 
-        bufpos[4] == 0x12 && 
-        //(bufpos[5] == 0x40 || bufpos[5] == 0x00) &&
-        bufpos[6] == 0x00 && 
-        bufpos[7] == 0x7F && 
-        // ignore GS pos 8 as it's not needed here (SCxx mode)
-        ((bufpos[5] == 0x40 && bufpos[9] == 0x41) || (bufpos[5] == 0x00 && (bufpos[9] == 0x01 || bufpos[9] == 0x00)))
-       ) ||
-       
-       len == 9 && // XG Reset
-       (bufpos[1] == 0x43 && 
-        bufpos[2] == 0x10 &&
-        bufpos[3] == 0x4C && 
-        bufpos[4] == 0x00 && 
-        bufpos[5] == 0x00 &&
-        bufpos[6] == 0x7E && 
-        bufpos[7] == 0x00)
-      )
-      */
-   if (len == 6  && (memcmp(resetArray[0], bufpos, len)==0 || memcmp(resetArray[1], bufpos, len)==0) ||
-       len == 11 && (memcmp(resetArray[2], bufpos, len)==0 || memcmp(resetArray[4], bufpos, len)==0 || memcmp(resetArray[5], bufpos, len)==0) ||
-       len == 9  && (memcmp(resetArray[6], bufpos, len)==0)
+   // Check reset
+   if (len == 6  && (memcmp(&resetArray[0][4], bufpos, len-4)==0 || memcmp(&resetArray[1][4], bufpos, len-4)==0) ||
+       len == 11 && (memcmp(&resetArray[2][4], bufpos, len-4)==0 || memcmp(&resetArray[4][4], bufpos, len-4)==0 || memcmp(&resetArray[5][4], bufpos, len-4)==0) ||
+       len == 9  && (memcmp(&resetArray[6][4], bufpos, len-4)==0)
       )
       IsResetSysex = true;
 
@@ -2143,13 +2142,13 @@ void
     * General MIDI Level 2 System Exclusive (MODE 2)
     *  - Allow bank switching
     *  - CC71-74 enabled
-    *  - Drum bank select 127 disabled - must use NRPN
+    *  - Drum bank select 127 disabled - must use secondary sysex
     */
 
    /*
     * Rolands GS System Exclusive (MODE 3)
     *  - Allow bank switching
-    *  - Drum bank select 127 disabled - must use NRPN
+    *  - Drum bank select 127 disabled - must use secondary sysex
     *  - CC71-74 enabled (TG300b-mode compatibility)
     *  - 
     */
@@ -2159,7 +2158,7 @@ void
     *  - Allow bank switching
     *  - Allow bank-switchable MIDI channels for drum bank
     *  - CC71-74 enabled
-    *  - Drum bank select via NRPN enabled
+    *  - Drum bank select enabled
     */
    
    //TODO: common reset routines to all channels
@@ -2177,7 +2176,118 @@ void
    else
    {
       // Do something!
+
+      // MIDI Master Volume
+      //F0 7F 7F 04 01 xx(lsb) yy(msb) F7
+
    }
+}
+
+void
+   OPLSynth::
+   ProcessGSSysEx(Bit8u *bufpos, DWORD len)
+{
+
+
+}
+
+void
+   OPLSynth::
+   ProcessXGSysEx(Bit8u *bufpos, DWORD len)
+{
+   // Master Tuning  (aaH = 1000H + bbH x 0100H + ccH * 0010H + ddH * 0001H)-0400H (in 0.1 cent units)
+   //F0 43 1n 4C 00 00 00 aa bb cc dd F7 (default: 00 04 00 00)
+
+   // Master Volume
+   //F0 43 1n 4C 00 00 04 xx F7 (default=7F, from 00 to 7F)
+
+   // Master Attenuator
+   //F0 43 1n 4C 00 00 05 xx F7 (default=00, from 00 to 7F) - opposite of above?
+
+   // Master Transpose (melodic notes only, non-realtime)
+   //F0 43 1n 4c 00 00 06 xx F7 (40=default)
+
+   // MIDI Master Tuning
+   //F0 43 1n 27 30 00 00 0m(sb) 0l(sb) cc(ignored) F7 
+
+   // Multipart data, nn=channel (00 to 0F)
+
+   // Bank Select MSB
+   //F0 43 1n 4C 08 nn 01 xx F7
+
+   // Bank Select LSB
+   //F0 43 1n 4C 08 nn 02 xx F7
+
+   // Program Change
+   //F0 43 1n 4C 08 nn 03 xx F7
+
+   // Mono / Poly
+   //F0 43 1n 4C 08 nn 05 xx F7 (00 or 01, default=01-poly)
+
+   // Part mode (lazy implementation, enable drum mode for nonzero value)
+   //F0 43 1n 4C 08 nn 07 xx F7 (00-nomral, 01...nn=drum)
+
+   // Note Shift (coarse tune.  lazy implementation: percussion will detune instead of shift notes and update instantaneously)
+   //F0 43 1n 4C 08 nn 08 xx F7 (default=40)
+
+   // Detune (fine tune)
+   //F0 43 1n 4C 08 nn 09/0A xx xx F7  (default=08 00.  range=00 00 to 0F 0F)
+
+   // Volume
+   //F0 43 1n 4C 08 nn 0B xx F7 (default=64, from 00 to 7F)
+
+   // Velocity Sensitivity (TODO?)
+   //F0 43 1n 4C 08 nn 0D xx F7 (default=40, from 00 to 7F)
+
+   // Pan
+   //F0 43 1n 4C 08 nn 0E xx F7 (default=40, from 00 to 7F)
+
+   // Vibrato Rate
+   //F0 43 1n 4C 08 nn 15 xx F7 (default=40, from 00 to 7F)
+
+   // Vibrato Depth
+   //F0 43 1n 4C 08 nn 16 xx F7 (default=40, from 00 to 7F)
+
+   // Vibrato Delay
+   //F0 43 1n 4C 08 nn 17 xx F7 (default=40, from 00 to 7F)
+
+   // LPF Cutoff (Brightness)
+   //F0 43 1n 4C 08 nn 18 xx F7 (default=40, from 00 to 7F)
+
+   // Attack
+   //F0 43 1n 4C 08 nn 1A xx F7 (default=40, from 00 to 7F)
+
+   // Decay  (NRPN 1H/64H)
+   //F0 43 1n 4C 08 nn 1B xx F7 (default=40, from 00 to 7F)
+
+   // Release
+   //F0 43 1n 4C 08 nn 1C xx F7 (default=40, from 00 to 7F)
+
+   // Portamento switch
+   //F0 43 1n 4C 08 nn 67 xx F7 (default=00, from 00 to 01)
+
+   // Portamento time
+   //F0 43 1n 4C 08 nn 68 xx F7 (default=00, from 00 to 7F)
+
+   // Pitch EG init level (not supported)
+   //F0 43 1n 4C 08 nn 69 xx F7 (default=40, from 00 to 7F)
+
+   // Pitch EG attack time (not supported) 6A
+
+   // Pitch EG Release level (not supported) 6B
+
+   // Pitch EG Release Time (not supported) 6C
+
+
+   // Drum part commands
+
+   // Drum Note Pitch Coarse (not supported) (3n = drum part n, rr = drum note number)
+   //F0 43 1n 4C 3n rr 00 xx F7 (default=40, from 00 to 7F)
+
+   // Drum Note Pitch File (not supported)
+   //F0 43 1n 4C 3n rr 01 xx F7 (default=40, from 00 to 7F)
+
+
 }
 
 void
