@@ -249,6 +249,7 @@ private:
    double  m_dwMasterTune;     /* Master Tune */
 
    std::vector<BYTE> m_noteHistory[NUMMIDICHN];
+   std::vector<BYTE> m_sostenutoBuffer[NUMMIDICHN];
    BYTE    m_bRPNCount[NUMMIDICHN];
    BYTE    m_bNRPNCount[NUMMIDICHN];
 

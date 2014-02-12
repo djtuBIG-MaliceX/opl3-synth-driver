@@ -136,7 +136,17 @@ void
          break;
 
       case 66:  // Sostenuto PEdal
-         // TODO handle held sustaining notes
+         if (bVelocity > 0x3F)
+            m_sostenutoBuffer[bChannel] = m_noteHistory[bChannel]; // memowise copy of held notes at this time instance
+         else
+         {
+            while (m_sostenutoBuffer[bChannel].size() > 0)
+            {
+               BYTE bNote = *m_sostenutoBuffer[bChannel].rbegin();
+               m_sostenutoBuffer[bChannel].pop_back();
+               Opl3_NoteOff(m_bPatch[bChannel], bNote, bChannel, m_bSustain[bChannel]);
+            }
+         }
          break;
 
       case 71:  // "Harmonic content"
@@ -357,20 +367,25 @@ void
    WORD         wTemp, wTemp2 ;
    BYTE         b4Op = (BYTE)(lpPS->bOp != PATCH_1_2OP);
 
+   // If exist on sostenuto list, do not do anything
+   if (std::find(m_sostenutoBuffer[bChannel].begin(), m_sostenutoBuffer[bChannel].end(), bNote) != m_sostenutoBuffer[bChannel].end())
+      return;
+
    // Find the note slot
    wTemp = Opl3_FindFullSlot( bNote, bChannel ) ;
    
-   // Remove note instance
-   for (std::vector<BYTE>::iterator it = m_noteHistory[bChannel].begin();
-         it != m_noteHistory[bChannel].end();
-         ++it)
+   // Remove note instance irrespective of any status
+   //for (std::vector<BYTE>::iterator it = m_noteHistory[bChannel].begin();
+   //      it != m_noteHistory[bChannel].end();
+   //      ++it)
+   //{
+   std::vector<BYTE>::iterator it = std::find(m_noteHistory[bChannel].begin(), m_noteHistory[bChannel].end(), bNote);
+   if ((*it) == bNote)
    {
-      if ((*it) == bNote)
-      {
-         m_noteHistory[bChannel].erase(it);
-         break;
-      }
+      m_noteHistory[bChannel].erase(it);
+   //      break;
    }
+   //}
 
    if (wTemp != 0xffff)
    {
@@ -993,6 +1008,10 @@ void
    // Add to note history as most recent note
    m_noteHistory[bChannel].push_back(bNote);
 
+   // If on sostenuto list, add to it (needed for note off)
+   if (std::find(m_sostenutoBuffer[bChannel].begin(), m_sostenutoBuffer[bChannel].end(), bNote) != m_sostenutoBuffer[bChannel].end())
+   m_sostenutoBuffer[bChannel].push_back(bNote);
+
 } // end of Opl3_NoteOn()
 
 void
@@ -1335,6 +1354,7 @@ void
    int i;
 
    m_noteHistory[bChannel].clear();
+   m_sostenutoBuffer[bChannel].clear();
    
    for (i = 0; i < NUM2VOICES; i++)
    {
@@ -2457,6 +2477,7 @@ void
       m_bAttack[i] = 64;
       m_bBrightness[i] = 64;
       m_noteHistory[i].clear();
+      m_sostenutoBuffer[i].clear();
       m_bCoarseTune[i] = 64;
       m_bFineTune[i] = 64;
       m_bRPNCount[i] = 0;
