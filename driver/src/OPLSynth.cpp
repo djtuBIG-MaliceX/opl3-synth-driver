@@ -136,7 +136,9 @@ void
          break;
 
       case 66:  // Sostenuto PEdal
-         if (bVelocity > 0x3F)
+         m_bSostenuto[bChannel] = bVelocity;
+
+         if (bVelocity > 0x3F && m_sostenutoBuffer[bChannel].size() == 0)
             m_sostenutoBuffer[bChannel] = m_noteHistory[bChannel]; // memowise copy of held notes at this time instance
          else
          {
@@ -368,7 +370,7 @@ void
    BYTE         b4Op = (BYTE)(lpPS->bOp != PATCH_1_2OP);
 
    // If exist on sostenuto list, do not do anything
-   if (std::find(m_sostenutoBuffer[bChannel].begin(), m_sostenutoBuffer[bChannel].end(), bNote) != m_sostenutoBuffer[bChannel].end())
+   if (std::find(m_sostenutoBuffer[bChannel].begin(), m_sostenutoBuffer[bChannel].end(), bNote) != m_sostenutoBuffer[bChannel].end() && m_bSostenuto[bChannel] > 0x3F)
       return;
 
    // Find the note slot
@@ -2470,6 +2472,7 @@ void
       m_bLastNoteUsed[i] = ~0;
       m_bPatch[i] = 0;
       m_bSustain[i] = 0;
+      m_bSostenuto[i] = 0;
       m_bPortaTime[i] = 0;
       m_bStereoMask[i] = 0xff;
       m_bModWheel[i] = 0;

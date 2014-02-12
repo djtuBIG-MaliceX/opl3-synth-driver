@@ -285,6 +285,7 @@ private:
    BYTE    m_bBankSelect[NUMMIDICHN][2]; /* Currently set bank selects */
    BYTE    m_bPatch[NUMMIDICHN];         /* patch number mapped to */
    BYTE    m_bSustain[NUMMIDICHN];       /* Is sustain in effect on this channel? */
+   BYTE    m_bSostenuto[NUMMIDICHN];     /* Sostenuto pedal depressed */
 
    /*ADSR modifiers*/
    BYTE    m_bAttack[NUMMIDICHN];      /*Scaled to modify carrier instrument AR*/
