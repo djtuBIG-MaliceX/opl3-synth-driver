@@ -219,9 +219,8 @@ static BYTE gbVelocityAtten[64] =
 
 static BYTE offsetSlot[] =
 {
-   0, 1, 2, 3, 4, 5,
-   8, 9, 10, 11, 12, 13,
-   16, 17, 18, 19, 20, 21
+   0,  1,  2,  3,  4,  5,  8,  9,  10, 
+   11, 12, 13, 16, 17, 18, 19, 20, 21
 };
 
 /* pitch values, from middle c, to octave above it */
@@ -247,7 +246,7 @@ private:
    WORD    m_wSynthAttenL;     /* in 1.5dB steps */
    WORD    m_wSynthAttenR;     /* in 1.5dB steps */
    BYTE    m_bMasterCoarseTune;      /* TODO Master Tuning level*/
-   DWORD   m_dwMasterTune;     /* TODO Master Tune */
+   double  m_dwMasterTune;     /* Master Tune */
 
    std::vector<BYTE> m_noteHistory[NUMMIDICHN];
    BYTE    m_bRPNCount[NUMMIDICHN];
@@ -323,6 +322,7 @@ private:
    void Opl3_LFOUpdate(BYTE bVoice);
    void ProcessGSSysEx(Bit8u *bufpos, DWORD len);
    void ProcessXGSysEx(Bit8u *bufpos, DWORD len);
+   patchStruct& Opl3_GetPatch(BYTE bBankMSB, BYTE bBankLSB, BYTE bPatch);
 public:
    void Opl3_SoftCommandReset(void);
    void WriteMidiData(DWORD dwData);

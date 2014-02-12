@@ -74,7 +74,7 @@ void
       {
 
       case 0: // Bank Select MSB
-         Opl3_UpdateBankSelect(0, bChannel, bVelocity);
+         Opl3_UpdateBankSelect(1, bChannel, bVelocity);
          break;
      
       case 1: // Modulation Wheel
@@ -93,7 +93,7 @@ void
          /* change channel volume */
          //Opl3_ChannelVolume(bChannel,gbVelocityAtten[bVelocity >> 1]);
          m_curVol[bChannel] = bVelocity;
-         Opl3_ChannelVolume(bChannel,gbVelocityAtten[(BYTE)((bVelocity >> 1) * ((float)m_iExpThres[bChannel]/0x7F))]);
+         Opl3_ChannelVolume(bChannel,bVelocity);
          break;
 
       case 8:
@@ -107,11 +107,11 @@ void
       case 11: 
          m_iExpThres[bChannel] = bVelocity;
          /* set expression threshold. should influence bChannel.gbVelocityAtten[curVol>>1] range */
-         Opl3_ChannelVolume(bChannel,gbVelocityAtten[(BYTE)((m_curVol[bChannel] >> 1) * ((float)m_iExpThres[bChannel]/0x7F))]);
+         Opl3_ChannelVolume(bChannel,bVelocity);
          break;
 
       case 32:  // Bank Select LSB
-         Opl3_UpdateBankSelect(1, bChannel, bVelocity);
+         Opl3_UpdateBankSelect(0, bChannel, bVelocity);
          break;
          
       case 38:  // Data Entry LSB
@@ -253,6 +253,15 @@ void
 
       case 121: // Reset all controllers
          Opl3_ChannelNotesOff(bChannel);
+         for (int i = 0; i < NUMMIDICHN; ++i)
+         {
+            m_iExpThres[i] = 127;
+            m_iBend[i] = 0;
+            m_bSustain[i] = 0;
+            m_bRPNCount[i] = 0;
+            m_bModWheel[i] = 0;
+            m_bStereoMask[i] = 0xFF;
+         }
          //Opl3_SoftCommandReset(); // TODO do not do full reset
          break;
 
@@ -458,7 +467,8 @@ void
    m_bBankSelect[bChannel][bSigBit] = val;
 
    // Update drum mode setting
-   m_wDrumMode = (m_bBankSelect[bChannel][0] == 0x7F && m_bBankSelect[bChannel][1] == 0) ?
+   // TODO: set conditional to disable this feature
+   m_wDrumMode = (m_bBankSelect[bChannel][0] == 0 && m_bBankSelect[bChannel][1] == 0x7F) ?
       m_wDrumMode | (1<<bChannel) :
       m_wDrumMode &~(1<<bChannel) ;
 }
@@ -1320,7 +1330,8 @@ void
    OPLSynth::
    Opl3_ChannelVolume(BYTE bChannel, WORD wAtten)
 {
-   m_bChanAtten[bChannel] = (BYTE)wAtten;
+   //m_bChanAtten[bChannel] = (BYTE)wAtten;
+   m_bChanAtten[bChannel] = (BYTE)gbVelocityAtten[(BYTE)(((wAtten & 0x7F) >> 1) * ((float)m_iExpThres[bChannel]/0x7F))];
 
    Opl3_SetVolume(bChannel);
 }
@@ -1342,10 +1353,7 @@ void
 // ===========================================================================
 void
    OPLSynth::
-   Opl3_SetVolume
-   (
-   BYTE   bChannel
-   )
+   Opl3_SetVolume(BYTE bChannel)
 {
    WORD            i, j, wTemp, wOffset ;
    patchStruct     *lpPS;
@@ -1524,7 +1532,7 @@ WORD
    RPNTune = ((signed)m_bCoarseTune[bChannel] - 64);
    RPNTune += lin_intp(m_bFineTune[bChannel], 0, 127, (-1), 1);
 
-	curNote = (double)(note + RPNTune + (m_iBend[bChannel] * m_iBendRange[bChannel] + dwLFOVal) / 8192.0); //Note + CurPitch / 8192.0;
+	curNote = (double)(note + m_bMasterCoarseTune + RPNTune + (m_iBend[bChannel] * m_iBendRange[bChannel] + dwLFOVal) / 8192.0); //Note + CurPitch / 8192.0;
 	freqVal = 440.0 * pow(2.0, (curNote - 69) / 12.0);
 	//BlockVal = ((signed short int)CurNote / 12) - 1;
 	BlockVal = ((signed short int)(curNote + 6) / 12) - 2;
@@ -2041,6 +2049,10 @@ void
    if (bVoice >= (NUM2VOICES / 2))
       wOffset += (0x100 - (NUM2VOICES / 2));
 
+   // Depends if voice is enabled or not
+   if (m_Voice[bVoice].bOn == FALSE)
+      wTemp &= ~(1<<5);
+
    Opl3_ChipWrite(AD_BLOCK + wOffset, m_Voice[ bVoice ].bBlock[ 0 ] ) ;
    Opl3_ChipWrite(AD_FNUMBER + wOffset, (BYTE) wTemp ) ;
    
@@ -2175,11 +2187,29 @@ void
 
    else
    {
-      // Do something!
+      switch(bufpos[1])
+      {
+         case 0x7E:  // Universal
+         case 0x7F:
+            // MIDI Master Volume
+            //F0 7F 7F 04 01 xx(lsb) yy(msb) F7
 
-      // MIDI Master Volume
-      //F0 7F 7F 04 01 xx(lsb) yy(msb) F7
+            // GM-2 MIDI Master Fine Tuning
+            //F0 7F devID 04 03 lsb msb F7 (default== 00 40, max = 7F 7F)
 
+            // GM-2 MIDI Master Coarse Tuning
+            //F0 7F devID 04 04 00 msb F7 (default=40. from 00 to 7F)
+            break;
+
+         case 0x41:  // Roland
+            ProcessGSSysEx(bufpos, len);
+            break;
+
+         case 0x43:  // Yamaha
+            ProcessXGSysEx(bufpos, len);
+            break;
+
+      }
    }
 }
 
@@ -2187,7 +2217,7 @@ void
    OPLSynth::
    ProcessGSSysEx(Bit8u *bufpos, DWORD len)
 {
-
+   // TODO handle equivalent GM-2/XG commands?
 
 }
 
@@ -2195,98 +2225,126 @@ void
    OPLSynth::
    ProcessXGSysEx(Bit8u *bufpos, DWORD len)
 {
-   // Master Tuning  (aaH = 1000H + bbH x 0100H + ccH * 0010H + ddH * 0001H)-0400H (in 0.1 cent units)
-   //F0 43 1n 4C 00 00 00 aa bb cc dd F7 (default: 00 04 00 00)
+   if (bufpos[4] == 0x00 || bufpos[4] == 0x30)
+   {
+      switch(bufpos[6])
+      {
+         case 0x00:
+            // Master Tuning  (aaH = 1000H + bbH x 0100H + ccH * 0010H + ddH * 0001H)-0400H (in 0.1 cent units)
+            //F0 43 1n 4C 00 00 00 aa bb cc dd F7 (default: 00 04 00 00)
+            if (bufpos[4]==0x30)
+            {
 
-   // Master Volume
-   //F0 43 1n 4C 00 00 04 xx F7 (default=7F, from 00 to 7F)
+            }
 
-   // Master Attenuator
-   //F0 43 1n 4C 00 00 05 xx F7 (default=00, from 00 to 7F) - opposite of above?
+            // MIDI Master Tuning
+            //F0 43 1n 27 30 00 00 0m(sb) 0l(sb) cc(ignored) F7  (default=00 40)
+            else
+            {
 
-   // Master Transpose (melodic notes only, non-realtime)
-   //F0 43 1n 4c 00 00 06 xx F7 (40=default)
+            }
+            break;
 
-   // MIDI Master Tuning
-   //F0 43 1n 27 30 00 00 0m(sb) 0l(sb) cc(ignored) F7 
+         // Master Transpose (melodic notes only, non-realtime)
+         //F0 43 1n 4c 00 00 06 xx F7 (40=default)
+         case 0x06:
+            m_bMasterCoarseTune = bufpos[7] - 0x40;
+            // do not update?
+            break;
 
-   // Multipart data, nn=channel (00 to 0F)
+         // Master Volume
+         //F0 43 1n 4C 00 00 04 xx F7 (default=7F, from 00 to 7F)
+         case 0x04:   
+            break;
 
-   // Bank Select MSB
-   //F0 43 1n 4C 08 nn 01 xx F7
+         // Master Attenuator
+         //F0 43 1n 4C 00 00 05 xx F7 (default=00, from 00 to 7F) - opposite of above?
+         case 0x05:
+            break;
 
-   // Bank Select LSB
-   //F0 43 1n 4C 08 nn 02 xx F7
+         
+      }
+   }
 
-   // Program Change
-   //F0 43 1n 4C 08 nn 03 xx F7
+   else if (bufpos[4] == 0x08)
+   {
+      // Multipart data, nn=channel (00 to 0F)
 
-   // Mono / Poly
-   //F0 43 1n 4C 08 nn 05 xx F7 (00 or 01, default=01-poly)
+      // Bank Select MSB
+      //F0 43 1n 4C 08 nn 01 xx F7
 
-   // Part mode (lazy implementation, enable drum mode for nonzero value)
-   //F0 43 1n 4C 08 nn 07 xx F7 (00-nomral, 01...nn=drum)
+      // Bank Select LSB
+      //F0 43 1n 4C 08 nn 02 xx F7
 
-   // Note Shift (coarse tune.  lazy implementation: percussion will detune instead of shift notes and update instantaneously)
-   //F0 43 1n 4C 08 nn 08 xx F7 (default=40)
+      // Program Change
+      //F0 43 1n 4C 08 nn 03 xx F7
 
-   // Detune (fine tune)
-   //F0 43 1n 4C 08 nn 09/0A xx xx F7  (default=08 00.  range=00 00 to 0F 0F)
+      // Mono / Poly
+      //F0 43 1n 4C 08 nn 05 xx F7 (00 or 01, default=01-poly)
 
-   // Volume
-   //F0 43 1n 4C 08 nn 0B xx F7 (default=64, from 00 to 7F)
+      // Part mode (lazy implementation, enable drum mode for nonzero value)
+      //F0 43 1n 4C 08 nn 07 xx F7 (00-nomral, 01...nn=drum)
 
-   // Velocity Sensitivity (TODO?)
-   //F0 43 1n 4C 08 nn 0D xx F7 (default=40, from 00 to 7F)
+      // Note Shift (coarse tune.  lazy implementation: percussion will detune instead of shift notes and update instantaneously)
+      //F0 43 1n 4C 08 nn 08 xx F7 (default=40)
 
-   // Pan
-   //F0 43 1n 4C 08 nn 0E xx F7 (default=40, from 00 to 7F)
+      // Detune (fine tune)
+      //F0 43 1n 4C 08 nn 09/0A xx xx F7  (default=08 00.  range=00 00 to 0F 0F)
 
-   // Vibrato Rate
-   //F0 43 1n 4C 08 nn 15 xx F7 (default=40, from 00 to 7F)
+      // Volume
+      //F0 43 1n 4C 08 nn 0B xx F7 (default=64, from 00 to 7F)
 
-   // Vibrato Depth
-   //F0 43 1n 4C 08 nn 16 xx F7 (default=40, from 00 to 7F)
+      // Velocity Sensitivity (TODO?)
+      //F0 43 1n 4C 08 nn 0D xx F7 (default=40, from 00 to 7F)
 
-   // Vibrato Delay
-   //F0 43 1n 4C 08 nn 17 xx F7 (default=40, from 00 to 7F)
+      // Pan
+      //F0 43 1n 4C 08 nn 0E xx F7 (default=40, from 00 to 7F)
 
-   // LPF Cutoff (Brightness)
-   //F0 43 1n 4C 08 nn 18 xx F7 (default=40, from 00 to 7F)
+      // Vibrato Rate
+      //F0 43 1n 4C 08 nn 15 xx F7 (default=40, from 00 to 7F)
 
-   // Attack
-   //F0 43 1n 4C 08 nn 1A xx F7 (default=40, from 00 to 7F)
+      // Vibrato Depth
+      //F0 43 1n 4C 08 nn 16 xx F7 (default=40, from 00 to 7F)
 
-   // Decay  (NRPN 1H/64H)
-   //F0 43 1n 4C 08 nn 1B xx F7 (default=40, from 00 to 7F)
+      // Vibrato Delay
+      //F0 43 1n 4C 08 nn 17 xx F7 (default=40, from 00 to 7F)
 
-   // Release
-   //F0 43 1n 4C 08 nn 1C xx F7 (default=40, from 00 to 7F)
+      // LPF Cutoff (Brightness)
+      //F0 43 1n 4C 08 nn 18 xx F7 (default=40, from 00 to 7F)
 
-   // Portamento switch
-   //F0 43 1n 4C 08 nn 67 xx F7 (default=00, from 00 to 01)
+      // Attack
+      //F0 43 1n 4C 08 nn 1A xx F7 (default=40, from 00 to 7F)
 
-   // Portamento time
-   //F0 43 1n 4C 08 nn 68 xx F7 (default=00, from 00 to 7F)
+      // Decay  (NRPN 1H/64H)
+      //F0 43 1n 4C 08 nn 1B xx F7 (default=40, from 00 to 7F)
 
-   // Pitch EG init level (not supported)
-   //F0 43 1n 4C 08 nn 69 xx F7 (default=40, from 00 to 7F)
+      // Release
+      //F0 43 1n 4C 08 nn 1C xx F7 (default=40, from 00 to 7F)
 
-   // Pitch EG attack time (not supported) 6A
+      // Portamento switch
+      //F0 43 1n 4C 08 nn 67 xx F7 (default=00, from 00 to 01)
 
-   // Pitch EG Release level (not supported) 6B
+      // Portamento time
+      //F0 43 1n 4C 08 nn 68 xx F7 (default=00, from 00 to 7F)
 
-   // Pitch EG Release Time (not supported) 6C
+      // Pitch EG init level (not supported)
+      //F0 43 1n 4C 08 nn 69 xx F7 (default=40, from 00 to 7F)
+
+      // Pitch EG attack time (not supported) 6A
+
+      // Pitch EG Release level (not supported) 6B
+
+      // Pitch EG Release Time (not supported) 6C
 
 
-   // Drum part commands
+      // Drum part commands
 
-   // Drum Note Pitch Coarse (not supported) (3n = drum part n, rr = drum note number)
-   //F0 43 1n 4C 3n rr 00 xx F7 (default=40, from 00 to 7F)
+      // Drum Note Pitch Coarse (not supported) (3n = drum part n, rr = drum note number)
+      //F0 43 1n 4C 3n rr 00 xx F7 (default=40, from 00 to 7F)
 
-   // Drum Note Pitch File (not supported)
-   //F0 43 1n 4C 3n rr 01 xx F7 (default=40, from 00 to 7F)
-
+      // Drum Note Pitch File (not supported)
+      //F0 43 1n 4C 3n rr 01 xx F7 (default=40, from 00 to 7F)
+   }
 
 }
 
