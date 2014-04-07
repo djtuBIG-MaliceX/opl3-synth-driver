@@ -1,5 +1,5 @@
 /*
- *  Copyright (C) 2013  Alexey Khokholov
+ *  Copyright (C) 2013-2014 Alexey Khokholov
  *
  *  This library is free software; you can redistribute it and/or
  *  modify it under the terms of the GNU Lesser General Public
@@ -16,11 +16,22 @@
  *  Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
  */
 
+/* Changelog:
+	v2:
+		Vibrato's sign fix
+	v3:
+		Operator key fix
+		Corrected 4-operator mode
+		Corrected rhythm mode
+		Some small fixes
+	v3.1:
+		Small envelope generator fix
+		Removed EX_Get function(not used)
+*/
+
 #include <stdlib.h>
 #include <string>
 #include "opl3.h"
-
-#define OPLRATE		(double)(14318180.0 / 288)
 
 // Channel types
 
@@ -43,6 +54,12 @@
 #define EG_SUSTAIN	0x03
 
 #define EG_RELEASE	0x04
+
+// Envelope generator states
+
+#define EG_KEY_NORM	0x01
+
+#define EG_KEY_DRUM	0x02
 
 static int tables = 0;
 
@@ -160,6 +177,7 @@ typedef struct _channel {
 	int op1id, op2id;
 	int con;
 	int chtype;
+	int alg;
 	int offset;
 	int feedback;
 	unsigned int cha,chb,chc,chd;
@@ -197,8 +215,6 @@ typedef struct _slot {
 	int ksl;
 	int key;
 	int waveform;
-	/*double dr_inc;
-	double rr_inc;*/
 } slot;
 
 
@@ -219,18 +235,13 @@ typedef struct OPL3Emu
 	slot OPs[36];
 } OPL3;
 
-int EX_Get(int i )
-{
-	return (((exprom[255-(i&0xff)])<<1)>>(i/256));
-}
-
 //
 // Phase generator 
 //
 
 void PG_UpdateFreq(OPL3 *opl, int op)
 {
-	opl->OPs[op].PG_inc = (opl->Channels[op/2].f_number<<(5+opl->Channels[op/2].block)) *  mt[opl->OPs[op].mult];
+	opl->OPs[op].PG_inc = ((opl->Channels[op/2].f_number<<opl->Channels[op/2].block) *  mt[opl->OPs[op].mult])>>1;
 }
 
 void PG_Generate(OPL3 *opl, int op)
@@ -239,7 +250,7 @@ void PG_Generate(OPL3 *opl, int op)
 	{
 		int fnum_high = opl->Channels[op/2].f_number>>(7+vib_table[(opl->vib_pos>>10)&0x7]+(1-opl->dvb));
 		int fnum = opl->Channels[op/2].f_number + fnum_high*negvib_table[(opl->vib_pos>>10)&0x7];
-		opl->OPs[op].PG_pos += (fnum<<(5+opl->Channels[op/2].block)) *  mt[opl->OPs[op].mult];
+		opl->OPs[op].PG_pos += (((fnum<<opl->Channels[op/2].block) *  mt[opl->OPs[op].mult])>>1);
 	}
 	else
 	{
@@ -373,8 +384,7 @@ void EG_Generate(OPL3 *opl, int op)
 		if(opl->OPs[op].EG_out>=511)
 		{
 			opl->OPs[op].EG_out = 511;
-         if (!opl->OPs[op].key)
-			   opl->OPs[op].EG_state = EG_OFF;
+			opl->OPs[op].EG_state = EG_OFF;
 		}
 		break;
 	}
@@ -389,21 +399,26 @@ void EG_Generate(OPL3 *opl, int op)
 	}
 }
 
-void EG_KeyOn(OPL3 *opl, int op)
+void EG_KeyOn(OPL3 *opl, int op, int type)
 {
-	if(opl->OPs[op].EG_state == EG_RELEASE || opl->OPs[op].EG_state == EG_OFF)
+	if(opl->OPs[op].key == 0x00)
 	{
 		opl->OPs[op].EG_state = EG_ATTACK;
-      opl->OPs[op].key = 1;
 		PG_Reset(opl,op);
 	}
+	opl->OPs[op].key |= type;
 }
 
-void EG_KeyOff(OPL3 *opl, int op)
+void EG_KeyOff(OPL3 *opl, int op, int type)
 {
-   opl->OPs[op].key = 0;
-	if(opl->OPs[op].EG_state != EG_OFF)
-		opl->OPs[op].EG_state = EG_RELEASE;
+	if(opl->OPs[op].key != 0x00)
+	{
+		opl->OPs[op].key &= (~type);
+		if(opl->OPs[op].key == 0x00)
+		{
+			opl->OPs[op].EG_state = EG_RELEASE;
+		}
+	}
 }
 
 void EG_Reset(OPL3 *opl, int op)
@@ -411,7 +426,6 @@ void EG_Reset(OPL3 *opl, int op)
 	opl->OPs[op].EG_state = EG_OFF;
 	opl->OPs[op].EG_out = 511;
 	opl->OPs[op].EG_mout = 511;
-   opl->OPs[op].key = 0;
 }
 
 //
@@ -485,7 +499,7 @@ void OP_GeneratePhase(OPL3 *opl, int op, int phase)
 void OP_Generate(OPL3 *opl, int op, int modulator)
 {
 	int EG = opl->OPs[op].EG_mout<<3;
-	int wp = (opl->OPs[op].PG_pos>>16) + modulator;
+	int wp = (opl->OPs[op].PG_pos>>10) + modulator;
 	wp&=0x3FF;
 
 	EG += sin_table[opl->OPs[op].waveform][wp];
@@ -493,7 +507,7 @@ void OP_Generate(OPL3 *opl, int op, int modulator)
 	{
 		EG = 6225;
 	}
-	opl->OPs[op].out = exptab[EG]<<1;
+	opl->OPs[op].out = exptab[EG];
 	if(negsin_table[opl->OPs[op].waveform][wp])
 	{
 		opl->OPs[op].out = ~opl->OPs[op].out;
@@ -507,7 +521,7 @@ void OP_Generate(OPL3 *opl, int op, int modulator)
 void CH_UpdateRhythm(OPL3 *opl)
 {
 	opl->rhythm = opl->opl_memory[0xBD]&0x3F;
-	if(opl->rhythm)
+	if(opl->rhythm&0x20)
 	{
 		for(int i = 6; i < 9; i++)
 		{
@@ -516,49 +530,49 @@ void CH_UpdateRhythm(OPL3 *opl)
 		//HH
 		if(opl->rhythm&0x01)
 		{
-			EG_KeyOn(opl,14);
+			EG_KeyOn(opl,14,EG_KEY_DRUM);
 		}
 		else
 		{
-			EG_KeyOff(opl,14);
+			EG_KeyOff(opl,14,EG_KEY_DRUM);
 		}
 		//TC
 		if(opl->rhythm&0x02)
 		{
-			EG_KeyOn(opl,16);
+			EG_KeyOn(opl,17,EG_KEY_DRUM);
 		}
 		else
 		{
-			EG_KeyOff(opl,16);
+			EG_KeyOff(opl,17,EG_KEY_DRUM);
 		}
 		//TOM
 		if(opl->rhythm&0x04)
 		{
-			EG_KeyOn(opl,15);
+			EG_KeyOn(opl,16,EG_KEY_DRUM);
 		}
 		else
 		{
-			EG_KeyOff(opl,15);
+			EG_KeyOff(opl,16,EG_KEY_DRUM);
 		}
 		//SD
 		if(opl->rhythm&0x08)
 		{
-			EG_KeyOn(opl,17);
+			EG_KeyOn(opl,15,EG_KEY_DRUM);
 		}
 		else
 		{
-			EG_KeyOff(opl,17);
+			EG_KeyOff(opl,15,EG_KEY_DRUM);
 		}
 		//BD
 		if(opl->rhythm&0x10)
 		{
-			EG_KeyOn(opl,12);
-			EG_KeyOn(opl,13);
+			EG_KeyOn(opl,12,EG_KEY_DRUM);
+			EG_KeyOn(opl,13,EG_KEY_DRUM);
 		}
 		else
 		{
-			EG_KeyOff(opl,12);
-			EG_KeyOff(opl,13);
+			EG_KeyOff(opl,12,EG_KEY_DRUM);
+			EG_KeyOff(opl,13,EG_KEY_DRUM);
 		}
 	}
 	else
@@ -567,16 +581,12 @@ void CH_UpdateRhythm(OPL3 *opl)
 		{
 			opl->Channels[i].chtype = CH_2OP;
 		}
-		for(int i = 12; i < 18; i++)
-		{
-			EG_KeyOff(opl,i);
-		}
 	}
 }
 
 void CH_UpdateAB0(OPL3 *opl, int ch)
 {
-	if(opl->Channels[ch].chtype==CH_4OP2)
+	if(opl->opl3mode && opl->Channels[ch].chtype==CH_4OP2)
 		return;
 	int f_number = (opl->opl_memory[0xA0+opl->Channels[ch].offset]) | (((opl->opl_memory[0xB0+opl->Channels[ch].offset])&0x03)<<8);
 	int block = ((opl->opl_memory[0xB0+opl->Channels[ch].offset])>>2)&0x07;
@@ -592,7 +602,7 @@ void CH_UpdateAB0(OPL3 *opl, int ch)
 	OP_Update60(opl,opl->Channels[ch].op2id);
 	OP_Update80(opl,opl->Channels[ch].op1id);
 	OP_Update80(opl,opl->Channels[ch].op2id);
-	if(opl->Channels[ch].chtype == CH_4OP)
+	if(opl->opl3mode && opl->Channels[ch].chtype == CH_4OP)
 	{
 		opl->Channels[ch+3].f_number = f_number;
 		opl->Channels[ch+3].block = block;
@@ -613,6 +623,20 @@ void CH_UpdateC0(OPL3 *opl, int ch)
 	int fb = (opl->opl_memory[0xC0+opl->Channels[ch].offset]&0x0E)>>1;
 	opl->Channels[ch].feedback = fb?(9-fb):0;
 	opl->Channels[ch].con = opl->opl_memory[0xC0+opl->Channels[ch].offset]&0x01;
+	opl->Channels[ch].alg = opl->Channels[ch].con;
+	if(opl->opl3mode)
+	{
+		if(opl->Channels[ch].chtype == CH_4OP)
+		{
+			opl->Channels[ch+3].alg = 0x04 | (opl->Channels[ch].con<<1) | (opl->Channels[ch+3].con);
+			opl->Channels[ch].alg = 0x08;
+		}
+		else if(opl->Channels[ch].chtype == CH_4OP2)
+		{
+			opl->Channels[ch].alg = 0x04 | (opl->Channels[ch-3].con<<1) | (opl->Channels[ch].con);
+			opl->Channels[ch-3].alg = 0x08;
+		}
+	}
 	if(opl->opl3mode)
 	{
 		opl->Channels[ch].cha = ((opl->opl_memory[0xC0+opl->Channels[ch].offset]>>4)&0x01) ? ~0 : 0;
@@ -657,48 +681,48 @@ void CH_GenerateRhythm(OPL3 *opl)
 	if(opl->rhythm&0x20)
 	{
 		//BD
-		int fbb = (opl->OPs[opl->Channels[6].op1id].prevout[0]+opl->OPs[opl->Channels[6].op1id].prevout[1])>>opl->Channels[6].feedback;
+		int fbb = (opl->OPs[12].prevout[0]+opl->OPs[12].prevout[1])>>opl->Channels[6].feedback;
 		if(opl->Channels[6].feedback==0)
 			fbb = 0;
 		if(!opl->Channels[6].con)
 		{
-			OP_Generate(opl,opl->Channels[6].op1id,fbb);
-			OP_Generate(opl,opl->Channels[6].op2id,opl->OPs[opl->Channels[6].op1id].out);
-			opl->Channels[6].out = opl->OPs[opl->Channels[6].op2id].out;
+			OP_Generate(opl,12,fbb);
+			OP_Generate(opl,13,opl->OPs[12].out);
+			opl->Channels[6].out = opl->OPs[opl->Channels[6].op2id].out*2;
 		}
 		else
 		{
-			OP_Generate(opl,opl->Channels[6].op1id,fbb);
-			OP_Generate(opl,opl->Channels[6].op2id,0);
+			OP_Generate(opl,12,fbb);
+			OP_Generate(opl,13,0);
 			opl->Channels[6].out = opl->OPs[opl->Channels[6].op2id].out*2;
 		}
-		//HH
-		for(int i = 14; i < 18; i++)
-		{
-			if(i==16)
-			{
-				continue;
-			}
-			//PG_Generate(opl,i);
-		}
-		int P14 = opl->OPs[14].PG_pos;
-		int P17 = opl->OPs[17].PG_pos;
+		int P14 = (opl->OPs[14].PG_pos>>10)&0x3FF;
+		int P17 = (opl->OPs[17].PG_pos>>10)&0x3FF;
 		int phase = 0;
 		// HH TC Phase bit
 		int PB = ((P14 & 0x08) | (((P14>>5) ^ P14)&0x04) | (((P17>>2) ^ P17)&0x08)) ? 0x01 : 0x00; 
 		//HH
-		phase = (PB<<9) | ( 0x34 << ((phase ^ (opl->noise & 0x01))<<1));
+		phase = (PB<<9) | ( 0x34 << ((PB ^ (opl->noise & 0x01)<<1)));
 		OP_GeneratePhase(opl,14,phase);
 		//SD
-		phase = (0x100<<((P14>>8)&0x01)) ^ 0x100;
+		phase = (0x100<<((P14>>8)&0x01)) ^ ((opl->noise & 0x01)<<8);
 		OP_GeneratePhase(opl,15,phase);
 		//TT
-		OP_Generate(opl,16,0);
+		fbb = (opl->OPs[8].prevout[0]+opl->OPs[8].prevout[1])>>opl->Channels[8].feedback;
+		if(opl->Channels[8].feedback==0)
+			fbb = 0;
+		OP_Generate(opl,16,fbb);
 		//TC
 		phase = 0x100 | (PB<<9);
 		OP_GeneratePhase(opl,17,phase);
 		opl->Channels[7].out = (opl->OPs[14].out + opl->OPs[15].out) * 2;
 		opl->Channels[8].out = (opl->OPs[16].out + opl->OPs[17].out) * 2;
+		opl->OPs[12].prevout[1] = opl->OPs[12].prevout[0];
+		opl->OPs[12].prevout[0] = opl->OPs[12].out;
+		opl->OPs[14].prevout[1] = opl->OPs[14].prevout[0];
+		opl->OPs[14].prevout[0] = opl->OPs[14].out;
+		opl->OPs[16].prevout[1] = opl->OPs[16].prevout[0];
+		opl->OPs[16].prevout[0] = opl->OPs[16].out;
 	}
 }
 
@@ -711,51 +735,50 @@ void CH_Generate(OPL3 *opl, int ch)
 	int fbb = (opl->OPs[opl->Channels[ch].op1id].prevout[0]+opl->OPs[opl->Channels[ch].op1id].prevout[1])>>opl->Channels[ch].feedback;
 	if(opl->Channels[ch].feedback == 0)
 		fbb = 0;
-	if(opl->Channels[ch].chtype==CH_4OP2)
+	if(opl->Channels[ch].alg&0x08)
 	{
 		opl->Channels[ch].out = 0;
 		opl->OPs[opl->Channels[ch].op1id].prevout[1] = opl->OPs[opl->Channels[ch].op1id].prevout[0];
 		opl->OPs[opl->Channels[ch].op1id].prevout[0] = 0;
 		return;
 	}
-	if(opl->Channels[ch].chtype==CH_4OP)
+	else if(opl->Channels[ch].alg&0x04)
 	{
-		int con = (opl->Channels[ch].con<<1) + opl->Channels[ch+3].con;
-		switch(con)
+		switch(opl->Channels[ch].alg&0x03)
 		{
 		case 0x00:
-			OP_Generate(opl,opl->Channels[ch].op1id,fbb);
+			OP_Generate(opl,opl->Channels[ch-3].op1id,fbb);
+			OP_Generate(opl,opl->Channels[ch-3].op2id,opl->OPs[opl->Channels[ch-3].op1id].out);
+			OP_Generate(opl,opl->Channels[ch].op1id,opl->OPs[opl->Channels[ch-3].op2id].out);
 			OP_Generate(opl,opl->Channels[ch].op2id,opl->OPs[opl->Channels[ch].op1id].out);
-			OP_Generate(opl,opl->Channels[ch+3].op1id,opl->OPs[opl->Channels[ch].op2id].out);
-			OP_Generate(opl,opl->Channels[ch+3].op2id,opl->OPs[opl->Channels[ch+3].op1id].out);
-			opl->Channels[ch].out = opl->OPs[opl->Channels[ch+3].op2id].out;
+			opl->Channels[ch].out = opl->OPs[opl->Channels[ch].op2id].out;
 			break;
 		case 0x01:
-			OP_Generate(opl,opl->Channels[ch].op1id,fbb);
+			OP_Generate(opl,opl->Channels[ch-3].op1id,fbb);
+			OP_Generate(opl,opl->Channels[ch-3].op2id,opl->OPs[opl->Channels[ch-3].op1id].out);
+			OP_Generate(opl,opl->Channels[ch].op1id,0);
 			OP_Generate(opl,opl->Channels[ch].op2id,opl->OPs[opl->Channels[ch].op1id].out);
-			OP_Generate(opl,opl->Channels[ch+3].op1id,0);
-			OP_Generate(opl,opl->Channels[ch+3].op2id,opl->OPs[opl->Channels[ch+3].op1id].out);
-			opl->Channels[ch].out = opl->OPs[opl->Channels[ch].op2id].out+opl->OPs[opl->Channels[ch+3].op2id].out;
+			opl->Channels[ch].out = opl->OPs[opl->Channels[ch-3].op2id].out+opl->OPs[opl->Channels[ch].op2id].out;
 			break;
 		case 0x02:
-			OP_Generate(opl,opl->Channels[ch].op1id,fbb);
-			OP_Generate(opl,opl->Channels[ch].op2id,0);
-			OP_Generate(opl,opl->Channels[ch+3].op1id,opl->OPs[opl->Channels[ch].op2id].out);
-			OP_Generate(opl,opl->Channels[ch+3].op2id,opl->OPs[opl->Channels[ch+3].op1id].out);
-			opl->Channels[ch].out = opl->OPs[opl->Channels[ch].op1id].out+opl->OPs[opl->Channels[ch+3].op2id].out;
+			OP_Generate(opl,opl->Channels[ch-3].op1id,fbb);
+			OP_Generate(opl,opl->Channels[ch-3].op2id,0);
+			OP_Generate(opl,opl->Channels[ch].op1id,opl->OPs[opl->Channels[ch-3].op2id].out);
+			OP_Generate(opl,opl->Channels[ch].op2id,opl->OPs[opl->Channels[ch].op1id].out);
+			opl->Channels[ch].out = opl->OPs[opl->Channels[ch-3].op1id].out+opl->OPs[opl->Channels[ch].op2id].out;
 			break;
 		case 0x03:
-			OP_Generate(opl,opl->Channels[ch].op1id,fbb);
+			OP_Generate(opl,opl->Channels[ch-3].op1id,fbb);
+			OP_Generate(opl,opl->Channels[ch-3].op2id,0);
+			OP_Generate(opl,opl->Channels[ch].op1id,opl->OPs[opl->Channels[ch-3].op2id].out);
 			OP_Generate(opl,opl->Channels[ch].op2id,0);
-			OP_Generate(opl,opl->Channels[ch+3].op1id,opl->OPs[opl->Channels[ch].op2id].out);
-			OP_Generate(opl,opl->Channels[ch+3].op2id,0);
-			opl->Channels[ch].out = opl->OPs[opl->Channels[ch].op1id].out+opl->OPs[opl->Channels[ch+3].op1id].out+opl->OPs[opl->Channels[ch+3].op2id].out;
+			opl->Channels[ch].out = opl->OPs[opl->Channels[ch-3].op1id].out+opl->OPs[opl->Channels[ch].op1id].out+opl->OPs[opl->Channels[ch].op2id].out;
 			break;
 		}
 	}
 	else
 	{
-		if(!opl->Channels[ch].con)
+		if(!(opl->Channels[ch].alg&0x01))
 		{
 			OP_Generate(opl,opl->Channels[ch].op1id,fbb);
 			OP_Generate(opl,opl->Channels[ch].op2id,opl->OPs[opl->Channels[ch].op1id].out);
@@ -774,33 +797,49 @@ void CH_Generate(OPL3 *opl, int ch)
 
 void CH_Enable(OPL3 *opl, int ch)
 {
-	if(opl->Channels[ch].chtype == CH_4OP)
+	if(opl->opl3mode)
 	{
-		EG_KeyOn(opl,opl->Channels[ch].op1id);
-		EG_KeyOn(opl,opl->Channels[ch].op2id);
-		EG_KeyOn(opl,opl->Channels[ch+3].op1id);
-		EG_KeyOn(opl,opl->Channels[ch+3].op2id);
+		if(opl->Channels[ch].chtype == CH_4OP)
+		{
+			EG_KeyOn(opl,opl->Channels[ch].op1id,EG_KEY_NORM);
+			EG_KeyOn(opl,opl->Channels[ch].op2id,EG_KEY_NORM);
+			EG_KeyOn(opl,opl->Channels[ch+3].op1id,EG_KEY_NORM);
+			EG_KeyOn(opl,opl->Channels[ch+3].op2id,EG_KEY_NORM);
+		}
+		else if(opl->Channels[ch].chtype == CH_2OP)
+		{
+			EG_KeyOn(opl,opl->Channels[ch].op1id,EG_KEY_NORM);
+			EG_KeyOn(opl,opl->Channels[ch].op2id,EG_KEY_NORM);
+		}
 	}
-	else if(opl->Channels[ch].chtype != CH_4OP2)
+	else
 	{
-		EG_KeyOn(opl,opl->Channels[ch].op1id);
-		EG_KeyOn(opl,opl->Channels[ch].op2id);
+		EG_KeyOn(opl,opl->Channels[ch].op1id,EG_KEY_NORM);
+		EG_KeyOn(opl,opl->Channels[ch].op2id,EG_KEY_NORM);
 	}
 }
 
 void CH_Disable(OPL3 *opl, int ch)
 {
-	if(opl->Channels[ch].chtype == CH_4OP)
+	if(opl->opl3mode)
 	{
-		EG_KeyOff(opl,opl->Channels[ch].op1id);
-		EG_KeyOff(opl,opl->Channels[ch].op2id);
-		EG_KeyOff(opl,opl->Channels[ch+3].op1id);
-		EG_KeyOff(opl,opl->Channels[ch+3].op2id);
+		if(opl->Channels[ch].chtype == CH_4OP)
+		{
+			EG_KeyOff(opl,opl->Channels[ch].op1id,EG_KEY_NORM);
+			EG_KeyOff(opl,opl->Channels[ch].op2id,EG_KEY_NORM);
+			EG_KeyOff(opl,opl->Channels[ch+3].op1id,EG_KEY_NORM);
+			EG_KeyOff(opl,opl->Channels[ch+3].op2id,EG_KEY_NORM);
+		}
+		else if(opl->Channels[ch].chtype == CH_2OP)
+		{
+			EG_KeyOff(opl,opl->Channels[ch].op1id,EG_KEY_NORM);
+			EG_KeyOff(opl,opl->Channels[ch].op2id,EG_KEY_NORM);
+		}
 	}
-	else if(opl->Channels[ch].chtype != CH_4OP2)
+	else
 	{
-		EG_KeyOff(opl,opl->Channels[ch].op1id);
-		EG_KeyOff(opl,opl->Channels[ch].op2id);
+		EG_KeyOff(opl,opl->Channels[ch].op1id,EG_KEY_NORM);
+		EG_KeyOff(opl,opl->Channels[ch].op2id,EG_KEY_NORM);
 	}
 }
 
@@ -840,7 +879,7 @@ void opl_inittables()
 	}
 	for(int i = 0; i < 6226; i++)
 	{
-		exptab[i] = (((exprom[(i&0xff)^0xff]+1024)>>(i/256)));
+		exptab[i] = (((exprom[(i&0xff)^0xff]*2+2048)>>(i/256)));
 	}
 	for(int i = 0; i < 256; i++)
 	{
@@ -887,9 +926,9 @@ void opl_inittables()
 		negsin_table[7][i] = 0;
 		sin_table[7][1023-i] = i*8;
 		negsin_table[7][1023-i] = 1;
-		sin_table[6][i] = i / 4;
+		sin_table[6][i] = 0;
 		negsin_table[6][i] = 0;
-		sin_table[6][512+i] = i / 4;
+		sin_table[6][512+i] = 0;
 		negsin_table[6][512+i] = 1;
 	}
 	for(int i = 0; i < 128; i++)
@@ -963,6 +1002,8 @@ void* opl_init()
 		opl->Channels[i+9].con = 0;
 		opl->Channels[i].chtype = CH_2OP;
 		opl->Channels[i+9].chtype = CH_2OP;
+		opl->Channels[i].alg = 0;
+		opl->Channels[i+9].alg = 0;
 		opl->Channels[i].offset = i;
 		opl->Channels[i+9].offset = 0x100 + i;
 		opl->Channels[i].out = 0;

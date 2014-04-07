@@ -382,7 +382,7 @@ void
    //      ++it)
    //{
    std::vector<BYTE>::iterator it = std::find(m_noteHistory[bChannel].begin(), m_noteHistory[bChannel].end(), bNote);
-   if ((*it) == bNote)
+   if (it != m_noteHistory[bChannel].end() && (*it) == bNote)
    {
       m_noteHistory[bChannel].erase(it);
    //      break;

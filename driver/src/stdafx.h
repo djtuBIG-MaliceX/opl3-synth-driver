@@ -14,7 +14,7 @@
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
-#include <mmddk.h>
+#include "mmddk.h"
 #ifdef __cplusplus
 }
 #endif  /* __cplusplus */

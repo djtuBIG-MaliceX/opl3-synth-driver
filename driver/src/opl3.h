@@ -17,6 +17,11 @@
  */
 
 typedef short int16_t;
+
+/*
+	define Bits, Bitu, Bit32s, Bit32u, Bit16s, Bit16u, Bit8s, Bit8u here
+*/
+
 typedef  unsigned char		Bit8u;
 typedef    signed char		Bit8s;
 typedef unsigned short		Bit16u;
