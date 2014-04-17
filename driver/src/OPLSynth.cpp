@@ -792,7 +792,7 @@ void
 
       //wTemp = m_Voice[m_bLastVoiceUsed[bChannel]].bChannel;
       wTemp = (m_Voice[m_bLastVoiceUsed[bChannel]].bChannel == bChannel) ? m_bLastVoiceUsed[bChannel] :
-              (b4Op) ? Opl3_FindEmptySlot4Op(bPatch, bChannel) : Opl3_FindEmptySlot(bPatch, bChannel);
+              (NS.bOp == PATCH_1_4OP) ? Opl3_FindEmptySlot4Op(bPatch, bChannel) : Opl3_FindEmptySlot(bPatch, bChannel);
       
       // If a rhythm mode patch
       if (bRhyPatch)
