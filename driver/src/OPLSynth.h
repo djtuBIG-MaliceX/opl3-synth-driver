@@ -10,6 +10,8 @@
 #include "opl_hw.h"
 #include "vgm_logging.h"
 
+//#pragma pack(1)
+
 typedef unsigned char	BYTE;
 typedef unsigned short  WORD;
 typedef unsigned long	DWORD, ULONG;
@@ -327,6 +329,21 @@ private:
    void ProcessGSSysEx(Bit8u *bufpos, DWORD len);
    void ProcessXGSysEx(Bit8u *bufpos, DWORD len);
    patchStruct& Opl3_GetPatch(BYTE bBankMSB, BYTE bBankLSB, BYTE bPatch);
+
+
+#ifdef _DEBUG
+   void DebugInit();
+   void DebugClose();
+   void DebugUpdate();
+
+   static const size_t 
+      MAX_SH_MEM_SIZE = 16384,
+      MAX_READ_PROCESSES_ALLOWED = 3;
+   LPCWSTR g_szShareMemoryName, g_szWriteEventName, g_szReadEventName;
+   HANDLE  g_hSharedMemory, g_hWriteEvent, g_hReadEvent[MAX_READ_PROCESSES_ALLOWED]; //global handle to shared memory
+   LPTSTR  g_pBuffer;       //shared memory pointer
+#endif //_DEBUG
+
 public:
    void Opl3_SoftCommandReset(void);
    void WriteMidiData(DWORD dwData);
@@ -334,8 +351,7 @@ public:
    void GetSample(short *samplem, int len);
    void PlaySysex(Bit8u *bufpos, DWORD len);
    inline void Opl3_ChipWrite(WORD idx, BYTE val);
-   //virtual ~OPLSynth();  // some stupid f***ing reason this breaks playback just for beign in existence
+   virtual ~OPLSynth();  // some stupid f***ing reason this breaks playback just for beign in existence
    void close();
-
 };
 #endif

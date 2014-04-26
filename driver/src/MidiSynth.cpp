@@ -473,7 +473,7 @@ namespace OPL3Emu
       if (wResult) return wResult;
 
       synthEvent.Wait();
-      synth->close();  
+      //synth->close();  
       delete synth;
       synth = new OPLSynth();
       if (!synth->Init())

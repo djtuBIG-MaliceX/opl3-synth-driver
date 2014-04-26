@@ -2039,6 +2039,9 @@ bool
    Opl3_BoardReset();
    Opl3_SoftCommandReset();
 
+#ifdef _DEBUG
+   DebugInit();
+#endif //_DEBUG
    return true;
 }
 
@@ -2146,6 +2149,10 @@ void
    // Increment logger sample history
    if (bIsLogging)
       VGMLog_IncrementSamples(len);
+
+#ifdef _DEBUG
+   DebugUpdate();
+#endif //_DEBUG
 }
 
 
@@ -2533,10 +2540,148 @@ void
 #ifndef DISABLE_HW_SUPPORT
    OPL_HW_Close();
 #endif /*DISABLE_HW_SUPPORT*/
+
+#ifdef _DEBUG
+   DebugClose();
+#endif /*DEBUG*/
 }
 
+#ifdef _DEBUG 
+
+/*
+ * Provide debug functionality
+ */
+
+void
+   OPLSynth::
+   DebugInit()
+{
+   // Init shared memory for use with debug application
+   g_szShareMemoryName = L"potenis";
+   g_szReadEventName = L"roids";
+   g_szWriteEventName = L"wroit";
+
+   //Trying to be defensive
+   for (int ii = 0; ii < MAX_READ_PROCESSES_ALLOWED; ii++)
+   {
+      g_hReadEvent[ii] = NULL;
+   }
+     
+   TCHAR szBuffer[32];  //big enough to hold the name
+     
+   //Creating Read events
+   for (int ii = 0; ii < MAX_READ_PROCESSES_ALLOWED; ii++)
+   {
+      _stprintf_s(szBuffer, L"%s %d", g_szReadEventName, ii);
+          
+      //Creates or opens event depending, on whether already exists or not
+      g_hReadEvent[ii] = CreateEvent( 
+         NULL,             //default security
+         false,            //auto reset
+         true,             //default state signaled
+         szBuffer);
+          
+      //if (NULL == g_hReadEvent[ii])
+      //{
+      //     return false;
+      //}
+   }
+
+   //Write Event
+   //Creates or opens event, depending on whether already exists or not
+   g_hWriteEvent = CreateEvent( 
+         NULL,             //default security
+         false,            //auto reset
+         true,             //default state signaled
+         g_szWriteEventName);
+     
+   //if (NULL == g_hWriteEvent)
+   //{
+   //     return false;
+   //}
+
+   //Shared Memory Stuff
+   //Creates or opens shared memory, depending on whether already exists or not
+     g_hSharedMemory = CreateFileMapping(
+         INVALID_HANDLE_VALUE,    // use paging file
+         NULL,                    // default security 
+         PAGE_READWRITE,          // read/write access
+         0,                       // max. object size 
+         MAX_SH_MEM_SIZE,         // buffer size  
+         g_szShareMemoryName);    // name of mapping object
+     
+     //if (NULL == g_hSharedMemory || INVALID_HANDLE_VALUE == g_hSharedMemory) 
+     //{
+     //    return;
+     //}
+
+     g_pBuffer = (LPTSTR) MapViewOfFile(g_hSharedMemory,   // handle to map object
+          FILE_MAP_ALL_ACCESS, // read/write permission
+          0,                   
+          0,                   
+          MAX_SH_MEM_SIZE);
+
+     //if (NULL == g_pBuffer) 
+     //{ 
+     //     return;
+     //}
+}
+
+void
+   OPLSynth::
+   DebugClose()
+{
+   // Close shared memory for use with debug application
+   UnmapViewOfFile(g_pBuffer);
+   for (int i = 0; i < MAX_READ_PROCESSES_ALLOWED; ++i)
+      CloseHandle(g_hReadEvent[i]);
+
+   CloseHandle(g_hWriteEvent);
+   CloseHandle(g_hSharedMemory);
+}
+
+void
+   OPLSynth::
+   DebugUpdate()
+{
+   if (WAIT_OBJECT_0 == WaitForSingleObject(g_hWriteEvent, INFINITE ))
+   {
+      DWORD dwWaitResult = WaitForMultipleObjects( 
+               MAX_READ_PROCESSES_ALLOWED,   // number of handles in array
+               g_hReadEvent,  // array of read-event handles
+               TRUE,         // wait until all are signaled
+               INFINITE);    // indefinite wait
+          
+      if (WAIT_OBJECT_0 == dwWaitResult)
+      {
+         voiceStruct *test = (voiceStruct*)g_pBuffer;
+         
+        //errno_t err = memcpy_s(g_pBuffer, MAX_SH_MEM_SIZE, m_Voice, sizeof(voiceStruct)*NUM2VOICES);
+        //if (err == EINVAL || err == ERANGE);
+         //for (int i = 0; i < NUM2VOICES; ++i)
+         //{
+         //   memcpy(&test[i], &m_Voice[i], sizeof(voiceStruct));
+         //}
+
+         memcpy(test, m_Voice, sizeof(voiceStruct)*NUM2VOICES);
+
+
+         SetEvent(g_hWriteEvent);
+
+         for (int i = 0; i < MAX_READ_PROCESSES_ALLOWED; ++i)
+         {
+            SetEvent(g_hReadEvent[i]);
+         }
+      }
+
+   }
+}
+
+   
+#endif //_DEBUG
+
 // Some stupid f***ing reason using this breaks playback, with or without anything in it
-//OPLSynth::~OPLSynth()
-//{
-//   //OPL_HW_Close();
-//}
+OPLSynth::~OPLSynth()
+{
+   close();
+}
