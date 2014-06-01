@@ -709,11 +709,23 @@ void
    WORD             wTemp, i, j, wTemp2 = ~0 ;
    BYTE             b4Op, /*bTemp, */bMode, bStereo, bRhyPatch;
    patchStruct      *lpPS, NS ;
+   short            wBaseFineTune     = 0,
+                    wBaseCoarseTune   = 0,
+                    wSecondFineTune   = 0,
+                    wSecondCoarseTune = 0;
    //DWORD            dwBasicPitch, dwPitch[ 2 ] ;
    //noteStruct       NS;
   
    // Increment voice allocation ID (needed for pairing operator pairs for 2x2op patches)
    static BYTE      bVoiceID = 0;
+
+   if (bPatch < 128)
+   {
+      wBaseFineTune     = gbMelMap[bPatch].wBaseFineTune,
+      wBaseCoarseTune   = gbMelMap[bPatch].wBaseTranspose, 
+      wSecondFineTune   = gbMelMap[bPatch].wSecondFineTune,
+      wSecondCoarseTune = gbMelMap[bPatch].wSecondTranspose;
+   }
 
    // Get a pointer to the patch
    lpPS = glpPatch + bPatch ;
@@ -742,18 +754,15 @@ void
    bRhyPatch = !(NS.bRhythmMap < RHY_CH_BD || NS.bRhythmMap > RHY_CH_CY);
    b4Op = (BYTE)(NS.bOp != PATCH_1_2OP && !bRhyPatch);
 
+   // Init note
    for (j = 0; j < 2; j++)
    {
-      // modify pitch
-      /*dwPitch[ j ] = dwBasicPitch ;*/
-      /*bTemp = (BYTE)((NS.bAtB0[ j ] >> 2) & 0x07) ;
-      if (bTemp > 4)
-         dwPitch[ j ] = AsLSHL( dwPitch[ j ], (BYTE)(bTemp - (BYTE)4) ) ;
-      else if (bTemp < 4)
-         dwPitch[ j ] = AsULSHR( dwPitch[ j ], (BYTE)((BYTE)4 - bTemp) ) ;*/
+      long lPitchSet = 
+           (j==0 && bPatch < 128) ? (wBaseCoarseTune*8192)+(wBaseFineTune*40.96)
+         : (j==1 && bPatch < 128) ? (wSecondCoarseTune*8192)+(wSecondFineTune*40.96)
+         : 0;
 
-      //wTemp = Opl3_CalcFAndB( Opl3_CalcBend( dwPitch[ j ], iBend ) ) ;
-      wTemp = Opl3_MIDINote2FNum(bNote, bChannel, 0);
+      wTemp = Opl3_MIDINote2FNum(bNote, bChannel, lPitchSet);
       NS.bAtA0[ j ] = (BYTE) wTemp ;
       NS.bAtB0[ j ] = (BYTE) 0x20 | (BYTE) (wTemp >> 8) ;
    }
@@ -887,6 +896,17 @@ void
       || m_bLastNoteUsed[bChannel] == (BYTE)0xFF || (m_wPortaMode & (1<<bChannel)) == 0)
       m_Voice[wTemp].dwPortaSampCnt = 0;
 
+   // Remove note from queue if held
+   if (m_Voice[ wTemp ].bOn)
+   {
+      Opl3_NoteOff (
+         m_Voice[ wTemp ].bPatch,
+         m_Voice[ wTemp ].bNote,
+         m_Voice[ wTemp ].bChannel,
+         (BYTE)0
+      );
+   }
+
    m_Voice[ wTemp ].bNote = bNote ;
    m_Voice[ wTemp ].bChannel = bChannel ;
    m_Voice[ wTemp ].bPatch = bPatch ;
@@ -900,6 +920,9 @@ void
    m_Voice[ wTemp ].dwTime = ++m_dwCurTime ;
    m_Voice[ wTemp ].dwLFOVal = 0;
    m_Voice[ wTemp ].dwDetuneEG = 0;
+   m_Voice[ wTemp ].wCoarseTune = wBaseCoarseTune;
+   m_Voice[ wTemp ].wFineTune = wBaseFineTune;
+
    if (((m_wMonoMode & (1<<bChannel)) > 0 && m_noteHistory[bChannel].size() == 0 || (m_wDrumMode & (1<<bChannel) || bChannel == DRUMCHANNEL)) 
        || !(m_wMonoMode & (1<<bChannel)))
       m_Voice[ wTemp ].dwStartTime = m_dwCurSample;
@@ -976,6 +999,17 @@ void
             }*/
       }
 
+      // Remove note from queue if held
+      if (m_Voice[ wTemp2 ].bOn)
+      {
+         Opl3_NoteOff (
+            m_Voice[ wTemp2 ].bPatch,
+            m_Voice[ wTemp2 ].bNote,
+            m_Voice[ wTemp2 ].bChannel,
+            (BYTE)0
+         );
+      }
+
       m_Voice[ wTemp2 ].bNote = bNote ;
       m_Voice[ wTemp2 ].bChannel = bChannel ;
       m_Voice[ wTemp2 ].bPatch = bPatch ;
@@ -989,6 +1023,8 @@ void
       m_Voice[ wTemp2 ].dwTime = ++m_dwCurTime ;
       m_Voice[ wTemp2 ].dwLFOVal = 0;
       m_Voice[ wTemp2 ].dwDetuneEG = 0;
+      m_Voice[ wTemp2 ].wCoarseTune = wSecondCoarseTune;
+      m_Voice[ wTemp2 ].wFineTune = wSecondFineTune;
       if (((m_wMonoMode & (1<<bChannel)) > 0 && m_noteHistory[bChannel].size() == 0 || (m_wDrumMode & (1<<bChannel) || bChannel == DRUMCHANNEL)) 
        || !(m_wMonoMode & (1<<bChannel)))
          m_Voice[ wTemp2 ].dwStartTime = m_dwCurSample;
@@ -1541,7 +1577,9 @@ void
       {
          j = 0 ;
          //wTemp[ j ] = Opl3_CalcFAndB( Opl3_CalcBend( m_Voice[ i ].dwOrigPitch[ j ], iBend ) ) ;
-         wTemp[ j ] = Opl3_MIDINote2FNum(m_Voice[ i ].bNote, bChannel, (m_Voice[ i ].dwLFOVal + m_Voice[ i ].dwDetuneEG));
+         wTemp[ j ] = Opl3_MIDINote2FNum(m_Voice[ i ].bNote, bChannel,
+            (m_Voice[ i ].dwLFOVal + m_Voice[ i ].dwDetuneEG + (8192*m_Voice[ i ].wCoarseTune) + (40.96*m_Voice[ i ].wFineTune))
+         );
          m_Voice[ i ].bBlock[ j ] =
             (m_Voice[ i ].bBlock[ j ] & (BYTE) 0xe0) |
             (BYTE) (wTemp[ j ] >> 8) ;
@@ -2097,7 +2135,7 @@ void
    m_Voice[bVoice].dwLFOVal = newLFOVal;
    m_Voice[bVoice].dwDetuneEG = newDetuneEG;
 
-   newLFOVal += newDetuneEG;
+   newLFOVal += newDetuneEG + (8192*m_Voice[ bVoice ].wCoarseTune*100) + (40.96*m_Voice[ bVoice ].wFineTune);
 
    wTemp = Opl3_MIDINote2FNum((noteDiff)?noteDiff:m_Voice[ bVoice ].bNote,
       m_Voice[bVoice].bChannel, newLFOVal);
@@ -2558,9 +2596,10 @@ void
 {
    // Init shared memory for use with debug application
    g_szShareMemoryName = L"potenis";
-   g_szReadEventName = L"roids";
+   g_szSharedMutexName = L"meinopl3";
+   /*g_szReadEventName = L"roids";
    g_szWriteEventName = L"wroit";
-
+   
    //Trying to be defensive
    for (int ii = 0; ii < MAX_READ_PROCESSES_ALLOWED; ii++)
    {
@@ -2599,7 +2638,7 @@ void
    //{
    //     return false;
    //}
-
+   */
    //Shared Memory Stuff
    //Creates or opens shared memory, depending on whether already exists or not
      g_hSharedMemory = CreateFileMapping(
@@ -2625,6 +2664,26 @@ void
      //{ 
      //     return;
      //}
+
+     // clear contents entirely.
+     memset(g_pBuffer, 0, MAX_SH_MEM_SIZE);
+
+   g_hSharedMutex = CreateMutex(
+      NULL,
+      FALSE,
+      g_szSharedMutexName);
+   
+   if (g_hSharedMutex == NULL)
+   {
+      g_hSharedMutex = OpenMutex(
+         SYNCHRONIZE,
+         FALSE,
+         g_szSharedMutexName);
+
+      //if (g_hSharedMutex == NULL)
+      //   return;
+   }
+
 }
 
 void
@@ -2633,48 +2692,72 @@ void
 {
    // Close shared memory for use with debug application
    UnmapViewOfFile(g_pBuffer);
-   for (int i = 0; i < MAX_READ_PROCESSES_ALLOWED; ++i)
+   /*for (int i = 0; i < MAX_READ_PROCESSES_ALLOWED; ++i)
       CloseHandle(g_hReadEvent[i]);
 
-   CloseHandle(g_hWriteEvent);
+   CloseHandle(g_hWriteEvent);*/
    CloseHandle(g_hSharedMemory);
+   CloseHandle(g_hSharedMutex);
 }
 
 void
    OPLSynth::
    DebugUpdate()
 {
-   if (WAIT_OBJECT_0 == WaitForSingleObject(g_hWriteEvent, INFINITE ))
+   voiceStruct *debugVoiceBuf = (voiceStruct*)g_pBuffer;
+   patchStruct *newVoices = ((patchStruct*)&(((voiceStruct*)g_pBuffer)[NUM2VOICES]));
+
+   DWORD dwWaitResult = WaitForSingleObject(
+      g_hSharedMutex,
+      INFINITE);
+
+   switch(dwWaitResult)
    {
-      DWORD dwWaitResult = WaitForMultipleObjects( 
-               MAX_READ_PROCESSES_ALLOWED,   // number of handles in array
-               g_hReadEvent,  // array of read-event handles
-               TRUE,         // wait until all are signaled
-               INFINITE);    // indefinite wait
-          
-      if (WAIT_OBJECT_0 == dwWaitResult)
+   case WAIT_OBJECT_0:
+      __try
       {
-         voiceStruct *test = (voiceStruct*)g_pBuffer;
-         
-        //errno_t err = memcpy_s(g_pBuffer, MAX_SH_MEM_SIZE, m_Voice, sizeof(voiceStruct)*NUM2VOICES);
-        //if (err == EINVAL || err == ERANGE);
-         //for (int i = 0; i < NUM2VOICES; ++i)
-         //{
-         //   memcpy(&test[i], &m_Voice[i], sizeof(voiceStruct));
-         //}
-
-         memcpy(test, m_Voice, sizeof(voiceStruct)*NUM2VOICES);
-
-
-         SetEvent(g_hWriteEvent);
-
-         for (int i = 0; i < MAX_READ_PROCESSES_ALLOWED; ++i)
+         if (memcmp(debugVoiceBuf, m_Voice, sizeof(voiceStruct)*NUM2VOICES) != 0)
          {
-            SetEvent(g_hReadEvent[i]);
+            //memcpy_s(g_pBuffer, MAX_SH_MEM_SIZE, m_Voice, sizeof(voiceStruct)*NUM2VOICES);
+            memcpy_s(g_pBuffer, sizeof(voiceStruct)*NUM2VOICES, m_Voice, sizeof(voiceStruct)*NUM2VOICES);
+         }
+
+         size_t debugVal = newVoices->bAtC0[0];
+         debugVal &= 0x30;
+
+         //if (newVoices->bAtC0[0] & 0x30 != 0x00)
+         if (debugVal == 0x30)
+         {
+            if (memcmp(newVoices, glpPatch, sizeof(patchStruct)*256) != 0)
+            {
+               //BYTE newPercMap[128][3];
+               BYTE *newPercMap = (BYTE*)&newVoices[256];
+
+               // copy drum map
+               //memcpy_s(&newVoices[256], (128*3), newPercMap, (128*3));
+               //memcpy_s(gbPercMap, (128*3), newPercMap, (128*3));
+
+               // copy new voice data
+               //memcpy_s(glpPatch, sizeof(patchStruct)*256, newVoices, sizeof(patchStruct)*256);
+               std::memmove(gbPercMap, newPercMap, 384);
+               std::memmove(glpPatch, newVoices, sizeof(patchStruct)*256);
+               std::memset(newVoices, 0, sizeof(patchStruct)*256);
+            }
+
          }
       }
-
+      __finally
+      {
+         while (! ReleaseMutex(g_hSharedMutex))
+         {
+            std::cout << "ERR ERR ERR" << std::endl;
+         }
+      }
+      break;
    }
+
+   
+
 }
 
    

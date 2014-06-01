@@ -98,6 +98,17 @@ typedef struct _patchStruct
 } patchStruct;
 
 
+typedef struct _patchMapStruct
+{
+   BYTE bPreset;
+   short wBaseTranspose, wSecondTranspose;
+   short wPitchEGAmt;
+   WORD wPitchEGTime;
+   short wBaseFineTune, wSecondFineTune;
+   BYTE bRetrigDly;
+   BYTE bReservedPadding[8];
+} patchMapStruct;
+
 //typedef struct _patchStruct
 //{
 //   noteStruct note;            /* note. This is all in the structure at the moment */
@@ -132,6 +143,8 @@ typedef struct _voiceStruct
    //BYTE   bPortaSampCnt;
    DWORD dwPortaSampCnt;
 
+   short wCoarseTune;
+   short wFineTune;
    //double dfPortaRatio;
    
 } voiceStruct;
@@ -337,10 +350,11 @@ private:
    void DebugUpdate();
 
    static const size_t 
-      MAX_SH_MEM_SIZE = 16384,
+      MAX_SH_MEM_SIZE = 65536,
       MAX_READ_PROCESSES_ALLOWED = 3;
-   LPCWSTR g_szShareMemoryName, g_szWriteEventName, g_szReadEventName;
-   HANDLE  g_hSharedMemory, g_hWriteEvent, g_hReadEvent[MAX_READ_PROCESSES_ALLOWED]; //global handle to shared memory
+   LPCWSTR g_szShareMemoryName, g_szWriteEventName, g_szReadEventName, g_szSharedMutexName;
+   HANDLE  g_hSharedMemory, g_hSharedMutex,
+      g_hWriteEvent, g_hReadEvent[MAX_READ_PROCESSES_ALLOWED]; //global handle to shared memory
    LPTSTR  g_pBuffer;       //shared memory pointer
 #endif //_DEBUG
 
