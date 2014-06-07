@@ -713,6 +713,7 @@ void
                     wBaseCoarseTune   = 0,
                     wSecondFineTune   = 0,
                     wSecondCoarseTune = 0;
+   bool             bIsMonoMode = ((m_wMonoMode & (1<<bChannel))>0);
    //DWORD            dwBasicPitch, dwPitch[ 2 ] ;
    //noteStruct       NS;
   
@@ -793,7 +794,7 @@ void
 
    // Check if mono mode is set.
    wTemp = 0;
-   if ((m_wMonoMode & (1<<bChannel)) > 0)
+   if (bIsMonoMode)
    {
       // Is last voice used if it indeed is used by this channel
       // else find a new slot.
@@ -875,7 +876,7 @@ void
    // Portamento
    // If mono mode and incomplete, take current position
    if ((m_Voice[wTemp].bOn || m_Voice[wTemp].bSusHeld) && (m_wPortaMode & (1<<bChannel)) > 0
-      && m_Voice[wTemp].dwPortaSampCnt > 0 && (m_wMonoMode & (1<<bChannel)) > 0)
+      && m_Voice[wTemp].dwPortaSampCnt > 0 && bIsMonoMode)
    {
       DWORD curSampRange = m_Voice[wTemp].dwPortaSampTime,
             curSampCnt = m_Voice[wTemp].dwPortaSampCnt;
@@ -897,7 +898,7 @@ void
       m_Voice[wTemp].dwPortaSampCnt = 0;
 
    // Remove note from queue if held
-   if (m_Voice[ wTemp ].bOn)
+   if (m_Voice[ wTemp ].bOn && !bIsMonoMode)
    {
       Opl3_NoteOff (
          m_Voice[ wTemp ].bPatch,
@@ -1000,7 +1001,7 @@ void
       }
 
       // Remove note from queue if held
-      if (m_Voice[ wTemp2 ].bOn)
+      if (m_Voice[ wTemp2 ].bOn && !bIsMonoMode)
       {
          Opl3_NoteOff (
             m_Voice[ wTemp2 ].bPatch,
@@ -1725,6 +1726,7 @@ WORD
       {
          dwOldestCurCh = m_Voice[ i ].dwTime;
          foundOldestCurCh = i;
+         ++bChnVoiceCnt;
       }
 
       if (m_Voice[ i ].dwTime < dwOldestOn)
@@ -1737,7 +1739,7 @@ WORD
    if (foundOldestOff != 0xffff)
       return ( foundOldestOff ) ;
 
-   if (foundOldestCurCh != 0xffff)
+   if (foundOldestCurCh != 0xffff && bChnVoiceCnt > (glpPatch[bPatch].bOp == PATCH_2_2OP ? 4 : 2))
       return ( foundOldestCurCh ) ;
 
    return foundOldestOn;
@@ -1796,6 +1798,7 @@ WORD
       {
          dwOldestCurCh = m_Voice[ i ].dwTime;
          foundOldestCurCh = i;
+         ++bChnVoiceCnt;
       }
 
       if (m_Voice[ i ].dwTime < dwOldestOn)
@@ -1808,7 +1811,7 @@ WORD
    if (foundOldestOff != 0xffff)
       return ( foundOldestOff ) ;
 
-   if (foundOldestCurCh != 0xffff)
+   if (foundOldestCurCh != 0xffff && bChnVoiceCnt > 2)
       return ( foundOldestCurCh ) ;
 
    return foundOldestOn;
