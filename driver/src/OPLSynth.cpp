@@ -1699,68 +1699,49 @@ WORD
    Opl3_FindEmptySlot(BYTE bPatch, BYTE bChannel)
 {
    BYTE   bChnVoiceCnt = 0;
-   WORD   i, found ;
-   DWORD  dwOldest ;
+   WORD   i, foundOldestOff, foundOldestCurCh, foundOldestOn;
+   DWORD  dwOldestOff, dwOldestCurCh, dwOldestOn ;
 
-   // First, look for a slot with a time == 0
-   for (i = 0;  i < NUM2VOICES; i++)
+   // Now, look for a slot of the oldest off-note
+   dwOldestOff = 0xffffffff ;
+   dwOldestCurCh = 0xffffffff ;
+   dwOldestOn = 0xffffffff ;
+   foundOldestOff = 0xffff ;
+   foundOldestCurCh = 0xffff;
+   foundOldestOn = 0xffff;
+
+   for (i = 0; i < NUM2VOICES; i++)
+   {
       if (!m_Voice[ i ].dwTime)
          return ( i ) ;
 
-   // Now, look for a slot of the oldest off-note
-   dwOldest = 0xffffffff ;
-   found = 0xffff ;
-
-   for (i = 0; i < NUM2VOICES; i++)
-      if ((!m_Voice[ i ].bOn/* || !m_Voice[ i ].bSusHeld*/)
-       && (m_Voice[ i ].dwTime < dwOldest))
+      if (!m_Voice[ i ].bOn && m_Voice[ i ].dwTime < dwOldestOff)
       {
-         dwOldest = m_Voice[ i ].dwTime ;
-         found = i ;
-      }
-   if (found != 0xffff)
-      return ( found ) ;
-
-   // Custom:  Search for oldest note on same channel, but only allocate if there 
-   //          are more than 2 notes currently held on same channel
-   found = 0;
-   dwOldest = 0xFFFF;
-   for (i = 0; i < NUM2VOICES; ++i)
-      if (m_Voice[ i ].dwTime < dwOldest && m_Voice[ i ].bChannel == bChannel)
-      {
-         dwOldest = m_Voice[ i ].dwTime;
-         found = i;
-         if (m_Voice[ i ].bOn && !m_Voice[ i ].bSusHeld) ++bChnVoiceCnt;
+         dwOldestOff = m_Voice[ i ].dwTime ;
+         foundOldestOff = i ;
       }
 
-   if (found != 0xFFFF && bChnVoiceCnt > ((glpPatch[bPatch].bOp == PATCH_2_2OP) ? 4 : 2))
-      return ( found );
-
-   // Now, look for a slot of the oldest note with
-   // the same patch
-   //dwOldest = 0xffffffff ;
-   //found = 0xffff ;
-   //for (i = 0; i < NUM2VOICES; i++)
-   //   if ((m_Voice[ i ].bPatch == bPatch) && (m_Voice[ i ].dwTime < dwOldest))
-   //   {
-   //      dwOldest = m_Voice[ i ].dwTime ;
-   //      found = i ;
-   //   }
-   //if (found != 0xffff)
-   //   return ( found ) 
-
-   // Now, just look for the oldest voice
-   found = 0 ;
-   dwOldest = m_Voice[ found ].dwTime ;
-   for (i = 0/*(found + 1)*/; i < NUM2VOICES; i++)
-      if (m_Voice[ i ].dwTime < dwOldest)
+      if ((m_Voice[ i ].bOn || m_Voice[ i ].bSusHeld) && m_Voice[ i ].bChannel == bChannel && m_Voice[ i ].dwTime < dwOldestCurCh)
       {
-         dwOldest = m_Voice[ i ].dwTime ;
-         found = i ;
+         dwOldestCurCh = m_Voice[ i ].dwTime;
+         foundOldestCurCh = i;
       }
 
-    return ( found ) ;
+      if (m_Voice[ i ].dwTime < dwOldestOn)
+      {
+         dwOldestOn = m_Voice[ i ].dwTime;
+         foundOldestOn = i;
+      }
+   }
 
+   if (foundOldestOff != 0xffff)
+      return ( foundOldestOff ) ;
+
+   if (foundOldestCurCh != 0xffff)
+      return ( foundOldestCurCh ) ;
+
+   return foundOldestOn;
+   
 } // end of Opl3_FindEmptySlot()
 
 //------------------------------------------------------------------------
@@ -1788,9 +1769,53 @@ WORD
    Opl3_FindEmptySlot4Op(BYTE bPatch, BYTE bChannel)
 {
    BYTE   bChnVoiceCnt = 0;
-   WORD   i, found ;
-   DWORD  dwOldest ;
+   WORD   i, n, foundOldestOff, foundOldestCurCh, foundOldestOn;
+   DWORD  dwOldestOff, dwOldestCurCh, dwOldestOn ;
 
+   dwOldestOff   = 0xffffffff ;
+   dwOldestCurCh = 0xffffffff ;
+   dwOldestOn    = 0xffffffff ;
+   foundOldestOff   = 0xffff ;
+   foundOldestCurCh = 0xffff;
+   foundOldestOn    = 0xffff;
+
+   for (n = 0; n < NUM4VOICES; n++)
+   {
+      i = gb4OpVoices[ n ];
+
+      if (!m_Voice[ i ].dwTime)
+         return ( i ) ;
+
+      if (!m_Voice[ i ].bOn && m_Voice[ i ].dwTime < dwOldestOff)
+      {
+         dwOldestOff = m_Voice[ i ].dwTime ;
+         foundOldestOff = i ;
+      }
+
+      if ((m_Voice[ i ].bOn || m_Voice[ i ].bSusHeld) && m_Voice[ i ].bChannel == bChannel && m_Voice[ i ].dwTime < dwOldestCurCh)
+      {
+         dwOldestCurCh = m_Voice[ i ].dwTime;
+         foundOldestCurCh = i;
+      }
+
+      if (m_Voice[ i ].dwTime < dwOldestOn)
+      {
+         dwOldestOn = m_Voice[ i ].dwTime;
+         foundOldestOn = i;
+      }
+   }
+
+   if (foundOldestOff != 0xffff)
+      return ( foundOldestOff ) ;
+
+   if (foundOldestCurCh != 0xffff)
+      return ( foundOldestCurCh ) ;
+
+   return foundOldestOn;
+   
+   
+   
+   /*
    // First, look for a slot with a time == 0
    for (i = 0;  i < NUM4VOICES; i++)
       if (!m_Voice[ gb4OpVoices[ i ] ].dwTime)
@@ -1801,7 +1826,7 @@ WORD
    found = 0xffff ;
 
    for (i = 0; i < NUM4VOICES; i++)
-      if ((!m_Voice[ gb4OpVoices[ i ] ].bOn/* || !m_Voice[ gb4OpVoices[ i ] ].bSusHeld*/)
+      if ((!m_Voice[ gb4OpVoices[ i ] ].bOn)
        && (m_Voice[ gb4OpVoices[ i ] ].dwTime < dwOldest))
       {
          dwOldest = m_Voice[ gb4OpVoices[ i ] ].dwTime ;
@@ -1819,7 +1844,7 @@ WORD
       if (m_Voice[ gb4OpVoices[ i ] ].dwTime < dwOldest && m_Voice[ gb4OpVoices[ i ] ].bChannel == bChannel)
       {
          dwOldest = m_Voice[ gb4OpVoices[ i ] ].dwTime;
-         found = i;
+         found = gb4OpVoices[ i ] ;
          if (m_Voice[ gb4OpVoices[ i ] ].bOn && !m_Voice[ gb4OpVoices [ i ] ].bSusHeld) ++bChnVoiceCnt;
       }
 
@@ -1850,7 +1875,7 @@ WORD
          found = gb4OpVoices[ i ] ;
       }
 
-   return ( found ) ;
+   return ( found ) ;*/
 
 } // end of Opl3_FindEmptySlot4Op()
 
