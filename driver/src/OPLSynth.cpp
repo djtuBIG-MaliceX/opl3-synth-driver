@@ -1471,9 +1471,8 @@ void
 
          for (j = 0; j < 2; ++j)
          {
-            // Do not attempt to modify second pair for 2x2op; this will be picked up later.
-            //if (j == 2 && lpPS->bOp == PATCH_1_2OP)
-            //   break;
+            if (j == 0 && lpPS->bOp == PATCH_1_4OP)
+               continue;
 
             // Copy to buffer
             RtlCopyMemory( (LPSTR) &opSt, (LPSTR) &(lpPS->op[j]), sizeof( operStruct ) ) ;
@@ -2146,7 +2145,7 @@ void
    // 100Hz sine wave with half semitone magnitude by default
    // (mod*32)sin((1/100)*FSAMP * curSample)
    if (m_bModWheel[m_Voice[bVoice].bChannel] > 0)
-      newLFOVal = (DWORD)floor(0.5 + (m_bModWheel[m_Voice[bVoice].bChannel]*32)*sin(timeLapse));
+      newLFOVal = (long)floor(0.5 + (m_bModWheel[m_Voice[bVoice].bChannel]*32)*sin(timeLapse));
 
    // Linear envelope generator hack  (TODO: improve)
    wTemp = gbPercMap[m_Voice[bVoice].bPatch-128][2] & 0xFF;
