@@ -377,17 +377,9 @@ void
    wTemp = Opl3_FindFullSlot( bNote, bChannel ) ;
    
    // Remove note instance irrespective of any status
-   //for (std::vector<BYTE>::iterator it = m_noteHistory[bChannel].begin();
-   //      it != m_noteHistory[bChannel].end();
-   //      ++it)
-   //{
    std::vector<BYTE>::iterator it = std::find(m_noteHistory[bChannel].begin(), m_noteHistory[bChannel].end(), bNote);
    if (it != m_noteHistory[bChannel].end() && (*it) == bNote)
-   {
       m_noteHistory[bChannel].erase(it);
-   //      break;
-   }
-   //}
 
    if (wTemp != 0xffff)
    {
@@ -847,13 +839,13 @@ void
       }
       */
       // Check if last channel used else find one.
-      else if (NS.bOp != PATCH_1_4OP)
+      /*else if (NS.bOp != PATCH_1_4OP)
       {
          wTemp = (wTemp == bChannel) ? wTemp : 
                  //(NS.bOp == PATCH_1_4OP) ? Opl3_FindEmptySlot4Op(bPatch, bChannel) :
                  Opl3_FindEmptySlot(bPatch, bChannel);
          //m_Voice[wTemp].bPrevNote = m_Voice[wTemp].bNote;
-      }
+      }*/
 
       // If percussion voice not ended, kill it
       //if ((m_wDrumMode & (1<<bChannel)) > 0 || bChannel == DRUMCHANNEL)
