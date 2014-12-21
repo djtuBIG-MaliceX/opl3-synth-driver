@@ -430,9 +430,9 @@ void
                   Opl3_CutVoice((BYTE)wTemp2, FALSE);
                else*/
                {
-                  m_Voice[wTemp+3].bOn = FALSE;
-                  m_Voice[wTemp+3].bSusHeld = FALSE;
-                  m_Voice[wTemp+3].dwTime = ++m_dwCurTime;
+                  m_Voice[wTemp2].bOn = FALSE;
+                  m_Voice[wTemp2].bSusHeld = FALSE;
+                  m_Voice[wTemp2].dwTime = m_dwCurTime;
                }
             }
             break;
@@ -827,7 +827,7 @@ void
       }
 
       // safety measure for pure 4-op patches
-      else if (NS.bOp == PATCH_1_4OP && ((wTemp > 2 && wTemp < 9) || wTemp > 11))
+      /*else if (NS.bOp == PATCH_1_4OP && ((wTemp > 2 && wTemp < 9) || wTemp > 11))
       {
          bool is4OpVoice = false;
 
@@ -845,7 +845,7 @@ void
             wTemp = Opl3_FindEmptySlot4Op(bPatch, bChannel);
          }
       }
-
+      */
       // Check if last channel used else find one.
       else if (NS.bOp != PATCH_1_4OP)
       {
@@ -1065,8 +1065,8 @@ void
       if (gb4OpVoices[i] == (BYTE)bVoice)
       {
          // Unset voice if not 4op
-         if (bOp != PATCH_1_4OP && (cur4OpVoiceSet & (1<<i)) > 0)
-            Opl3_CutVoice(gb4OpVoices[i], TRUE);
+         /*if (bOp != PATCH_1_4OP && (cur4OpVoiceSet & (1<<i)) > 0)
+            Opl3_CutVoice(gb4OpVoices[i], TRUE);*/
 
          // Unset relevant voices if 4op
          /*else if (bOp == PATCH_1_4OP && (cur4OpVoiceSet & (i<<1)) > 0)
