@@ -370,14 +370,19 @@ void
    BYTE         b4Op = (BYTE)(lpPS->bOp != PATCH_1_2OP);
 
    // If exist on sostenuto list, do not do anything
-   if (std::find(m_sostenutoBuffer[bChannel].begin(), m_sostenutoBuffer[bChannel].end(), bNote) != m_sostenutoBuffer[bChannel].end() && m_bSostenuto[bChannel] > 0x3F)
+   if (std::find(m_sostenutoBuffer[bChannel].begin(),
+      m_sostenutoBuffer[bChannel].end(), 
+      (unsigned char)bNote) != m_sostenutoBuffer[bChannel].end()/* && m_bSostenuto[bChannel] > 0x3F*/)
       return;
 
    // Find the note slot
    wTemp = Opl3_FindFullSlot( bNote, bChannel ) ;
    
    // Remove note instance irrespective of any status
-   std::vector<BYTE>::iterator it = std::find(m_noteHistory[bChannel].begin(), m_noteHistory[bChannel].end(), bNote);
+   std::vector<BYTE>::iterator it = std::find(
+      m_noteHistory[bChannel].begin(),
+      m_noteHistory[bChannel].end(), 
+      bNote);
    if (it != m_noteHistory[bChannel].end() && (*it) == bNote)
       m_noteHistory[bChannel].erase(it);
 

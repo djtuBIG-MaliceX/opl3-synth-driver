@@ -25,6 +25,7 @@ extern "C" {
 #include <iostream>
 #include <cmath>
 #include <vector>
+#include <algorithm>
 
 #include "OPLSynth.h"
 #include "MidiSynth.h"

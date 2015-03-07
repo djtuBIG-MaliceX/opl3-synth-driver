@@ -62,7 +62,11 @@ void VGMLog_Init()
    if (hFileVGM == NULL)
    {
       ExpandEnvironmentStrings(L"%TEMP%\\opl3vgmlog.vgm", (LPWSTR)&TempLogPath, BUFSIZ);
+#ifndef __MINGW32__
       _wfopen_s(&hFileVGM, TempLogPath, L"wb");
+#else
+      hFileVGM = _wfopen(TempLogPath, L"wb");
+#endif
    
       //strcpy_s(TempLogPath, getenv("TEMP"));
       //hFileVGM = fopen(TempLogPath, "wb");
@@ -161,7 +165,11 @@ DWORD VGMLog_CountSamplesFromOffset(DWORD offset)
    
    while (!feof(hFileVGM))
    {
-      if ((fread_s(&cmdBuf, sizeof(vgmcmd_t), sizeof(vgmcmd_t), 0x01, hFileVGM)) != sizeof(vgmcmd_t))
+#ifndef __MINGW32__
+      if (fread_s(&cmdBuf, sizeof(vgmcmd_t), sizeof(vgmcmd_t), 0x01, hFileVGM))
+#else
+      if (fread(&cmdBuf, sizeof(vgmcmd_t), 0x01, hFileVGM))
+#endif
          break;
 
       // Assuming all commands logged (except for EOF)

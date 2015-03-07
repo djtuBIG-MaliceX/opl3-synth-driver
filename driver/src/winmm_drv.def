@@ -1,4 +1,4 @@
-LIBRARY      opl3emu
+LIBRARY opl3emu
 EXPORTS
-	DriverProc
-	modMessage
+    DriverProc
+    modMessage

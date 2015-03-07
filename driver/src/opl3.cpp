@@ -29,8 +29,8 @@
 		Removed EX_Get function(not used)
 */
 
-#include <stdlib.h>
-#include <string>
+#include <cstdlib>
+#include <cstring>
 #include "opl3.h"
 
 // Channel types

@@ -40,7 +40,7 @@ struct Driver
 	} clients[MAX_CLIENTS];
 } drivers[MAX_DRIVERS];
 
-STDAPI_(LONG) DriverProc(DWORD dwDriverID, HDRVR hdrvr, WORD wMessage,
+extern "C" __declspec(dllexport) LONG __stdcall DriverProc(DWORD dwDriverID, HDRVR hdrvr, WORD wMessage,
                          DWORD dwParam1, DWORD dwParam2) 
 {
 	switch(wMessage) 
@@ -119,6 +119,11 @@ HRESULT modGetCaps(PVOID capsPtr, DWORD capsSize)
    CHAR synthName[] = "YMF262 (OPL3) FM Synthesizer\0";
 	WCHAR synthNameW[] = L"YMF262 (OPL3) FM Synthesizer\0";
 #endif /*DISABLE_HW_SUPPORT*/
+
+#ifdef __MINGW32__
+#define MM_UNMAPPED (0xFFFF)
+#define MM_MPU401_MIDIOUT (10)
+#endif
 
 	switch (capsSize) 
    {
@@ -234,7 +239,7 @@ LONG CloseDriver(Driver *driver, UINT uDeviceID, UINT uMsg, DWORD_PTR dwUser, DW
 	return MMSYSERR_NOERROR;
 }
 
-STDAPI_(DWORD) modMessage(DWORD uDeviceID, DWORD uMsg, DWORD_PTR dwUser,
+extern "C" __declspec(dllexport) DWORD __stdcall modMessage(DWORD uDeviceID, DWORD uMsg, DWORD_PTR dwUser,
                           DWORD_PTR dwParam1, DWORD_PTR dwParam2)
 {
 	MIDIHDR *midiHdr;

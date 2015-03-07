@@ -263,7 +263,7 @@ namespace OPL3Emu
          MMTIME mmTime;
          mmTime.wType = TIME_SAMPLES;
 
-         if (waveOutGetPosition(hWaveOut, &mmTime, sizeof MMTIME) != MMSYSERR_NOERROR)
+         if (waveOutGetPosition(hWaveOut, &mmTime, sizeof(MMTIME)) != MMSYSERR_NOERROR)
          {
             MessageBox(NULL, L"Failed to get current playback position", L"OPL3",
                MB_OK | MB_ICONEXCLAMATION);
