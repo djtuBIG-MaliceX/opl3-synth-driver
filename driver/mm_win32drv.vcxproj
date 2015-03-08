@@ -172,6 +172,7 @@
       <ModuleDefinitionFile>src/winmm_drv.def</ModuleDefinitionFile>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
+      <Profile />
     </Link>
     <PostBuildEvent>
       <Command>
@@ -351,9 +352,6 @@
     <ClCompile Include="src\winmm_drv.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="src\winmm_drv.def" />
-  </ItemGroup>
-  <ItemGroup>
     <ClInclude Include="src\2x2patchtest.h" />
     <ClInclude Include="src\ctmidipatch.h" />
     <ClInclude Include="src\fmsynthpatch.h" />
@@ -370,6 +368,9 @@
     <ClInclude Include="src\targetver.h" />
     <ClInclude Include="src\VGMFile.h" />
     <ClInclude Include="src\vgm_logging.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="src\winmm_drv.def" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

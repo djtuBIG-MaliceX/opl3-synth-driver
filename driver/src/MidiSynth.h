@@ -21,42 +21,42 @@
 
 namespace OPL3Emu {
 
-class MidiSynth {
-private:
-	unsigned int sampleRate;
-	unsigned int midiLatency;
-	unsigned int bufferSize;
-	unsigned int chunkSize;
-	bool useRingBuffer;
-	bool resetEnabled;
-	float outputGain;
-	float reverbOutputGain;
-	bool reverbEnabled;
-	bool reverbOverridden;
-	Bit8u reverbMode;
-	Bit8u reverbTime;
-	Bit8u reverbLevel;
+   class MidiSynth {
+   private:
+      unsigned int sampleRate;
+      unsigned int midiLatency;
+      unsigned int bufferSize;
+      unsigned int chunkSize;
+      bool useRingBuffer;
+      bool resetEnabled;
+      float outputGain;
+      float reverbOutputGain;
+      bool reverbEnabled;
+      bool reverbOverridden;
+      Bit8u reverbMode;
+      Bit8u reverbTime;
+      Bit8u reverbLevel;
 
-	Bit16s *buffer;
-	DWORD framesRendered;
+      Bit16s *buffer;
+      DWORD framesRendered;
 
-	OPLSynth *synth;
+      OPLSynth *synth;
 
-	unsigned int MillisToFrames(unsigned int millis);
-	void LoadSettings();
+      unsigned int MillisToFrames(unsigned int millis);
+      void LoadSettings();
 
-	MidiSynth();
+      MidiSynth();
 
-public:
-	static MidiSynth &getInstance();
-	int Init();
-	void Close();
-	int Reset();
-	void RenderAvailableSpace();
-	void Render(Bit16s *bufpos, DWORD totalFrames);
-	void PushMIDI(DWORD msg);
-	void PlaySysex(Bit8u *bufpos, DWORD len);
-};
+   public:
+      static MidiSynth& getInstance(); 
+      int Init();
+      void Close();
+      int Reset();
+      void RenderAvailableSpace();
+      void Render(Bit16s *bufpos, DWORD totalFrames);
+      void PushMIDI(DWORD msg);
+      void PlaySysex(Bit8u *bufpos, DWORD len);
+   };
 
 }
 #endif

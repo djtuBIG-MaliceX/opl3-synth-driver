@@ -26,9 +26,16 @@ extern "C" {
 #include <cmath>
 #include <vector>
 #include <algorithm>
+#include <cstdlib>
+#include <cstring>
 
 #include "OPLSynth.h"
 #include "MidiSynth.h"
+
+#if _DEBUG
+#define _CRTDBG_MAP_ALLOC
+#include <crtdbg.h>
+#endif
 
 #endif /*STDAFX_H*/
 

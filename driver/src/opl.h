@@ -24,6 +24,15 @@
  * Ken Silverman's official web site: "http://www.advsys.net/ken"
  */
 
+#pragma once
+
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+
+#ifdef __MINGW32__
+#define __forceinline __attribute__((always_inline))
+#endif
 
 #define fltype double
 

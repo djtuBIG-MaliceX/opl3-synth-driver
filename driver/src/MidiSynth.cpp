@@ -345,15 +345,23 @@ namespace OPL3Emu
    static MidiStream midiStream;
 
    static SynthEventWin32 synthEvent;
-
    
 
-   MidiSynth::MidiSynth() {}
-
-   MidiSynth &MidiSynth::getInstance() 
+   MidiSynth::MidiSynth() 
    {
-      static MidiSynth *instance = new MidiSynth;
-      return *instance;
+      LoadSettings();
+
+      this->synth = nullptr;
+      this->buffer = nullptr;
+   }
+
+   MidiSynth& MidiSynth::getInstance()
+   {
+#ifdef _DEBUG
+         _CrtDumpMemoryLeaks();
+#endif
+         static MidiSynth instance;
+         return instance;
    }
 
    // Renders all the available space in the single looped ring buffer
@@ -436,15 +444,18 @@ namespace OPL3Emu
 
    int MidiSynth::Init()
    {
-      LoadSettings();
-      buffer = new Bit16s[2 * bufferSize]; // each frame consists of two samples for both the Left and Right channels
+      
+      if (buffer == nullptr)
+         buffer = new Bit16s[2 * bufferSize]; // each frame consists of two samples for both the Left and Right channels
 
       // Init synth
       if (synthEvent.Init()) 
       {
          return 1;
       }
-      synth = new OPLSynth();
+      if (synth == nullptr)
+         synth = new OPLSynth();
+
       if (!synth->Init()) 
       {
          MessageBox(NULL, L"Can't open Synth", L"OPL3", MB_OK | MB_ICONEXCLAMATION);
@@ -473,9 +484,10 @@ namespace OPL3Emu
       if (wResult) return wResult;
 
       synthEvent.Wait();
-      //synth->close();  
-      delete synth;
-      synth = new OPLSynth();
+      
+      synth->close();
+      //delete synth;
+      //synth = new OPLSynth();
       if (!synth->Init())
       {
          return 1;
@@ -502,12 +514,14 @@ namespace OPL3Emu
    {
       waveOut.Pause();
       synthEvent.Wait();
-      synth->close();
       waveOut.Close();
 
       // Cleanup memory
       delete synth;
       delete buffer;
+
+      synth = nullptr;
+      buffer = nullptr;
 
       synthEvent.Close();
    }

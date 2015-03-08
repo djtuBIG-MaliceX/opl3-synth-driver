@@ -87,8 +87,6 @@
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
-    <None Include="src\winmm_drv.def">
-      <Filter>Source Files</Filter>
-    </None>
+    <None Include="src\winmm_drv.def" />
   </ItemGroup>
 </Project>

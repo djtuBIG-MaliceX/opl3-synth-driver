@@ -369,22 +369,25 @@ void
    WORD         wTemp, wTemp2 ;
    BYTE         b4Op = (BYTE)(lpPS->bOp != PATCH_1_2OP);
 
+   const std::vector<BYTE>::iterator
+      &sosBegin = m_sostenutoBuffer[bChannel].begin(),
+      &sosEnd = m_sostenutoBuffer[bChannel].end(),
+      &it1 = std::find(sosBegin, sosEnd, bNote);
+
    // If exist on sostenuto list, do not do anything
-   if (std::find(m_sostenutoBuffer[bChannel].begin(),
-      m_sostenutoBuffer[bChannel].end(), 
-      (unsigned char)bNote) != m_sostenutoBuffer[bChannel].end()/* && m_bSostenuto[bChannel] > 0x3F*/)
+   if (it1 != m_sostenutoBuffer[bChannel].end()/* && m_bSostenuto[bChannel] > 0x3F*/)
       return;
 
    // Find the note slot
    wTemp = Opl3_FindFullSlot( bNote, bChannel ) ;
    
    // Remove note instance irrespective of any status
-   std::vector<BYTE>::iterator it = std::find(
+   const std::vector<BYTE>::iterator &it2 = std::find(
       m_noteHistory[bChannel].begin(),
       m_noteHistory[bChannel].end(), 
       bNote);
-   if (it != m_noteHistory[bChannel].end() && (*it) == bNote)
-      m_noteHistory[bChannel].erase(it);
+   if (it2 != m_noteHistory[bChannel].end() && (*it2) == bNote)
+      m_noteHistory[bChannel].erase(it2);
 
    if (wTemp != 0xffff)
    {
@@ -1046,7 +1049,10 @@ void
    m_noteHistory[bChannel].push_back(bNote);
 
    // If on sostenuto list, add to it (needed for note off)
-   if (std::find(m_sostenutoBuffer[bChannel].begin(), m_sostenutoBuffer[bChannel].end(), bNote) != m_sostenutoBuffer[bChannel].end())
+   if (std::find(
+      m_sostenutoBuffer[bChannel].begin(),
+      m_sostenutoBuffer[bChannel].end(),
+      bNote) != m_sostenutoBuffer[bChannel].end())
    m_sostenutoBuffer[bChannel].push_back(bNote);
 
 } // end of Opl3_NoteOn()
@@ -2090,13 +2096,14 @@ bool
 
    m_MIDIMode = MIDIMODE_XG;
 
-//#ifdef DISABLE_HW_SUPPORT
-   //m_Miniport.adlib_init();
-   m_Miniport = opl_init();
-//#else
+#ifdef DISABLE_HW_SUPPORT
+   //if (m_Miniport == nullptr) m_Miniport = new OPL();
+   //m_Miniport->adlib_init();
+   if (m_Miniport == nullptr) m_Miniport = opl_init();
+#else
    OPL_Hardware_Detection();
    OPL_HW_Init(); // start hardware
-//#endif /*DISABLE_HW_SUPPORT*/
+#endif /*DISABLE_HW_SUPPORT*/
    //VGMLog_Init();
    Opl3_BoardReset();
    Opl3_SoftCommandReset();
@@ -2158,7 +2165,8 @@ void
 
    m_Voice[bVoice].dwLFOVal = newLFOVal;
    m_Voice[bVoice].dwDetuneEG = newDetuneEG;
-
+   
+   // Hax
    newLFOVal += newDetuneEG + (8192*m_Voice[ bVoice ].wCoarseTune*100) + (40.96*m_Voice[ bVoice ].wFineTune);
 
    wTemp = Opl3_MIDINote2FNum((noteDiff)?noteDiff:m_Voice[ bVoice ].bNote,
@@ -2203,10 +2211,10 @@ void
 
    m_dwCurSample += len;
 
-//#ifdef DISABLE_HW_SUPPORT
-   //m_Miniport.adlib_getsample(sample,len);
+#ifdef DISABLE_HW_SUPPORT
+   //m_Miniport->adlib_getsample(sample,len);
    opl_getoutput(m_Miniport, sample, len);
-//#endif /*DISABLE_HW_SUPPORT*/
+#endif /*DISABLE_HW_SUPPORT*/
 
    // Increment logger sample history
    if (bIsLogging)
@@ -2575,7 +2583,7 @@ inline void
 {
 #ifdef DISABLE_HW_SUPPORT
    // Write to software chip
-   //m_Miniport.adlib_write(idx,val);
+   //m_Miniport->adlib_write(idx,val);
    opl_writereg(m_Miniport,idx,val);
 
 #else
@@ -2602,7 +2610,11 @@ void
 #ifndef DISABLE_HW_SUPPORT
    OPL_HW_Close();
 #endif /*DISABLE_HW_SUPPORT*/
-
+   
+   
+   //free(m_Miniport); // opl3.h
+   delete m_Miniport; // opl.h
+   m_Miniport = nullptr;
 #ifdef _DEBUG
    DebugClose();
 #endif /*DEBUG*/
@@ -2618,6 +2630,7 @@ void
    OPLSynth::
    DebugInit()
 {
+#ifdef DEBUG_HELPER
    // Init shared memory for use with debug application
    g_szShareMemoryName = L"potenis";
    g_szSharedMutexName = L"meinopl3";
@@ -2707,13 +2720,14 @@ void
       //if (g_hSharedMutex == NULL)
       //   return;
    }
-
+#endif
 }
 
 void
    OPLSynth::
    DebugClose()
 {
+#ifdef DEBUG_HELPER
    // Close shared memory for use with debug application
    UnmapViewOfFile(g_pBuffer);
    /*for (int i = 0; i < MAX_READ_PROCESSES_ALLOWED; ++i)
@@ -2722,12 +2736,14 @@ void
    CloseHandle(g_hWriteEvent);*/
    CloseHandle(g_hSharedMemory);
    CloseHandle(g_hSharedMutex);
+#endif
 }
 
 void
    OPLSynth::
    DebugUpdate()
 {
+#ifdef DEBUG_HELPER
    voiceStruct *debugVoiceBuf = (voiceStruct*)g_pBuffer;
    patchStruct *newVoices = ((patchStruct*)&(((voiceStruct*)g_pBuffer)[NUM2VOICES]));
 
@@ -2781,13 +2797,17 @@ void
    }
 
    
-
+#endif
 }
 
    
 #endif //_DEBUG
 
-// Some stupid f***ing reason using this breaks playback, with or without anything in it
+OPLSynth::OPLSynth()
+{
+   m_Miniport = nullptr;
+}
+
 OPLSynth::~OPLSynth()
 {
    close();
