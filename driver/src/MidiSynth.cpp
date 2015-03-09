@@ -431,7 +431,7 @@ namespace OPL3Emu
 
    void MidiSynth::LoadSettings() {
       sampleRate = 49716;
-      bufferSize = MillisToFrames(200);
+      bufferSize = MillisToFrames(100);
       chunkSize = MillisToFrames(10);
       midiLatency = MillisToFrames(0);
       useRingBuffer = false;
@@ -515,6 +515,7 @@ namespace OPL3Emu
    {
       waveOut.Pause();
       synthEvent.Wait();
+      synthEvent.Release();
       waveOut.Close();
 
       // Cleanup memory

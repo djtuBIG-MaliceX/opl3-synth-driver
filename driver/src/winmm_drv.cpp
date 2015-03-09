@@ -260,8 +260,6 @@ extern "C" __declspec(dllexport) DWORD __stdcall modMessage(UINT uDeviceID, UINT
 
          synthOpened = true;
       }
-      else
-         midiSynth.Reset();
 
       instance = NULL;
       DWORD res;
@@ -277,8 +275,8 @@ extern "C" __declspec(dllexport) DWORD __stdcall modMessage(UINT uDeviceID, UINT
 
       if (synthOpened)
       {
-         //midiSynth.Reset();
-         midiSynth.Close();
+         midiSynth.Reset();
+         //midiSynth.Close();
          synthOpened = false;
       }
       return CloseDriver(driver, uDeviceID, uMsg, dwUser, dwParam1, dwParam2);
