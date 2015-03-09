@@ -358,6 +358,7 @@ namespace OPL3Emu
    MidiSynth& MidiSynth::getInstance()
    {
 #ifdef _DEBUG
+      
          _CrtDumpMemoryLeaks();
 #endif
          static MidiSynth instance;
@@ -430,7 +431,7 @@ namespace OPL3Emu
 
    void MidiSynth::LoadSettings() {
       sampleRate = 49716;
-      bufferSize = MillisToFrames(100);
+      bufferSize = MillisToFrames(200);
       chunkSize = MillisToFrames(10);
       midiLatency = MillisToFrames(0);
       useRingBuffer = false;

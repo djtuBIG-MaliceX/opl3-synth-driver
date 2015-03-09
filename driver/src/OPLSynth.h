@@ -249,7 +249,7 @@ static DWORD BCODE gdwPitch[12] =
 class OPLSynth
 {
 private:
-   //OPL   *m_Miniport;
+   //OPL    m_Miniport;
    void* m_Miniport;
 
    bool    bIsLogging;

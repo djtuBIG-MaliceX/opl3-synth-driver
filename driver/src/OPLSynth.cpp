@@ -2098,7 +2098,7 @@ bool
 
 #ifdef DISABLE_HW_SUPPORT
    //if (m_Miniport == nullptr) m_Miniport = new OPL();
-   //m_Miniport->adlib_init();
+   //m_Miniport.adlib_init();
    if (m_Miniport == nullptr) m_Miniport = opl_init();
 #else
    OPL_Hardware_Detection();
@@ -2212,7 +2212,7 @@ void
    m_dwCurSample += len;
 
 #ifdef DISABLE_HW_SUPPORT
-   //m_Miniport->adlib_getsample(sample,len);
+   //m_Miniport.adlib_getsample(sample,len);
    opl_getoutput(m_Miniport, sample, len);
 #endif /*DISABLE_HW_SUPPORT*/
 
@@ -2583,7 +2583,7 @@ inline void
 {
 #ifdef DISABLE_HW_SUPPORT
    // Write to software chip
-   //m_Miniport->adlib_write(idx,val);
+   //m_Miniport.adlib_write(idx,val);
    opl_writereg(m_Miniport,idx,val);
 
 #else
@@ -2612,8 +2612,8 @@ void
 #endif /*DISABLE_HW_SUPPORT*/
    
    
-   //free(m_Miniport); // opl3.h
-   delete m_Miniport; // opl.h
+   free(m_Miniport); // opl3.h
+   //delete m_Miniport; // opl.h
    m_Miniport = nullptr;
 #ifdef _DEBUG
    DebugClose();

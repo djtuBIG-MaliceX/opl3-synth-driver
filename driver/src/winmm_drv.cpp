@@ -43,6 +43,10 @@ struct Driver
 extern "C" __declspec(dllexport) LONG __stdcall DriverProc(DWORD dwDriverID, HDRVR hdrvr, UINT wMessage,
    LONG dwParam1, LONG dwParam2)
 {
+#ifdef _DEBUG
+   _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+#endif
+
    switch (wMessage)
    {
    case DRV_LOAD:
@@ -239,12 +243,13 @@ LONG CloseDriver(Driver *driver, UINT uDeviceID, UINT uMsg, DWORD_PTR dwUser, DW
    return MMSYSERR_NOERROR;
 }
 
-extern "C" __declspec(dllexport) DWORD __stdcall modMessage(DWORD uDeviceID, DWORD uMsg, DWORD_PTR dwUser,
+extern "C" __declspec(dllexport) DWORD __stdcall modMessage(UINT uDeviceID, UINT uMsg, DWORD_PTR dwUser,
    DWORD_PTR dwParam1, DWORD_PTR dwParam2)
 {
    MIDIHDR *midiHdr;
    Driver *driver = &drivers[uDeviceID];
    DWORD instance;
+
    switch (uMsg)
    {
    case MODM_OPEN:

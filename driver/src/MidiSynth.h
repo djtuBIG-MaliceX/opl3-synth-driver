@@ -46,7 +46,8 @@ namespace OPL3Emu {
       void LoadSettings();
 
       MidiSynth();
-
+      MidiSynth(MidiSynth const&);              // Don't Implement.
+      void operator=(MidiSynth const&); // Don't implement
    public:
       static MidiSynth& getInstance(); 
       int Init();
