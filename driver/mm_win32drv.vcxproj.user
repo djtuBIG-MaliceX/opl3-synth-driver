@@ -3,7 +3,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
     <RemoteDebuggerAttach>true</RemoteDebuggerAttach>
-    <LocalDebuggerCommand>D:\Apps\Audio\Winjammer Professional\WJPro.exe</LocalDebuggerCommand>
+    <LocalDebuggerCommand>T:\Apps\Audio\Winjammer Professional\WJPro.exe</LocalDebuggerCommand>
     <LocalDebuggerAttach>false</LocalDebuggerAttach>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">

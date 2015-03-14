@@ -144,9 +144,9 @@ void
          {
             while (m_sostenutoBuffer[bChannel].size() > 0)
             {
-               BYTE bNote = *m_sostenutoBuffer[bChannel].rbegin();
+               BYTE bSosNote = *m_sostenutoBuffer[bChannel].rbegin();
                m_sostenutoBuffer[bChannel].pop_back();
-               Opl3_NoteOff(m_bPatch[bChannel], bNote, bChannel, m_bSustain[bChannel]);
+               Opl3_NoteOff(m_bPatch[bChannel], bSosNote, bChannel, m_bSustain[bChannel]);
             }
          }
          break;
@@ -1153,7 +1153,7 @@ void
          lpSN->op[1+i].bAt60 |= (bTemp > 0xF) ? 0xF0 : (bTemp > 0) ? (bTemp<<4) : 0;
 
          // If AM mode (assuming 2op)
-         if (((lpSN->bAtC0[0+i]) & 0x1) == 1)
+         if (((lpSN->bAtC0[0+(i%2)]) & 0x1) == 1)
          {
             bTemp = ((lpSN->op[0].bAt60 & 0xF0)>>4);
             lpSN->op[0+i].bAt60 &= ~0xF0;
@@ -1636,7 +1636,7 @@ WORD
 	else if (BlockVal > 0x07)
 		BlockVal = 0x07;
 	//KeyVal = (unsigned short int)(FreqVal * pow(2, 20 - BlockVal) / CHIP_RATE + 0.5);
-	keyVal = (WORD)(freqVal * (1 << (20 - BlockVal)) / FSAMP + 0.5);
+	keyVal = (WORD)(freqVal * (1ULL << (20 - BlockVal)) / FSAMP + 0.5);
 	if (keyVal > 0x03FF)
 		keyVal = 0x03FF;
 	
@@ -2273,7 +2273,7 @@ void
    // Check reset
    if (len == 6  && (memcmp(&resetArray[0][4], bufpos, len-4)==0 || memcmp(&resetArray[1][4], bufpos, len-4)==0) ||
        len == 11 && (memcmp(&resetArray[2][4], bufpos, len-4)==0 || memcmp(&resetArray[4][4], bufpos, len-4)==0 || memcmp(&resetArray[5][4], bufpos, len-4)==0) ||
-       len == 9  && (memcmp(&resetArray[6][4], bufpos, len-4)==0)
+       len == 9  && (memcmp(&resetArray[5][4], bufpos, len-4)==0)
       )
       IsResetSysex = true;
 
@@ -2612,8 +2612,8 @@ void
 #endif /*DISABLE_HW_SUPPORT*/
    
    
-   free(m_Miniport); // opl3.h
-   //delete m_Miniport; // opl.h
+   //free(m_Miniport); // opl3.h
+   delete m_Miniport; // opl.h
    m_Miniport = nullptr;
 #ifdef _DEBUG
    DebugClose();

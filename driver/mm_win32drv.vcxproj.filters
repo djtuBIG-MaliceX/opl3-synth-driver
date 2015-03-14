@@ -61,9 +61,6 @@
     <ClInclude Include="src\2x2patchtest.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\mmddk.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\fmsynthpatch.h">
       <Filter>Header Files</Filter>
     </ClInclude>

@@ -28,13 +28,16 @@ extern "C" {
 #include <algorithm>
 #include <cstdlib>
 #include <cstring>
+#include <thread>
+#include <mutex>
 
 #include "OPLSynth.h"
 #include "MidiSynth.h"
 
-#if _DEBUG
+#ifdef _DEBUG
 #define _CRTDBG_MAP_ALLOC
 #include <crtdbg.h>
+#include <vld.h>
 #endif
 
 #endif /*STDAFX_H*/

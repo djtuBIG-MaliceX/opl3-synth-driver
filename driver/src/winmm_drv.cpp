@@ -17,13 +17,16 @@
 
 #include "stdafx.h"
 
-#define MAX_DRIVERS 8
-#define MAX_CLIENTS 8 // Per driver
+#define MAX_DRIVERS 1
+#define MAX_CLIENTS 1 // Per driver
 
 static OPL3Emu::MidiSynth &midiSynth = OPL3Emu::MidiSynth::getInstance();
+//static OPL3Emu::MidiSynth *midiSynth = NULL;
 static bool synthOpened = false;
 //static HWND hwnd = NULL;
 static int driverCount;
+
+static std::mutex drv_lock;
 
 struct Driver
 {
@@ -45,6 +48,7 @@ extern "C" __declspec(dllexport) LONG __stdcall DriverProc(DWORD dwDriverID, HDR
 {
 #ifdef _DEBUG
    _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
+   _CrtSetReportMode ( _CRT_ERROR, _CRTDBG_MODE_DEBUG);
 #endif
 
    switch (wMessage)
@@ -56,6 +60,7 @@ extern "C" __declspec(dllexport) LONG __stdcall DriverProc(DWORD dwDriverID, HDR
    case DRV_ENABLE:
       return DRV_OK;
    case DRV_OPEN:
+   {
       int driverNum;
       if (driverCount == MAX_DRIVERS)
       {
@@ -80,6 +85,7 @@ extern "C" __declspec(dllexport) LONG __stdcall DriverProc(DWORD dwDriverID, HDR
       drivers[driverNum].hdrvr = hdrvr;
       driverCount++;
       return DRV_OK;
+   }
    case DRV_INSTALL:
    case DRV_PNPINSTALL:
       return DRV_OK;
@@ -88,6 +94,7 @@ extern "C" __declspec(dllexport) LONG __stdcall DriverProc(DWORD dwDriverID, HDR
    case DRV_CONFIGURE:
       return DRVCNF_OK;
    case DRV_CLOSE:
+   {
       for (int i = 0; i < MAX_DRIVERS; i++)
       {
          if (drivers[i].open && drivers[i].hdrvr == hdrvr)
@@ -98,6 +105,7 @@ extern "C" __declspec(dllexport) LONG __stdcall DriverProc(DWORD dwDriverID, HDR
          }
       }
       return DRV_CANCEL;
+   }
    case DRV_DISABLE:
       return DRV_OK;
    case DRV_FREE:
@@ -242,7 +250,15 @@ LONG CloseDriver(Driver *driver, UINT uDeviceID, UINT uMsg, DWORD_PTR dwUser, DW
    DoCallback(uDeviceID, dwUser, MOM_CLOSE, NULL, NULL);
    return MMSYSERR_NOERROR;
 }
+/*
+bool StartMidiSynth()
+{
+   if (midiSynth == NULL)
+      midiSynth = new OPL3Emu::MidiSynth();
 
+   return (midiSynth != NULL);
+}
+*/
 extern "C" __declspec(dllexport) DWORD __stdcall modMessage(UINT uDeviceID, UINT uMsg, DWORD_PTR dwUser,
    DWORD_PTR dwParam1, DWORD_PTR dwParam2)
 {
@@ -250,75 +266,106 @@ extern "C" __declspec(dllexport) DWORD __stdcall modMessage(UINT uDeviceID, UINT
    Driver *driver = &drivers[uDeviceID];
    DWORD instance;
 
+#ifdef _DEBUG
+   //_ASSERTE(_CrtCheckMemory());
+   _CrtCheckMemory();
+#endif 
    switch (uMsg)
    {
-   case MODM_OPEN:
-      if (!synthOpened)
+      case MODM_OPEN:
       {
-         if (midiSynth.Init() != 0)
+         drv_lock.lock();
+
+         //if (StartMidiSynth())
+         {
+            if (midiSynth.Init() != 0)
+            {
+               drv_lock.unlock();
+               return MMSYSERR_ERROR;
+            }
+            synthOpened = true;
+         }
+         /* else
+          {
+          // failed to allocate memory
+          return MMSYSERR_ERROR;
+          }*/
+
+         instance = NULL;
+         DWORD res;
+         res = OpenDriver(driver, uDeviceID, uMsg, dwUser, dwParam1, dwParam2);
+         driver->clients[*(LONG *)dwUser].synth_instance = instance;
+
+         drv_lock.unlock();
+         return res;
+      }
+      case MODM_CLOSE:
+      {
+         drv_lock.lock();
+
+         if (driver->clients[dwUser].allocated == false)
+         {
+            drv_lock.unlock();
             return MMSYSERR_ERROR;
+         }
 
-         synthOpened = true;
-      }
+         if (synthOpened)
+         {
+            //midiSynth.Reset();
+            midiSynth.Close();
+            synthOpened = false;
 
-      instance = NULL;
-      DWORD res;
-      res = OpenDriver(driver, uDeviceID, uMsg, dwUser, dwParam1, dwParam2);
-      driver->clients[*(LONG *)dwUser].synth_instance = instance;
-      return res;
+            //delete midiSynth;
+            //midiSynth = NULL;
+         }
+         drv_lock.unlock();
+         return CloseDriver(driver, uDeviceID, uMsg, dwUser, dwParam1, dwParam2);
 
-   case MODM_CLOSE:
-      if (driver->clients[dwUser].allocated == false)
+      case MODM_PREPARE:
+         return MMSYSERR_NOTSUPPORTED;
+
+      case MODM_UNPREPARE:
+         return MMSYSERR_NOTSUPPORTED;
+
+      case MODM_GETDEVCAPS:
+         return modGetCaps((PVOID)dwParam1, (DWORD)dwParam2);
+
+      case MODM_DATA:
       {
-         return MMSYSERR_ERROR;
+         if (driver->clients[dwUser].allocated == false)
+         {
+            return MMSYSERR_ERROR;
+         }
+         drv_lock.lock();
+         midiSynth.PushMIDI((DWORD)dwParam1);
+         drv_lock.unlock();
+         return MMSYSERR_NOERROR;
       }
+      case MODM_LONGDATA:
+         if (driver->clients[dwUser].allocated == false)
+         {
+            return MMSYSERR_ERROR;
+         }
+         drv_lock.lock();
+         midiHdr = (MIDIHDR *)dwParam1;
+         if ((midiHdr->dwFlags & MHDR_PREPARED) == 0)
+         {
+            drv_lock.unlock();
+            return MIDIERR_UNPREPARED;
+         }
+         midiSynth.PlaySysex((unsigned char*)midiHdr->lpData, midiHdr->dwBufferLength);
+         midiHdr->dwFlags |= MHDR_DONE;
+         midiHdr->dwFlags &= ~MHDR_INQUEUE;
+         DoCallback(uDeviceID, dwUser, MOM_DONE, dwParam1, NULL);
+         drv_lock.unlock();
+         return MMSYSERR_NOERROR;
 
-      if (synthOpened)
-      {
-         midiSynth.Reset();
-         //midiSynth.Close();
-         synthOpened = false;
+      case MODM_GETNUMDEVS: // TODO
+         return 0x1;
+
+      default:
+         return MMSYSERR_NOERROR;
+         break;
       }
-      return CloseDriver(driver, uDeviceID, uMsg, dwUser, dwParam1, dwParam2);
-
-   case MODM_PREPARE:
-      return MMSYSERR_NOTSUPPORTED;
-
-   case MODM_UNPREPARE:
-      return MMSYSERR_NOTSUPPORTED;
-
-   case MODM_GETDEVCAPS:
-      return modGetCaps((PVOID)dwParam1, (DWORD)dwParam2);
-
-   case MODM_DATA:
-      if (driver->clients[dwUser].allocated == false)
-      {
-         return MMSYSERR_ERROR;
-      }
-      midiSynth.PushMIDI((DWORD)dwParam1);
-      return MMSYSERR_NOERROR;
-
-   case MODM_LONGDATA:
-      if (driver->clients[dwUser].allocated == false)
-      {
-         return MMSYSERR_ERROR;
-      }
-      midiHdr = (MIDIHDR *)dwParam1;
-      if ((midiHdr->dwFlags & MHDR_PREPARED) == 0)
-      {
-         return MIDIERR_UNPREPARED;
-      }
-      midiSynth.PlaySysex((unsigned char*)midiHdr->lpData, midiHdr->dwBufferLength);
-      midiHdr->dwFlags |= MHDR_DONE;
-      midiHdr->dwFlags &= ~MHDR_INQUEUE;
-      DoCallback(uDeviceID, dwUser, MOM_DONE, dwParam1, NULL);
-      return MMSYSERR_NOERROR;
-
-   case MODM_GETNUMDEVS:
-      return 0x1;
-
-   default:
-      return MMSYSERR_NOERROR;
-      break;
    }
 }

@@ -972,12 +972,12 @@ void opl_inittables()
 void* opl_init()
 {
 	OPL3 *opl;
-	opl = (OPL3 *)malloc(sizeof(OPL3));
-	memset(opl,0,sizeof(OPL3));
+	opl = (OPL3 *)malloc(sizeof(OPL3));	
 	if(opl == NULL)
 	{
 		return NULL;
 	}
+   memset(opl,0,sizeof(OPL3));
 	if(!tables)
 	{
 		opl_inittables();
