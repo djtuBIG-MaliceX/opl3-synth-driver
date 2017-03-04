@@ -250,7 +250,7 @@ class OPLSynth
 {
 private:
    //OPL     m_Miniport;
-   void* m_Miniport;
+   opl3_chip* m_Miniport;
 
    bool    bIsLogging;
 

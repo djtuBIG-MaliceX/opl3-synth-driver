@@ -2099,7 +2099,12 @@ bool
 #ifdef DISABLE_HW_SUPPORT
    //if (m_Miniport == nullptr) m_Miniport = new OPL();
    //m_Miniport.adlib_init();
-   if (m_Miniport == nullptr) m_Miniport = opl_init();
+   //if (m_Miniport == nullptr) m_Miniport = opl_init();
+   if (m_Miniport == nullptr)
+   {
+	   m_Miniport = new opl3_chip();
+	   OPL3_Reset(m_Miniport, (Bit32u)FSAMP);
+   }
 #else
    OPL_Hardware_Detection();
    OPL_HW_Init(); // start hardware
@@ -2213,7 +2218,8 @@ void
 
 #ifdef DISABLE_HW_SUPPORT
    //m_Miniport.adlib_getsample(sample,len);
-   opl_getoutput(m_Miniport, sample, len);
+   //opl_getoutput(m_Miniport, sample, len);
+   OPL3_GenerateStream(m_Miniport, sample, len);
 #endif /*DISABLE_HW_SUPPORT*/
 
    // Increment logger sample history
@@ -2584,8 +2590,8 @@ inline void
 #ifdef DISABLE_HW_SUPPORT
    // Write to software chip
    //m_Miniport.adlib_write(idx,val);
-   opl_writereg(m_Miniport,idx,val);
-
+   //opl_writereg(m_Miniport,idx,val);
+	OPL3_WriteReg(m_Miniport, idx, val);
 #else
 
    // Write to hardware

@@ -35,9 +35,9 @@ extern "C" {
 #include "MidiSynth.h"
 
 #ifdef _DEBUG
-#define _CRTDBG_MAP_ALLOC
-#include <crtdbg.h>
-#include <vld.h>
+//#define _CRTDBG_MAP_ALLOC
+//#include <crtdbg.h>
+//#include <vld.h>
 #endif
 
 #endif /*STDAFX_H*/
