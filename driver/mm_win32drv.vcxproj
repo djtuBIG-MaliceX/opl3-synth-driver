@@ -165,13 +165,13 @@
       <PreprocessorDefinitions>DISABLE_HW_SUPPORT;WIN32;_DEBUG;_WINDOWS;_USRDLL;MM_WIN32DRV_EXPORTS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <MinimalRebuild>false</MinimalRebuild>
       <BasicRuntimeChecks>Default</BasicRuntimeChecks>
-      <RuntimeLibrary>MultiThreadedDebugDLL</RuntimeLibrary>
+      <RuntimeLibrary>MultiThreadedDebug</RuntimeLibrary>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
-      <DebugInformationFormat>None</DebugInformationFormat>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <EnablePREfast>false</EnablePREfast>
       <WholeProgramOptimization>false</WholeProgramOptimization>
-      <ExceptionHandling>false</ExceptionHandling>
+      <ExceptionHandling>Sync</ExceptionHandling>
       <CompileAsManaged>false</CompileAsManaged>
       <CompileAsWinRT>false</CompileAsWinRT>
     </ClCompile>
@@ -182,6 +182,7 @@
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <SubSystem>Windows</SubSystem>
       <Profile />
+      <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
     </Link>
     <PostBuildEvent>
       <Command>
@@ -355,7 +356,6 @@
   <ItemGroup>
     <ClCompile Include="src\InpOut32Helper.cpp" />
     <ClCompile Include="src\MidiSynth.cpp" />
-    <ClCompile Include="src\opl.cpp" />
     <ClCompile Include="src\opl3.cpp" />
     <ClCompile Include="src\OPLSynth.cpp" />
     <ClCompile Include="src\opl_hw.cpp" />
@@ -371,7 +371,6 @@
     <ClInclude Include="src\opl_hw.h" />
     <ClInclude Include="src\mauipatch.h" />
     <ClInclude Include="src\MidiSynth.h" />
-    <ClInclude Include="src\opl.h" />
     <ClInclude Include="src\OPLSynth.h" />
     <ClInclude Include="src\patch.h" />
     <ClInclude Include="src\stdafx.h" />

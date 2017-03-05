@@ -11,9 +11,6 @@
     </Filter>
   </ItemGroup>
   <ItemGroup>
-    <ClCompile Include="src\opl.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="src\OPLSynth.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -37,9 +34,6 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="src\opl.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\OPLSynth.h">
       <Filter>Header Files</Filter>
     </ClInclude>

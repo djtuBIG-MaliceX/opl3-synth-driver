@@ -2081,20 +2081,27 @@ bool
    Init()
 {
    // init some members
-   bIsLogging = false;
-   m_dwCurTime = 1;    /* for note on/off * /
+   this->bIsLogging = false;
+   this->m_dwCurTime = 1;    /* for note on/off */
    /* volume */
-   m_wSynthAttenL = 0;        /* in 1.5dB steps */
-   m_wSynthAttenR = 0;        /* in 1.5dB steps */
+   this->m_wSynthAttenL = 0;        /* in 1.5dB steps */
+   this->m_wSynthAttenR = 0;        /* in 1.5dB steps */
 
-   m_MinVolValue  = 0xFFD0C000;    //  minimum -47.25(dB) * 0x10000
-   m_MaxVolValue  = 0x00000000;    //  maximum  0    (dB) * 0x10000
-   m_VolStepDelta = 0x0000C000;    //  steps of 0.75 (dB) * 0x10000
+   this->m_MinVolValue  = 0xFFD0C000;    //  minimum -47.25(dB) * 0x10000
+   this->m_MaxVolValue  = 0x00000000;    //  maximum  0    (dB) * 0x10000
+   this->m_VolStepDelta = 0x0000C000;    //  steps of 0.75 (dB) * 0x10000
 
-   m_bMasterCoarseTune = 0;
-   m_dwMasterTune = 0;
+   this->m_bMasterCoarseTune = 0;
+   this->m_dwMasterTune = 0;
 
-   m_MIDIMode = MIDIMODE_XG;
+   this->m_MIDIMode = MIDIMODE_XG;
+
+   if (this->m_noteHistory == nullptr)
+	   this->m_noteHistory = new std::vector<BYTE>[NUMMIDICHN];
+
+   if (this->m_sostenutoBuffer == nullptr)
+	   this->m_sostenutoBuffer = new std::vector<BYTE>[NUMMIDICHN];
+
 
 #ifdef DISABLE_HW_SUPPORT
    //if (m_Miniport == nullptr) m_Miniport = new OPL();
@@ -2103,7 +2110,7 @@ bool
    if (m_Miniport == nullptr)
    {
 	   m_Miniport = new opl3_chip();
-	   OPL3_Reset(m_Miniport, (Bit32u)FSAMP);
+       OPL3_Reset(m_Miniport, (Bit32u)FSAMP);
    }
 #else
    OPL_Hardware_Detection();
@@ -2619,8 +2626,8 @@ void
    
    
    //free(m_Miniport); // opl3.h
-   delete m_Miniport; // opl.h
-   m_Miniport = nullptr;
+   //delete m_Miniport; // opl.h
+   //m_Miniport = nullptr;
 #ifdef _DEBUG
    DebugClose();
 #endif /*DEBUG*/
@@ -2812,6 +2819,8 @@ void
 OPLSynth::OPLSynth()
 {
    m_Miniport = nullptr;
+   m_noteHistory = nullptr;
+   m_sostenutoBuffer = nullptr;
 }
 
 OPLSynth::~OPLSynth()

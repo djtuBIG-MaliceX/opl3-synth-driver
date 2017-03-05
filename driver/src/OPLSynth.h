@@ -250,7 +250,7 @@ class OPLSynth
 {
 private:
    //OPL     m_Miniport;
-   opl3_chip* m_Miniport;
+   opl3_chip *m_Miniport;
 
    bool    bIsLogging;
 
@@ -264,8 +264,8 @@ private:
    char    m_bMasterCoarseTune;      /* TODO Master Tuning level*/
    double  m_dwMasterTune;     /* Master Tune */
 
-   std::vector<BYTE> m_noteHistory[NUMMIDICHN];
-   std::vector<BYTE> m_sostenutoBuffer[NUMMIDICHN];
+   std::vector<BYTE> *m_noteHistory;//[NUMMIDICHN];
+   std::vector<BYTE> *m_sostenutoBuffer;//[NUMMIDICHN];
    BYTE    m_bRPNCount[NUMMIDICHN];
    BYTE    m_bNRPNCount[NUMMIDICHN];
 

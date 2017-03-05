@@ -1236,7 +1236,7 @@ void OPL3_Reset(opl3_chip *chip, Bit32u samplerate)
 	Bit8u slotnum;
 	Bit8u channum;
 
-	memset(chip, 0, sizeof(opl3_chip));
+	//memset(chip, 0, sizeof(opl3_chip));
 	for (slotnum = 0; slotnum < 36; slotnum++)
 	{
 		chip->slot[slotnum].chip = chip;

@@ -29,7 +29,7 @@ extern "C" {
 #include <cstdlib>
 #include <cstring>
 #include <thread>
-#include <mutex>
+//#include <mutex>
 
 #include "OPLSynth.h"
 #include "MidiSynth.h"

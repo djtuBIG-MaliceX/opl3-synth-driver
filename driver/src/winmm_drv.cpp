@@ -26,7 +26,7 @@ static bool synthOpened = false;
 //static HWND hwnd = NULL;
 static int driverCount;
 
-static std::mutex drv_lock;
+//static std::mutex drv_lock;
 
 struct Driver
 {
@@ -274,13 +274,13 @@ extern "C" __declspec(dllexport) DWORD __stdcall modMessage(UINT uDeviceID, UINT
    {
       case MODM_OPEN:
       {
-         drv_lock.lock();
+         //drv_lock.lock();
 
          //if (StartMidiSynth())
          {
             if (midiSynth.Init() != 0)
             {
-               drv_lock.unlock();
+               //drv_lock.unlock();
                return MMSYSERR_ERROR;
             }
             synthOpened = true;
@@ -296,16 +296,16 @@ extern "C" __declspec(dllexport) DWORD __stdcall modMessage(UINT uDeviceID, UINT
          res = OpenDriver(driver, uDeviceID, uMsg, dwUser, dwParam1, dwParam2);
          driver->clients[*(LONG *)dwUser].synth_instance = instance;
 
-         drv_lock.unlock();
+         //drv_lock.unlock();
          return res;
       }
       case MODM_CLOSE:
       {
-         drv_lock.lock();
+         //drv_lock.lock();
 
          if (driver->clients[dwUser].allocated == false)
          {
-            drv_lock.unlock();
+            //drv_lock.unlock();
             return MMSYSERR_ERROR;
          }
 
@@ -318,7 +318,7 @@ extern "C" __declspec(dllexport) DWORD __stdcall modMessage(UINT uDeviceID, UINT
             //delete midiSynth;
             //midiSynth = NULL;
          }
-         drv_lock.unlock();
+         //drv_lock.unlock();
          return CloseDriver(driver, uDeviceID, uMsg, dwUser, dwParam1, dwParam2);
 
       case MODM_PREPARE:
@@ -336,9 +336,9 @@ extern "C" __declspec(dllexport) DWORD __stdcall modMessage(UINT uDeviceID, UINT
          {
             return MMSYSERR_ERROR;
          }
-         drv_lock.lock();
+         //drv_lock.lock();
          midiSynth.PushMIDI((DWORD)dwParam1);
-         drv_lock.unlock();
+         //drv_lock.unlock();
          return MMSYSERR_NOERROR;
       }
       case MODM_LONGDATA:
@@ -346,18 +346,18 @@ extern "C" __declspec(dllexport) DWORD __stdcall modMessage(UINT uDeviceID, UINT
          {
             return MMSYSERR_ERROR;
          }
-         drv_lock.lock();
+         //drv_lock.lock();
          midiHdr = (MIDIHDR *)dwParam1;
          if ((midiHdr->dwFlags & MHDR_PREPARED) == 0)
          {
-            drv_lock.unlock();
+            //drv_lock.unlock();
             return MIDIERR_UNPREPARED;
          }
          midiSynth.PlaySysex((unsigned char*)midiHdr->lpData, midiHdr->dwBufferLength);
          midiHdr->dwFlags |= MHDR_DONE;
          midiHdr->dwFlags &= ~MHDR_INQUEUE;
          DoCallback(uDeviceID, dwUser, MOM_DONE, dwParam1, NULL);
-         drv_lock.unlock();
+         //drv_lock.unlock();
          return MMSYSERR_NOERROR;
 
       case MODM_GETNUMDEVS: // TODO
