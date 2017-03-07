@@ -256,15 +256,19 @@ void
          break;
 
       case 118: // Set VGM log loop marker
+#ifndef DISABLE_VGM_LOGGING
          VGMLog_MarkLoopStartNow();
+#endif /*DISABLE_VGM_LOGGING*/
          break;
 
       case 119: // Toggle VGM logging
       {
+#ifndef DISABLE_VGM_LOGGING
          bool logFlag = bIsLogging;
          bIsLogging = (bVelocity > 0x3F) ? true : false;
          if (logFlag != bIsLogging)
             (!bIsLogging) ? VGMLog_Close() : VGMLog_Init();
+#endif /*DISABLE_VGM_LOGGING*/
          break;
       }
 
@@ -749,7 +753,7 @@ void
    // the total level and pitch according to
    // the velocity, midi volume, and tuning.
 
-   RtlCopyMemory( (LPSTR) &NS, (LPSTR) lpPS, sizeof( patchStruct ) ) ;
+   memcpy( &NS, lpPS, sizeof(patchStruct));
    
    // Check if 4op patch and is not a rhythm mode patch
    bRhyPatch = !(NS.bRhythmMap < RHY_CH_BD || NS.bRhythmMap > RHY_CH_CY);
@@ -2101,7 +2105,12 @@ bool
 
    if (this->m_sostenutoBuffer == nullptr)
 	   this->m_sostenutoBuffer = new std::vector<BYTE>[NUMMIDICHN];
-
+   
+   for (int i = 0; i < NUMMIDICHN; ++i)
+   {
+      this->m_noteHistory[i].reserve(256);
+      this->m_sostenutoBuffer[i].reserve(256);
+   }
 
 #ifdef DISABLE_HW_SUPPORT
    //if (m_Miniport == nullptr) m_Miniport = new OPL();
@@ -2116,7 +2125,6 @@ bool
    OPL_Hardware_Detection();
    OPL_HW_Init(); // start hardware
 #endif /*DISABLE_HW_SUPPORT*/
-   //VGMLog_Init();
    Opl3_BoardReset();
    Opl3_SoftCommandReset();
 
@@ -2229,9 +2237,11 @@ void
    OPL3_GenerateStream(m_Miniport, sample, len);
 #endif /*DISABLE_HW_SUPPORT*/
 
+#ifndef DISABLE_VGM_LOGGING
    // Increment logger sample history
    if (bIsLogging)
       VGMLog_IncrementSamples(len);
+#endif /*DISABLE_VGM_LOGGING*/
 
 #ifdef _DEBUG
    DebugUpdate();
@@ -2606,8 +2616,10 @@ inline void
 
 #endif /*DISABLE_HW_SUPPORT*/
 
+#ifndef DISABLE_VGM_LOGGING
    if (bIsLogging)
       VGMLog_CmdWrite((0x5E | (idx>>8)), (BYTE)idx, val);
+#endif /*DISABLE_VGM_LOGGING*/
 }
 
 void 
