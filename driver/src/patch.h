@@ -174,7 +174,7 @@ BYTE gbPercMap[128][3] =
    {120, 0 , 0 },   {121, 0 , 0 },   {122, 0 , 0 },   {123, 0 , 0 },   {124, 0 , 0 },   {125, 0 , 0 },   {126, 0 , 0 },   {127, 0 , 0 },
 };
 
-BOOLEAN IsRhythmMode = false;
+bool IsRhythmMode = false;
 
 // Operator voices
 patchStruct glpPatch[] = 

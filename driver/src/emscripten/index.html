@@ -9,20 +9,21 @@
          var WriteMidiData = Module.cwrap('WriteMidiData', null, ['number'])
          var GetSample = Module.cwrap('GetSample', null, ['number', 'number']);
          var GetSampleTwo = Module.cwrap('GetSampleTwo', null, ['number', 'number', 'number', 'number']);
-         
+         var Reset = Module.cwrap('Reset', null, []);
+         var Initialize = Module.cwrap('Initialize', null, []);
          
          function testChord()
          {
             // major chord
-            WriteMidiData(0x7F5190);
-            WriteMidiData(0x7F5590);
-            WriteMidiData(0x7F5890);
+            WriteMidiData(0x7F4090);
+            WriteMidiData(0x7F4490);
+            WriteMidiData(0x7F4790);
             
             // note off
             setTimeout(function() {
-               WriteMidiData(0x005180);
-               WriteMidiData(0x005580);
-               WriteMidiData(0x005880);
+               WriteMidiData(0x004080);
+               WriteMidiData(0x004480);
+               WriteMidiData(0x004780);
             
             }, 5000);
          }
@@ -57,112 +58,142 @@
           
             WriteMidiData(n);
          }
-
-      
-         if (navigator.requestMIDIAccess)
-         {
-            console.log('Browser supports MIDI!');
-         }
-       
-         if (navigator.requestMIDIAccess)
-         {
-            navigator.requestMIDIAccess()
-                 .then(success, failure);
-         }
-      
-         // start opl3 synth
-         ccall('Initialize');
-      
-         // webaudio api buffer
-         var channels = 2;
-         var frameCount = 2048; // lol higher buffer = instant swing quantize lel
-         var scriptNode = context.createScriptProcessor(frameCount, 1, channels);
          
-         // emscripten malloc
-         //var dataBuf = new Int16Array(frameCount);
-         var nDataBytes = frameCount * 2; //dataBuf.length * dataBuf.BYTES_PER_ELEMENT;
-         var dataPtr = Module._malloc(nDataBytes);
-         //var dataPtr2 = Module._malloc(nDataBytes);
-         //var dataPtr3 = Module._malloc(nDataBytes);
-         var dataHeap = new Int16Array(Module.HEAP16.buffer, dataPtr, nDataBytes);
-         //var dataHeap2 = new Float32Array(Module.HEAPF32.buffer, dataPtr2, nDataBytes);
-         //var dataHeap3 = new Float32Array(Module.HEAPF32.buffer, dataPtr3, nDataBytes);
-         
-         //var dataHeap = new Uint8Array(Module.HEAPU8.buffer, dataPtr, nDataBytes);
-         //dataHeap.set(new Uint8Array(dataBuf.buffer));
-         
-         // rendering
-         scriptNode.onaudioprocess = function(evt) {
+         Module['onRuntimeInitialized'] = function() {
             
-            // shit hack - sample everyting sequentially
-            // TODO doesn't quite work
-            //var ptrStart = dataHeap.byteOffset;
-            //var incr = 512;
-            //for (var offs = 0; offs < nDataBytes; offs+=incr)
-            //   GetSample(ptrStart+offs, incr);
             
-            // per frameSize chunk
-            GetSample(dataHeap.byteOffset, nDataBytes);
+            // start opl3 synth
+            //ccall('Initialize');
+            Initialize();
             
-            //var result = new Int16Array(dataHeap.buffer, dataHeap.byteOffset, nDataBytes);
-            var outBuf = evt.outputBuffer;
+            // webaudio api buffer
+            var channels = 2;
+            var frameCount = 4096; // lol higher buffer = instant swing quantize lel
+            var scriptNode = context.createScriptProcessor(frameCount/2, 1, channels);
             
-            // interleave method 1 - LLLLRRRR
-            /*
-            for (var ch = 0; ch < channels; ++ch)
-            {
-               var chn = outBuf.getChannelData(ch);
-               for (var i = ch*(dataHeap.length>>1), j=0; j < (dataHeap.length>>1); ++i, ++j)
+            // emscripten malloc
+            //var dataBuf = new Int16Array(frameCount);
+            var nDataBytes = frameCount * 2; //dataBuf.length * dataBuf.BYTES_PER_ELEMENT;
+            var dataPtr = Module._malloc(nDataBytes);
+            //var dataPtr2 = Module._malloc(nDataBytes*2);
+            //var dataPtr3 = Module._malloc(nDataBytes*2);
+            var dataHeap = new Int16Array(Module.HEAP16.buffer, dataPtr, nDataBytes);
+            //var dataHeap2 = new Float32Array(Module.HEAPF32.buffer, dataPtr2, nDataBytes*2);
+            //var dataHeap3 = new Float32Array(Module.HEAPF32.buffer, dataPtr3, nDataBytes*2);
+            
+            //var dataHeap = new Uint8Array(Module.HEAPU8.buffer, dataPtr, nDataBytes);
+            //dataHeap.set(new Uint8Array(dataBuf.buffer));
+            
+            // rendering
+            scriptNode.onaudioprocess = function(evt) {
+               
+               // shit hack - sample everyting sequentially
+               // TODO doesn't quite work
+               //var ptrStart = dataHeap.byteOffset;
+               //var incr = 256;
+               //for (var offs = 0; offs < dataHeap; offs+=(incr))
+               //   GetSample((ptrStart+offs), incr);
+               //GetSample(ptrStart, incr);
+               
+               // per frameSize chunk
+               GetSample(dataHeap.byteOffset, frameCount);
+               
+               //var result = new Int16Array(dataHeap.buffer, dataHeap.byteOffset, nDataBytes);
+               var outBuf = evt.outputBuffer;
+               
+               // interleave method 1 - LLLLRRRR
+               /*
+               for (var ch = 0; ch < channels; ++ch)
                {
+                  var chn = outBuf.getChannelData(ch);
+                  for (var i = ch*(dataHeap.length>>1), j=0; j < (dataHeap.length>>1); ++i, ++j)
+                  {
+                     var n = Number.parseFloat(dataHeap[i] / 32768.0);
+                     if (n<-1) n=-1;
+                     else if (n>1) n=1;
+                     chn[j] = n;
+                  }
+               }
+               */
+               // Interleave method 2 - LRLRLRLR
+               var chLData = outBuf.getChannelData(0);
+               var chRData = outBuf.getChannelData(1);
+               
+               
+               for (var i = 0, j = 0; i < dataHeap.length; i++)
+               {  
+                  //var n = dataHeap2[i];
                   var n = Number.parseFloat(dataHeap[i] / 32768.0);
-                  if (n<-1) n=-1;
-                  else if (n>1) n=1;
-                  chn[j] = n;
-               }
-            }
-            */
-            // Interleave method 2 - LRLRLRLR
-            var chLData = outBuf.getChannelData(0);
-            var chRData = outBuf.getChannelData(1);
-            
-            
-            for (var i = 0, j = 0; i < dataHeap.length; i++)
-            {  
-               //var n = dataHeap2[i];
-               var n = Number.parseFloat(dataHeap[i] / 32768.0);
-               //var n = Number.parseFloat(result[i] / 32768.0);
-               //if (n<-1) n=-1;
-               //else if (n>1) n=1;
-               
-               if (i&1!=0)
-                  chLData[j] = n;
-               else
-               {
-                  chRData[j++] = n;
+                  //var n = Number.parseFloat(result[i] / 32768.0);
+                  //if (n<-1) n=-1;
+                  //else if (n>1) n=1;
+                  
+                  if (i&1!=0)
+                     chLData[j] = n;
+                  else
+                  {
+                     chRData[j++] = n;
+                  }
+                  
+                  //document.getElementById('bufNum').innerHTML = dataHeap[i];
+                  
+                  //document.getElementById('bufNum').innerHTML = lVal + " " + rVal;
+                  
                }
                
-               //document.getElementById('bufNum').innerHTML = dataHeap[i];
+               /*
+               // Method 3 - direct float calc
+               GetSampleTwo(dataHeap.byteOffset, nDataBytes, dataHeap2.byteOffset, dataHeap3.byteOffset);
+               outBuf.copyToChannel(dataHeap2, 0);
+               outBuf.copyToChannel(dataHeap3, 1);
+               */
+               // Method 4 - lke 1 but no division
+               /*
+               GetSampleTwo(dataHeap.byteOffset, nDataBytes, dataHeap2.byteOffset, dataHeap3.byteOffset);
+               for (var i = 0, j = 0; i < dataHeap.length; i++)
+               {  
+                  
+                  //var n = dataHeap[i];
+                  
+                  if (i&1!=0)
+                     chLData[j] = dataHeap2[j];
+                  else
+                  {
+                     chRData[j] = dataHeap3[j];
+                     j++;
+                  }
+               }
+               */
                
-               //document.getElementById('bufNum').innerHTML = lVal + " " + rVal;
-               
+            };
+            scriptNode.connect(context.destination);
+            
+            
+            if (navigator.requestMIDIAccess)
+            {
+               console.log('Browser supports MIDI!');
             }
-            
-            /*
-            // Method 3 - direct float calc
-            GetSampleTwo(dataHeap.byteOffset, nDataBytes, dataHeap2.byteOffset, dataHeap3.byteOffset);
-            outBuf.copyToChannel(dataHeap2, 0,0);
-            outBuf.copyToChannel(dataHeap3, 1,1);
-            */
-            
-         };
-         scriptNode.connect(context.destination);
+          
+            if (navigator.requestMIDIAccess)
+            {
+               navigator.requestMIDIAccess()
+                    .then(success, failure);
+            }
+         }
+         
          
       </script>
       
    </head>
    <body>
       <div>
-         What now? <input type="button" onclick="testChord()" value="moo" />
+         What now?
+      </div>
+      <div>
+         <input type="button" onclick="testChord()" value="Test chord" />
+         <input type="button" onclick="Reset()" value="Reset" />
+         <input type="button" onclick="Initialize()" value="Init" />
+         <input type="button" onclick="testChord()" value="moo" />
       </div>
       <div>
          <span id="bufNum">nnn</span>

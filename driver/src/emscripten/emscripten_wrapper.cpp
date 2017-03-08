@@ -62,31 +62,38 @@ extern "C" {
    void GetSampleTwo(short *samplem, int len, float* fsamparrL, float* fsamparrR)
    {
       GetSample(samplem, len);
-      
-      for (int i = 0, j=0; j < len/2; i+=2, j++)
+      /*
+      for (int i = 0, j=0; i < len; i+=2, j++)
       {
          fsamparrL[j] = samplem[i] / 32768.f;
-         fsamparrL[j] = (fsamparrL[j]<-1)?-1:(fsamparrL[j]>1)?1:fsamparrL[j];
+         //fsamparrL[j] = (fsamparrL[j]<-1)?-1:(fsamparrL[j]>1)?1:fsamparrL[j];
       }
          
       
-      for (int i = 1, j=0; j < len/2; i+=2, j++)
+      for (int i = 1, j=0; i < len; i+=2, j++)
       {
          fsamparrR[j] = samplem[i] / 32768.f;
-         fsamparrR[j] = (fsamparrR[j]<-1)?-1:(fsamparrR[j]>1)?1:fsamparrR[j];
-      }
+         //fsamparrR[j] = (fsamparrR[j]<-1)?-1:(fsamparrR[j]>1)?1:fsamparrR[j];
          
+         //EM_ASM_({
+         //   var xxx = 0;
+         //   if ($2 % 1000 == 0)
+         //   document.getElementById('bufNum').innerHTML += $0 + ' => ' + $1 + '<br />';
+         //}, samplem[i], fsamparrR[j], j);
+         
+      }
+      */ 
       
-      /*
-      for (int i = 0; i < len; ++i)
+      
+      for (int i = 0, j = 0; i < len; )
       {
-         fsamparr[i] = (float)samplem[i] / 32768.f;
-         fsamparr[i] = (fsamparr[i] < -1) ? -1 : (fsamparr[i] > 1) ? 1 : fsamparr[i];
+         fsamparrL[j]   = samplem[i++] / 32768.f;
+         fsamparrR[j++] = samplem[i++] / 32768.f;
          //EM_ASM_({
          //   document.getElementById('bufNum').innerHTML = $0 + '<br />';
          //}, fsamparr[i]);
       }
-      */
+      
    }
    
    void PlaySysex(Bit8u *bufpos, DWORD len)

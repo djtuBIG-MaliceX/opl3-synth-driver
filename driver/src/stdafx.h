@@ -12,8 +12,6 @@
 #include <mmsystem.h>
 #include <mmreg.h>
 #include <process.h>
-#endif //WIN32
-
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -21,6 +19,7 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif  /* __cplusplus */
+#endif //WIN32
 
 #include <iostream>
 #include <cmath>

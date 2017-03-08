@@ -11,6 +11,18 @@ Git Repository: https://bitbucket.org/djtubig-malicex/opl3-synth-driver
 
 Changelog
 ---------
+[10-MAR-2017]
+ * Rebuild with VS2017 CE after long hibernation.
+ * Updated core to Nuked OPL3 version 1.7.4
+ * Crash bugs appear to have been fixed.
+ * Disabled experimental linear pitch envelope on 2x2patchtest.h.
+ * Disabled experimental CC74 support for now.
+ * Project solution cleaned up. Had to remove hardware build for the moment (just remove DISABLE_HW_SUPPORT from preprocessor define list to re-enable)
+ * 
+ opl3emu.ini
+ * [TODO] Switchable patch map on load.
+ * [TODO] Switchable hardware port
+ 
 [17-JAN-2014]
  * VGM Logging support (CC119=127 for ON, CC119=0 for OFF.  Saves to %TEMP%\opl3vgmlog.vgm for now)
  * Fixed intermittent 4-op -> 2x2op/2op voice stealing issues

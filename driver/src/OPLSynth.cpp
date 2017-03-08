@@ -10,10 +10,10 @@
 #include "OPLSynth.h"
 
 // TODO - Determine way to read configuration for existing bank file before playback
-//#include "patch.h"
+#include "patch.h"
 //#include "mauipatch.h"
 //#include "fmsynthpatch.h"
-#include "2x2patchtest.h"
+//#include "2x2patchtest.h"
 //#include "ctmidipatch.h"
 
 void
@@ -220,6 +220,7 @@ void
       
       case 74:  // "brightness"
          // TODO: read adjustment depending on algorithm (?)
+#ifdef USE_EXPERIMENTAL
          m_bBrightness[bChannel] = bVelocity;
          for (int i = 0; i < NUM2VOICES; ++i)
          {
@@ -235,7 +236,8 @@ void
                Opl3_ChipWrite( 0x40 + wOffset, bInst) ;
             }
          }
-         //Opl3_UpdateBrightness(bChannel, bVelocity);
+#endif // USE_EXPERIMENTAL
+         
          break;
 
       case 75:  // Decay
@@ -337,7 +339,7 @@ void
    for (i = 0; i < NUM2VOICES; i++)
    {
       if (m_Voice[i].bSusHeld)
-         Opl3_CutVoice(i, FALSE);
+         Opl3_CutVoice(i, false);
       else
          Opl3_NoteOff(m_Voice[i].bPatch, m_Voice[i].bNote, m_Voice[i].bChannel, 0);
   } 
@@ -428,14 +430,14 @@ void
             }
             else
             {
-               Opl3_CutVoice((BYTE)wTemp, FALSE);
+               Opl3_CutVoice((BYTE)wTemp, false);
 
                /*if (wTemp2 != (WORD)~0 && (lpPS->note.bAtC0[1] & 0x1))
-                  Opl3_CutVoice((BYTE)wTemp2, FALSE);
+                  Opl3_CutVoice((BYTE)wTemp2, false);
                else*/
                {
-                  m_Voice[wTemp2].bOn = FALSE;
-                  m_Voice[wTemp2].bSusHeld = FALSE;
+                  m_Voice[wTemp2].bOn = false;
+                  m_Voice[wTemp2].bSusHeld = false;
                   m_Voice[wTemp2].dwTime = m_dwCurTime;
                }
             }
@@ -456,11 +458,11 @@ void
             }
             else
             {
-               Opl3_CutVoice((BYTE)wTemp, FALSE);
+               Opl3_CutVoice((BYTE)wTemp, false);
 
                if (wTemp2 != (WORD)~0)
                {
-                  Opl3_CutVoice((BYTE)wTemp2, FALSE);
+                  Opl3_CutVoice((BYTE)wTemp2, false);
                   break;
                }
             }
@@ -478,7 +480,7 @@ void
                   Opl3_NoteOn(bPatch, prevNote, bChannel, m_Voice[wTemp].bVelocity, m_iBend[bChannel]);
             }
             else
-               Opl3_CutVoice((BYTE)wTemp, FALSE);
+               Opl3_CutVoice((BYTE)wTemp, false);
             break;
       }
 
@@ -864,7 +866,7 @@ void
       //{
       //   if (m_Voice[wTemp].bOn || m_Voice[wTemp].bSusHeld)
       //   {
-      //      Opl3_CutVoice(wTemp, TRUE);
+      //      Opl3_CutVoice(wTemp, true);
       //   }
       //}
       // TODO: configuration flag for locking to 1:1 channel mapping.
@@ -916,7 +918,7 @@ void
    m_Voice[ wTemp ].bChannel = bChannel ;
    m_Voice[ wTemp ].bPatch = bPatch ;
    m_Voice[ wTemp ].bVelocity = bVelocity ;
-   m_Voice[ wTemp ].bOn = TRUE ;
+   m_Voice[ wTemp ].bOn = true ;
    //m_Voice[ wTemp ].dwOrigPitch[0] = dwPitch[ 0 ] ;  // not including bend
    //m_Voice[ wTemp ].dwOrigPitch[1] = dwPitch[ 1 ] ;  // not including bend
    m_Voice[ wTemp ].bBlock[0] = NS.bAtB0[ 0 ] ;
@@ -952,7 +954,7 @@ void
             //   {
             //      if (m_Voice[wTemp2].bOn || m_Voice[wTemp2].bSusHeld)
             //      {
-            //         Opl3_CutVoice(wTemp2, TRUE);
+            //         Opl3_CutVoice(wTemp2, true);
             //      }
             //   }
             //}
@@ -999,7 +1001,7 @@ void
                ~0;
                wTemp2 = (wTemp2 != (WORD)~0) ? wTemp2 : Opl3_FindEmptySlot( bPatch, bChannel );
                
-               Opl3_Set4OpFlag((BYTE)wTemp, FALSE);
+               Opl3_Set4OpFlag((BYTE)wTemp, false);
                break;
             }*/
       }
@@ -1019,7 +1021,7 @@ void
       m_Voice[ wTemp2 ].bChannel = bChannel ;
       m_Voice[ wTemp2 ].bPatch = bPatch ;
       m_Voice[ wTemp2 ].bVelocity = bVelocity ;
-      m_Voice[ wTemp2 ].bOn = TRUE ;
+      m_Voice[ wTemp2 ].bOn = true ;
       //m_Voice[ wTemp2 ].dwOrigPitch[0] = dwPitch[ 0 ] ;  // not including bend
       //m_Voice[ wTemp2 ].dwOrigPitch[1] = dwPitch[ 1 ] ;  // not including bend
       m_Voice[ wTemp2 ].bBlock[0] = NS.bAtB0[ 0 ] ;
@@ -1073,16 +1075,16 @@ void
       {
          // Unset voice if not 4op
          /*if (bOp != PATCH_1_4OP && (cur4OpVoiceSet & (1<<i)) > 0)
-            Opl3_CutVoice(gb4OpVoices[i], TRUE);*/
+            Opl3_CutVoice(gb4OpVoices[i], true);*/
 
          // Unset relevant voices if 4op
          /*else if (bOp == PATCH_1_4OP && (cur4OpVoiceSet & (i<<1)) > 0)
          {
             //if (m_Voice[bVoice].bOn)
-            Opl3_CutVoice(gb4OpVoices[i], TRUE);
+            Opl3_CutVoice(gb4OpVoices[i], true);
 
             //if (m_Voice[bVoice+3].bOn)
-            Opl3_CutVoice(gb4OpVoices[i]+3, TRUE);
+            Opl3_CutVoice(gb4OpVoices[i]+3, true);
          }*/
 
          // Update local register
@@ -1102,7 +1104,7 @@ void
       {
          // Cut base voice to be safe (?)
          if (bOp != PATCH_1_4OP && (cur4OpVoiceSet & (1<<i)) > 0)
-            Opl3_CutVoice(gb4OpVoices[i], TRUE);
+            Opl3_CutVoice(gb4OpVoices[i], true);
 
          // Update local register
          b4OpVoiceSet &= ~(1<<i);
@@ -1374,10 +1376,10 @@ BYTE
       bVolume = (BYTE)(bOper <= 2);
       break;
    case 7:
-      bVolume = TRUE;
+      bVolume = true;
       break;
    default:
-      bVolume = FALSE;
+      bVolume = false;
       break;
    };
    if (!bVolume)
@@ -1408,7 +1410,7 @@ void
       if ((m_Voice[ i ].bOn) && (m_Voice[ i ].bChannel == bChannel))
       {
          //Opl3_NoteOff(m_Voice[i].bPatch, m_Voice[i].bNote,m_Voice[i].bChannel, 0) ;
-         Opl3_CutVoice(i, TRUE);
+         Opl3_CutVoice(i, true);
       }
    }
 }
@@ -1482,7 +1484,7 @@ void
                continue;
 
             // Copy to buffer
-            RtlCopyMemory( (LPSTR) &opSt, (LPSTR) &(lpPS->op[j]), sizeof( operStruct ) ) ;
+            memcpy( &opSt, &(lpPS->op[j]), sizeof( operStruct ) ) ;
 
             wTemp = (BYTE) Opl3_CalcVolume(
                //(BYTE) (lpPS -> op[j].bAt40 & (BYTE) 0x3f),
@@ -1919,7 +1921,7 @@ void
             // this is not guaranteed to cut repeated sustained notes
             //Opl3_NoteOff(m_Voice[i].bPatch, m_Voice[i].bNote, m_Voice[i].bChannel, 0);
 
-            Opl3_CutVoice(i, FALSE);
+            Opl3_CutVoice(i, false);
          }
       }
    }
@@ -2073,11 +2075,11 @@ void
       (BYTE)(m_Voice[ bVoice ].bBlock[ 0 ] & 0x1f) ) ;
 
    // Note this...
-   m_Voice[ bVoice ].bOn = FALSE ;
+   m_Voice[ bVoice ].bOn = false ;
    m_Voice[ bVoice ].bBlock[ 0 ] &= 0x1f ;
    m_Voice[ bVoice ].bBlock[ 1 ] &= 0x1f ;
    m_Voice[ bVoice ].dwTime = ++m_dwCurTime ;
-   m_Voice[ bVoice ].bSusHeld = FALSE ;
+   m_Voice[ bVoice ].bSusHeld = false ;
 }
 
 bool
@@ -2201,7 +2203,7 @@ void
       wOffset += (0x100 - (NUM2VOICES / 2));
 
    // Depends if voice is enabled or not
-   if (m_Voice[bVoice].bOn == FALSE)
+   if (m_Voice[bVoice].bOn == false)
       wTemp &= ~(1<<5);
 
    Opl3_ChipWrite(AD_BLOCK + wOffset, m_Voice[ bVoice ].bBlock[ 0 ] ) ;
@@ -2555,7 +2557,7 @@ void
 {
    for (int i = 0; i < NUM2VOICES; ++i)
    {
-      Opl3_CutVoice(i, TRUE);
+      Opl3_CutVoice(i, true);
       //m_Voice[i].bPatch = 0;
       //m_Voice[i].dwTime = 0;
       memset(&m_Voice[i], 0, sizeof(voiceStruct));
@@ -2629,10 +2631,10 @@ void
 {
    // Reset board
    Opl3_BoardReset();
-
+#ifndef DISABLE_VGM_LOGGING
    if (bIsLogging)
       VGMLog_Close();
-
+#endif //DISABLE_VGM_LOGGING
 #ifndef DISABLE_HW_SUPPORT
    OPL_HW_Close();
 #endif /*DISABLE_HW_SUPPORT*/
@@ -2733,14 +2735,14 @@ void
 
    g_hSharedMutex = CreateMutex(
       NULL,
-      FALSE,
+      false,
       g_szSharedMutexName);
    
    if (g_hSharedMutex == NULL)
    {
       g_hSharedMutex = OpenMutex(
          SYNCHRONIZE,
-         FALSE,
+         false,
          g_szSharedMutexName);
 
       //if (g_hSharedMutex == NULL)
