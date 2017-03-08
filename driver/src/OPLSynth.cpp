@@ -2096,6 +2096,7 @@ bool
    this->m_VolStepDelta = 0x0000C000;    //  steps of 0.75 (dB) * 0x10000
 
    this->m_bMasterCoarseTune = 0;
+
    this->m_dwMasterTune = 0;
 
    this->m_MIDIMode = MIDIMODE_XG;
