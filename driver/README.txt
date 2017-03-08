@@ -2,7 +2,7 @@ OPL3 software synthesizer WinMM driver
 ======================================
 
 Original code (C) 2011-2013 Alex Khokolov
-Additions (C) 2013 dj.tuBIG/MaliceX (http://www.codingchords.com)
+Additions (C) 2013-2017 dj.tuBIG/MaliceX (http://www.codingchords.com)
 Distributed under LGPL
 
 

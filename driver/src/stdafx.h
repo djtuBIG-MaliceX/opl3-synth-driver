@@ -4,13 +4,15 @@
 
 #pragma pack(1)
 
-#include "targetver.h"
-
+#ifdef WIN32
 #define WIN32_LEAN_AND_MEAN   // Exclude rarely-used stuff from Windows headers
 // Windows Header Files:
 #include <windows.h>
 #include <tchar.h>
 #include <mmsystem.h>
+#include <mmreg.h>
+#include <process.h>
+#endif //WIN32
 
 #ifdef __cplusplus
 extern "C" {
@@ -20,8 +22,6 @@ extern "C" {
 }
 #endif  /* __cplusplus */
 
-#include <mmreg.h>
-#include <process.h>
 #include <iostream>
 #include <cmath>
 #include <vector>
@@ -35,9 +35,6 @@ extern "C" {
 #include "MidiSynth.h"
 
 #ifdef _DEBUG
-//#define _CRTDBG_MAP_ALLOC
-//#include <crtdbg.h>
-//#include <vld.h>
 #endif
 
 #endif /*STDAFX_H*/

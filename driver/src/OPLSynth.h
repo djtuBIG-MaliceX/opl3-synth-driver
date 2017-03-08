@@ -6,10 +6,14 @@
 #include "stdafx.h"
 #ifndef OPL3SYNTH_H
 #define OPL3SYNTH_H
-//#include "opl.h"
+
 #include "opl3.h"
+#ifndef DISABLE_HW_SUPPORT
 #include "opl_hw.h"
+#endif //DISABLE_HW_SUPPORT
+#ifndef DISABLE_VGM_LOGGING
 #include "vgm_logging.h"
+#endif //DISABLE_VGM_LOGGING
 
 //#pragma pack(1)
 
@@ -19,20 +23,14 @@ typedef unsigned long	DWORD, ULONG;
 typedef signed long		LONG;
 
 #define NUMPATCHES      (256)
-#define DRUMCHANNEL     (9)     /* midi channel 10 */
-
-
-#define BCODE
-#define fEnabled TRUE
-
-
+#define DRUMCHANNEL     (9)     //midi channel 10
 
 #define AsULMUL(a, b) ((DWORD)((DWORD)(a) * (DWORD)(b)))
 #define AsLSHL(a, b) ((DWORD)((DWORD)(a) << (DWORD)(b)))
 #define AsULSHR(a, b) ((DWORD)((DWORD)(a) >> (DWORD)(b)))
-#define lin_intp(x, xmin, xmax, ymin, ymax) (ymin+((double)((ymax)-(ymin))*((double)((x)-(xmin))/(double)((xmax)-(xmin)))))
 
-#define AsMemCopy CopyMemory
+// Linear interpolation macro equation
+#define lin_intp(x, xmin, xmax, ymin, ymax) (ymin+((double)((ymax)-(ymin))*((double)((x)-(xmin))/(double)((xmax)-(xmin)))))
 
 // indexed FM registers
 
@@ -173,7 +171,7 @@ typedef struct _voiceStruct
 
 
 /* operator offset location */
-static WORD BCODE gw2OpOffset[ NUM2VOICES ][ 2 ] =
+static WORD gw2OpOffset[ NUM2VOICES ][ 2 ] =
 {
    { 0x000,0x003 },
    { 0x001,0x004 },
@@ -240,7 +238,7 @@ static BYTE offsetSlot[] =
 };
 
 /* pitch values, from middle c, to octave above it */
-static DWORD BCODE gdwPitch[12] =
+static DWORD gdwPitch[12] =
 {
    PITCH(C), PITCH(CSHARP), PITCH(D), PITCH(DSHARP),
    PITCH(E), PITCH(F), PITCH(FSHARP), PITCH(G),
