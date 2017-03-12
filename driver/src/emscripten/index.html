@@ -68,8 +68,8 @@
             
             // webaudio api buffer
             var channels = 2;
-            var frameCount = 4096; // lol higher buffer = instant swing quantize lel
-            var scriptNode = context.createScriptProcessor(frameCount/2, 1, channels);
+            var frameCount = 2048; // lol higher buffer = instant swing quantize lel
+            var scriptNode = context.createScriptProcessor();//(frameCount/2, 1, channels);
             
             // emscripten malloc
             //var dataBuf = new Int16Array(frameCount);
