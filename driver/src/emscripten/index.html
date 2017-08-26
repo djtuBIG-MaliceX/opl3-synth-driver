@@ -10,7 +10,7 @@
          var GetSample = Module.cwrap('GetSample', null, ['number', 'number']);
          var GetSampleTwo = Module.cwrap('GetSampleTwo', null, ['number', 'number', 'number', 'number']);
          var Reset = Module.cwrap('Reset', null, []);
-         var Initialize = Module.cwrap('Initialize', null, []);
+         var Initialize = Module.cwrap('Initialize', null, ['number']);
          
          function testChord()
          {
@@ -64,7 +64,7 @@
             
             // start opl3 synth
             //ccall('Initialize');
-            Initialize();
+            Initialize(context.sampleRate);
             
             // webaudio api buffer
             var channels = 2;
@@ -90,10 +90,9 @@
                // shit hack - sample everyting sequentially
                // TODO doesn't quite work
                //var ptrStart = dataHeap.byteOffset;
-               //var incr = 256;
-               //for (var offs = 0; offs < dataHeap; offs+=(incr))
-               //   GetSample((ptrStart+offs), incr);
-               //GetSample(ptrStart, incr);
+               //var incr = 512;
+               //for (var offs = ptrStart; offs < ptrStart+frameCount; offs+=incr)
+               //   GetSample(offs, incr);
                
                // per frameSize chunk
                GetSample(dataHeap.byteOffset, frameCount);
