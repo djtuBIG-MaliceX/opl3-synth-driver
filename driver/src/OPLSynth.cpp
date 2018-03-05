@@ -408,7 +408,9 @@ void
             wTemp2 = (lpPS->bOp == PATCH_2_2OP) ?
                Opl3_FindSecondVoice((BYTE)wTemp, m_Voice[wTemp].bVoiceID) :
                wTemp + 3;
-            if (wTemp2 != (WORD)~0) 
+            wTemp2 = (wTemp2 < NUM2VOICES) ? wTemp2 : ~(WORD)0;
+
+            if (wTemp2 != (WORD)~0)
                m_Voice[wTemp2].bSusHeld = 1;
          }
          return;
@@ -419,6 +421,7 @@ void
       {
          case PATCH_1_4OP: // note cut on second voice is not necessary but need to be verified.
             wTemp2 = (wTemp+3);
+            wTemp2 = (wTemp2 < NUM2VOICES) ? wTemp2 : ~(WORD)0;
 
             if ((m_wMonoMode & (1<<bChannel)) > 0 &&
                 m_noteHistory[bChannel].size() > 0)
@@ -432,13 +435,16 @@ void
             {
                Opl3_CutVoice((BYTE)wTemp, false);
 
-               /*if (wTemp2 != (WORD)~0 && (lpPS->note.bAtC0[1] & 0x1))
-                  Opl3_CutVoice((BYTE)wTemp2, false);
-               else*/
+               if (wTemp2 != (WORD)~0)
                {
-                  m_Voice[wTemp2].bOn = false;
-                  m_Voice[wTemp2].bSusHeld = false;
-                  m_Voice[wTemp2].dwTime = m_dwCurTime;
+                  /*if ((lpPS->note.bAtC0[1] & 0x1))
+                     Opl3_CutVoice((BYTE)wTemp2, false);
+                  else*/
+                  {
+                     m_Voice[wTemp2].bOn = false;
+                     m_Voice[wTemp2].bSusHeld = false;
+                     m_Voice[wTemp2].dwTime = m_dwCurTime;
+                  }
                }
             }
             break;
@@ -2175,11 +2181,13 @@ void
       newLFOVal = (long)floor(0.5 + (m_bModWheel[m_Voice[bVoice].bChannel]*32)*sin(timeLapse));
 
    // Linear envelope generator hack  (TODO: improve)
-   wTemp = gbPercMap[m_Voice[bVoice].bPatch-128][2] & 0xFF;
-   if ((m_wDrumMode & (1<<m_Voice[bVoice].bChannel)) > 0 && wTemp > 0
-      && (m_Voice[bVoice].bOn || m_Voice[bVoice].bSusHeld))   // only continue it if the note is held
-   {
-      newDetuneEG = (long)((signed char)wTemp * 0.25 * (timeDiff));
+   if ((m_wDrumMode & (1<<m_Voice[bVoice].bChannel)) > 0 &&
+       (m_Voice[bVoice].bOn || m_Voice[bVoice].bSusHeld)) {   // only continue it if the note is held
+       wTemp = gbPercMap[m_Voice[bVoice].bPatch-128][2] & 0xFF;
+       if (wTemp > 0)
+       {
+           newDetuneEG = (long)((signed char)wTemp * 0.25 * (timeDiff));
+       }
    }
 
    if (newLFOVal == m_Voice[bVoice].dwLFOVal && newDetuneEG == m_Voice[bVoice].dwDetuneEG 
