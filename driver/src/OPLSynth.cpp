@@ -317,10 +317,13 @@ void
       break;
 
    case 0xe0:  // pitch bend
+   {
+      LONG iBend;
       dwTemp = ((WORD)bNote << 0) | ((WORD)bVelocity << 7);
-		dwTemp -= 0x2000;
-      Opl3_PitchBend(bChannel, (long)dwTemp);
+      iBend = (LONG)dwTemp - 0x2000;
+      Opl3_PitchBend(bChannel, iBend);
       break;
+   }
    };
    return;
 }
