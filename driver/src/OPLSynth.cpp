@@ -1211,8 +1211,8 @@ void
    OPLSynth::
    Opl3_ProcessDataEntry(BYTE bChannel)
 {
-   WORD rpn  = (WORD)(m_RPN[bChannel][0])|(m_RPN[bChannel][1] << 8) & (WORD)(0x7F7F),
-        nrpn = (WORD)(m_NRPN[bChannel][0])|(m_NRPN[bChannel][1] << 8) & (WORD)(0x7F7F);
+   WORD rpn  = ((WORD)(m_RPN[bChannel][0])|(m_RPN[bChannel][1] << 8)) & (WORD)(0x7F7F),
+        nrpn = ((WORD)(m_NRPN[bChannel][0])|(m_NRPN[bChannel][1] << 8)) & (WORD)(0x7F7F);
    //DWORD dwTemp;
    BYTE val = m_bDataEnt[bChannel][1];  // TODO repurpose?
 
