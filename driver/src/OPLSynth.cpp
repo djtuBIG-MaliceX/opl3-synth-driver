@@ -2620,6 +2620,10 @@ void
             patchlen = sizeof(patchStruct);
          MemCopy2x4To8((BYTE *)&patch, bufpos, patchlen);
 
+         // Check validity
+         if (patch.bOp > PATCH_1_2OP)
+             break;
+
          // Set the patch
          glpPatch[insno] = patch;
       }
