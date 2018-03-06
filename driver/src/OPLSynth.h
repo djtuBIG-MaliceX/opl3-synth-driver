@@ -73,6 +73,8 @@ logarithmic attenuation */
 #define NUMOPS       4
 #define NUMMIDICHN   16
 
+#pragma pack(push)
+#pragma pack(1)
 typedef struct _operStruct 
 {
    BYTE    bAt20;              /* flags which are send to 0x20 on fm */
@@ -95,6 +97,7 @@ typedef struct _patchStruct
    //BYTE    bDummy;             /* place holder */
    BYTE    bRhythmMap;         /* see RHY_CH_??? */
 } patchStruct;
+#pragma pack(pop)
 
 
 typedef struct _patchMapStruct
@@ -222,6 +225,8 @@ static BYTE gbRhyOpMask[] =
 #define MIDIMODE_GS  (0x03)
 #define MIDIMODE_XG  (0x04)
 
+static const BYTE gbMaliceXIdentifier[8] =
+   {'M','a','l','i','c','e','X',' '};
 
 static BYTE gbVelocityAtten[64] = 
 {
@@ -311,6 +316,9 @@ private:
    BYTE    m_MIDIMode;                 /*System Exclusive MIDI command mode (TODO: dynamically set defaults)*/
    BYTE    m_bSysexDeviceId;           /*Device ID*/
 
+    /* bank defaults*/
+   patchStruct glpPatch[256];
+
    void Opl3_ChannelVolume(BYTE bChannel, WORD wAtten);
    void Opl3_SetPan(BYTE bChannel, BYTE bPan);
    void Opl3_PitchBend(BYTE bChannel, long iBend);
@@ -341,6 +349,7 @@ private:
    void Opl3_LFOUpdate(BYTE bVoice);
    void ProcessGSSysEx(Bit8u *bufpos, DWORD len);
    void ProcessXGSysEx(Bit8u *bufpos, DWORD len);
+   void ProcessMaliceXSysEx(const Bit8u *bufpos, DWORD len);
    patchStruct& Opl3_GetPatch(BYTE bBankMSB, BYTE bBankLSB, BYTE bPatch);
 
 
