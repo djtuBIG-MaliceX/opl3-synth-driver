@@ -73,8 +73,6 @@ logarithmic attenuation */
 #define NUMOPS       4
 #define NUMMIDICHN   16
 
-#pragma pack(push)
-#pragma pack(1)
 typedef struct _operStruct 
 {
    BYTE    bAt20;              /* flags which are send to 0x20 on fm */
@@ -97,7 +95,6 @@ typedef struct _patchStruct
    //BYTE    bDummy;             /* place holder */
    BYTE    bRhythmMap;         /* see RHY_CH_??? */
 } patchStruct;
-#pragma pack(pop)
 
 
 typedef struct _patchMapStruct
