@@ -17,7 +17,7 @@ std::vector<BYTE> BankToSyx(const patchStruct pats[], unsigned n)
     for (unsigned insno = 0; insno < n; ++insno) {
         v.push_back(0xf0);
         v.push_back(0x7d);
-        v.push_back(0x00);  // device id
+        v.push_back(0x10);  // device id
         v.push_back(0x00);  // placeholder for model id
         v.push_back(0x02);  // send
 

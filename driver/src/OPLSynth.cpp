@@ -2102,7 +2102,7 @@ bool
    this->m_dwMasterTune = 0;
 
    this->m_MIDIMode = MIDIMODE_XG;
-   this->m_bSysexDeviceId = 0;
+   this->m_bSysexDeviceId = 0x10;
 
    memcpy(this->glpPatch, glpDefaultPatch, 256 * sizeof(patchStruct));
 
