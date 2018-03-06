@@ -309,6 +309,7 @@ private:
 
    BYTE    b4OpVoiceSet;               /*Bitvector to indicate bits 0-6 as channel flags for 4-op voice mode.*/
    BYTE    m_MIDIMode;                 /*System Exclusive MIDI command mode (TODO: dynamically set defaults)*/
+   BYTE    m_bSysexDeviceId;           /*Device ID*/
 
    void Opl3_ChannelVolume(BYTE bChannel, WORD wAtten);
    void Opl3_SetPan(BYTE bChannel, BYTE bPan);

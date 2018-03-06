@@ -2102,6 +2102,7 @@ bool
    this->m_dwMasterTune = 0;
 
    this->m_MIDIMode = MIDIMODE_XG;
+   this->m_bSysexDeviceId = 0;
 
    if (this->m_noteHistory == nullptr)
 	   this->m_noteHistory = new std::vector<BYTE>[NUMMIDICHN];
@@ -2293,8 +2294,11 @@ void
    //XG               F0 43 10 4C 00 00 7E 00 F7 
 
    // Ignore Sysex Continued or non-standard sysex events
-   if (bufpos[0] != 0xF0 || bufpos[len-1] != 0xF7)
+   if (len < 4 || bufpos[0] != 0xF0 || bufpos[len-1] != 0xF7)
       return;
+   // Check the message is for our device ID
+   if (bufpos[2] != m_bSysexDeviceId)
+       return;
 
    // Check reset
    if (len == 6  && (memcmp(&resetArray[0][4], bufpos, len-4)==0 || memcmp(&resetArray[1][4], bufpos, len-4)==0) ||
