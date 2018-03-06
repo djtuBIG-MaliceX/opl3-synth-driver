@@ -222,6 +222,8 @@ static BYTE gbRhyOpMask[] =
 #define MIDIMODE_GS  (0x03)
 #define MIDIMODE_XG  (0x04)
 
+static const BYTE gbMaliceXIdentifier[8] =
+   {'M','a','l','i','c','e','X',' '};
 
 static BYTE gbVelocityAtten[64] = 
 {
@@ -309,6 +311,10 @@ private:
 
    BYTE    b4OpVoiceSet;               /*Bitvector to indicate bits 0-6 as channel flags for 4-op voice mode.*/
    BYTE    m_MIDIMode;                 /*System Exclusive MIDI command mode (TODO: dynamically set defaults)*/
+   BYTE    m_bSysexDeviceId;           /*Device ID*/
+
+    /* bank defaults*/
+   patchStruct glpPatch[256];
 
    void Opl3_ChannelVolume(BYTE bChannel, WORD wAtten);
    void Opl3_SetPan(BYTE bChannel, BYTE bPan);
@@ -340,6 +346,7 @@ private:
    void Opl3_LFOUpdate(BYTE bVoice);
    void ProcessGSSysEx(Bit8u *bufpos, DWORD len);
    void ProcessXGSysEx(Bit8u *bufpos, DWORD len);
+   void ProcessMaliceXSysEx(const Bit8u *bufpos, DWORD len);
    patchStruct& Opl3_GetPatch(BYTE bBankMSB, BYTE bBankLSB, BYTE bPatch);
 
 

@@ -2105,6 +2105,9 @@ bool
    this->m_dwMasterTune = 0;
 
    this->m_MIDIMode = MIDIMODE_XG;
+   this->m_bSysexDeviceId = 0x10;
+
+   memcpy(this->glpPatch, glpDefaultPatch, 256 * sizeof(patchStruct));
 
    if (this->m_noteHistory == nullptr)
 	   this->m_noteHistory = new std::vector<BYTE>[NUMMIDICHN];
@@ -2296,7 +2299,7 @@ void
    //XG               F0 43 10 4C 00 00 7E 00 F7 
 
    // Ignore Sysex Continued or non-standard sysex events
-   if (bufpos[0] != 0xF0 || bufpos[len-1] != 0xF7)
+   if (len < 4 || bufpos[0] != 0xF0 || bufpos[len-1] != 0xF7)
       return;
 
    // Check reset
@@ -2372,6 +2375,9 @@ void
             ProcessXGSysEx(bufpos, len);
             break;
 
+         case 0x7D:  // Non commercial
+            ProcessMaliceXSysEx(bufpos, len);
+            break;
       }
    }
 }
@@ -2552,6 +2558,80 @@ void
 
       // Drum Note Pitch File (not supported)
       //F0 43 1n 4C 3n rr 01 xx F7 (default=40, from 00 to 7F)
+   }
+}
+
+static void
+   MemCopy2x4To8(BYTE *dst, const BYTE *src, DWORD dstlen)
+{
+   // Combine consecutive nibble pairs into bytes
+   //(to decode sysex payload which can only use 7 bits of each byte)
+   for (DWORD i = 0; i < dstlen; ++i)
+   {
+      DWORD lsn = src[2*i+0] & 0xf;
+      DWORD msn = src[2*i+1] & 0xf;
+      dst[i] = (msn << 4) | lsn;
+   }
+}
+
+void
+   OPLSynth::
+   ProcessMaliceXSysEx(const Bit8u *bufpos, DWORD len)
+{
+   // Check the message is for our device ID
+   if (bufpos[2] != m_bSysexDeviceId)
+       return;
+
+   switch ((len >= 7) ? bufpos[4] : 0xff)
+   {
+   case 0x01:
+      // Request
+      //F0 7D [device-id] 00 01 [data...] [checksum] F7
+      bufpos += 5; len -= 7;
+
+      if (len < 8 || memcmp(bufpos, gbMaliceXIdentifier, 8))
+         break;
+      bufpos += 8; len -= 8;
+
+      // TODO maybe handle at some point
+      (void)bufpos; (void)len;
+      break;
+   case 0x02:
+      // Send
+      //F0 7D [device-id] 00 02 [data...] [checksum] F7
+      bufpos += 5; len -= 7;
+
+      if (len < 8 || memcmp(bufpos, gbMaliceXIdentifier, 8))
+          break;
+      bufpos += 8; len -= 8;
+
+      if (len >= 8 && !memcmp(bufpos, "OP3PATCH", 8)) {
+         bufpos += 8; len -= 8;
+
+         if (len < 4)
+             break;
+         BYTE insno;
+         BYTE patchlen;
+         MemCopy2x4To8(&insno, bufpos, 1);
+         bufpos += 2;
+         MemCopy2x4To8(&patchlen, bufpos, 1);
+         bufpos += 2;
+
+         if (patchlen < 28 || len/2 < patchlen)
+             break;
+         patchStruct patch = {};
+         if (patchlen > sizeof(patchStruct))
+            patchlen = sizeof(patchStruct);
+         MemCopy2x4To8((BYTE *)&patch, bufpos, patchlen);
+
+         // Check validity
+         if (patch.bOp > PATCH_1_2OP)
+             break;
+
+         // Set the patch
+         glpPatch[insno] = patch;
+      }
+      break;
    }
 }
 
