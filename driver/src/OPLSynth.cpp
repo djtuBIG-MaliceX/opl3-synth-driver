@@ -2385,9 +2385,9 @@ void
    OPLSynth::
    ProcessXGSysEx(Bit8u *bufpos, DWORD len)
 {
-   if (bufpos[4] == 0x00 || bufpos[4] == 0x30)
+   if (len >= 5 && (bufpos[4] == 0x00 || bufpos[4] == 0x30))
    {
-      switch(bufpos[6])
+      switch((len >= 7) ? bufpos[6] : 0xff)
       {
          case 0x00:
             // Master Tuning  (aaH = 1000H + bbH x 0100H + ccH * 0010H + ddH * 0001H)-0400H (in 0.1 cent units)
@@ -2408,13 +2408,15 @@ void
          // Master Transpose (melodic notes only, non-realtime)
          //F0 43 1n 4c 00 00 06 xx F7 (40=default)
          case 0x06:
+            if (len < 8)
+               break;
             m_bMasterCoarseTune = bufpos[7] - 0x40;
             // do not update?
             break;
 
          // Master Volume
          //F0 43 1n 4C 00 00 04 xx F7 (default=7F, from 00 to 7F)
-         case 0x04:   
+         case 0x04:
             break;
 
          // Master Attenuator
@@ -2422,12 +2424,12 @@ void
          case 0x05:
             break;
 
-         
+
       }
    }
 
    // Multipart data, nn=channel (00 to 0F)
-   else if (bufpos[4] == 0x08)
+   else if (len >= 8 && (bufpos[4] == 0x08))
    {
       BYTE bChannel = bufpos[5] & 0xF,
            bVal     = bufpos[7] & 0x7F;
@@ -2445,7 +2447,7 @@ void
          case 0x02:
             Opl3_UpdateBankSelect(0, bChannel, bVal);
             break;
-            
+
          // Program Change
          //F0 43 1n 4C 08 nn 03 xx F7
          case 0x03:
@@ -2548,7 +2550,6 @@ void
       // Drum Note Pitch File (not supported)
       //F0 43 1n 4C 3n rr 01 xx F7 (default=40, from 00 to 7F)
    }
-
 }
 
 void
