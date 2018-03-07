@@ -108,6 +108,13 @@ typedef struct _patchMapStruct
    BYTE bReservedPadding[8];
 } patchMapStruct;
 
+typedef struct _percMapStruct
+{
+   BYTE bPreset;
+   BYTE bBaseNote;
+   BYTE bPitchEGAmt;
+} percMapStruct;
+
 //typedef struct _patchStruct
 //{
 //   noteStruct note;            /* note. This is all in the structure at the moment */
@@ -315,6 +322,8 @@ private:
 
     /* bank defaults*/
    patchStruct glpPatch[256];
+   patchMapStruct gbMelMap[128];
+   percMapStruct gbPercMap[128];
 
    void Opl3_ChannelVolume(BYTE bChannel, WORD wAtten);
    void Opl3_SetPan(BYTE bChannel, BYTE bPan);
