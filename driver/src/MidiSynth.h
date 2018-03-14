@@ -30,14 +30,15 @@ namespace OPL3Emu {
       bool useRingBuffer;
       bool resetEnabled;
       float outputGain;
+      /*
       float reverbOutputGain;
       bool reverbEnabled;
       bool reverbOverridden;
       Bit8u reverbMode;
       Bit8u reverbTime;
       Bit8u reverbLevel;
-
-      Bit16s *buffer;
+      */
+      int16_t *buffer;
       DWORD framesRendered;
 
       OPLSynth *synth;
@@ -54,9 +55,9 @@ namespace OPL3Emu {
       void Close();
       int Reset();
       void RenderAvailableSpace();
-      void Render(Bit16s *bufpos, DWORD totalFrames);
+      void Render(int16_t *bufpos, DWORD totalFrames);
       void PushMIDI(DWORD msg);
-      void PlaySysex(Bit8u *bufpos, DWORD len);
+      void PlaySysex(uint8_t *bufpos, DWORD len);
    };
 
 }

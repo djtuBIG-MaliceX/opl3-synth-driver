@@ -1826,71 +1826,6 @@ WORD
       return ( foundOldestCurCh ) ;
 
    return foundOldestOn;
-   
-   
-   
-   /*
-   // First, look for a slot with a time == 0
-   for (i = 0;  i < NUM4VOICES; i++)
-      if (!m_Voice[ gb4OpVoices[ i ] ].dwTime)
-         return ( gb4OpVoices[ i ] ) ;
-
-   // Now, look for a slot of the oldest off-note
-   dwOldest = 0xffffffff ;
-   found = 0xffff ;
-
-   for (i = 0; i < NUM4VOICES; i++)
-      if ((!m_Voice[ gb4OpVoices[ i ] ].bOn)
-       && (m_Voice[ gb4OpVoices[ i ] ].dwTime < dwOldest))
-      {
-         dwOldest = m_Voice[ gb4OpVoices[ i ] ].dwTime ;
-         found = gb4OpVoices[ i ] ;
-      }
-
-   if (found != 0xffff)
-      return ( found ) ;
-
-   // Custom:  Search for oldest note on same channel, but only allocate if there 
-   //          are more than 2 notes currently held on same channel
-   found = 0;
-   dwOldest = 0xFFFF;
-   for (i = 0; i < NUM4VOICES; ++i)
-      if (m_Voice[ gb4OpVoices[ i ] ].dwTime < dwOldest && m_Voice[ gb4OpVoices[ i ] ].bChannel == bChannel)
-      {
-         dwOldest = m_Voice[ gb4OpVoices[ i ] ].dwTime;
-         found = gb4OpVoices[ i ] ;
-         if (m_Voice[ gb4OpVoices[ i ] ].bOn && !m_Voice[ gb4OpVoices [ i ] ].bSusHeld) ++bChnVoiceCnt;
-      }
-
-   if (found != 0xFFFF && bChnVoiceCnt > 2)
-      return ( found );
-
-
-   //// Now, look for a slot of the oldest note with
-   //// the same patch
-   //dwOldest = 0xffffffff ;
-   //found = 0xffff ;
-   //for (i = 0; i < NUM4VOICES; i++)
-   //   if ((m_Voice[ gb4OpVoices[ i ] ].bPatch == bPatch) && (m_Voice[ gb4OpVoices[ i ] ].dwTime < dwOldest))
-   //   {
-   //      dwOldest = m_Voice[ gb4OpVoices[ i ] ].dwTime ;
-   //      found = gb4OpVoices[ i ] ;
-   //   }
-   //if (found != 0xffff)
-   //   return ( found ) ;
-
-   // Now, just look for the oldest voice
-   found = 0 ;
-   dwOldest = m_Voice[ gb4OpVoices[ found ] ].dwTime ;
-   for (i = 0; i < NUM4VOICES; i++)
-      if (m_Voice[ gb4OpVoices[ i ] ].dwTime < dwOldest)
-      {
-         dwOldest = m_Voice[ gb4OpVoices[ i ] ].dwTime ;
-         found = gb4OpVoices[ i ] ;
-      }
-
-   return ( found ) ;*/
-
 } // end of Opl3_FindEmptySlot4Op()
 
 //------------------------------------------------------------------------
@@ -1953,7 +1888,7 @@ void
 
             m_Voice[i].dwPortaSampTime = dwPortaScaledTime; //bPortaTime;
             m_Voice[i].dwPortaSampCnt = (DWORD)floor(0.5 + lin_intp(m_Voice[i].dwPortaSampCnt,
-               0, dwOldScaledTime/*bOldPortaTime*/, 0, dwPortaScaledTime/*bPortaTime*/));
+               0, dwOldScaledTime, 0, dwPortaScaledTime));
          }
       }
    } else
@@ -2129,8 +2064,7 @@ bool
    //if (m_Miniport == nullptr) m_Miniport = opl_init();
    if (m_Miniport == nullptr)
    {
-	   m_Miniport = new opl3_chip();
-       OPL3_Reset(m_Miniport, (Bit32u)FSAMP);
+      m_Miniport = new OPLChipInterface((BYTE)1);
    }
 #else
    OPL_Hardware_Detection();
@@ -2152,16 +2086,16 @@ void
    WORD  wTemp, wOffset;
    long  newLFOVal = m_Voice[bVoice].dwLFOVal, 
          newDetuneEG = m_Voice[bVoice].dwDetuneEG;
-   DWORD timeDiff = m_dwCurSample-m_Voice[bVoice].dwStartTime;
-   double timeLapse = 0.00025*3.14159265358979323846*(double)(timeDiff),
+   //DWORD timeDiff = m_dwCurSample-m_Voice[bVoice].dwStartTime;
+   double timeDiff = m_dwCurSample,
+          timeLapse = 0.00025*(M_PI)*(double)(timeDiff),
           noteDiff = 0;
-
+   
    // Portamento update first
    if (m_Voice[bVoice].dwPortaSampCnt > 0)
    {
       const double PORTA_DEC_RATE = 3.333;
 
-      //--m_Voice[bVoice].bPortaSampCnt;
       m_Voice[bVoice].dwPortaSampCnt = ((m_Voice[bVoice].dwPortaSampCnt-PORTA_DEC_RATE) <= 0) ?
          0 : (DWORD)floor(0.5 + m_Voice[bVoice].dwPortaSampCnt-PORTA_DEC_RATE);
 
@@ -2172,9 +2106,6 @@ void
          m_Voice[bVoice].bPrevNote, 
          m_Voice[bVoice].bNote
       );
-         
-      /*noteDiff = m_Voice[bVoice].dwNoteFactor*(m_Voice[bVoice].dwPortaSampTime 
-         - m_Voice[bVoice].bPortaSampCnt) - 1;*/
    }
 
    // 100Hz sine wave with half semitone magnitude by default
@@ -2243,12 +2174,7 @@ void
 
    m_dwCurSample += len;
 
-#ifdef DISABLE_HW_SUPPORT
-   //m_Miniport.adlib_getsample(sample,len);
-   //opl_getoutput(m_Miniport, sample, len);
-   OPL3_GenerateStream(m_Miniport, sample, len);
-#endif /*DISABLE_HW_SUPPORT*/
-
+   this->m_Miniport->Opl3_GetSample(sample, len);
 #ifndef DISABLE_VGM_LOGGING
    // Increment logger sample history
    if (bIsLogging)
@@ -2263,7 +2189,7 @@ void
 
 void
    OPLSynth::
-   PlaySysex(Bit8u *bufpos, DWORD len)
+   PlaySysex(uint8_t *bufpos, DWORD len)
 {
    bool IsResetSysex = false;
    const BYTE resetArray[6][12] =
@@ -2387,7 +2313,7 @@ void
 
 void
    OPLSynth::
-   ProcessGSSysEx(Bit8u *bufpos, DWORD len)
+   ProcessGSSysEx(uint8_t *bufpos, DWORD len)
 {
    // TODO handle equivalent GM-2/XG commands?
 
@@ -2395,7 +2321,7 @@ void
 
 void
    OPLSynth::
-   ProcessXGSysEx(Bit8u *bufpos, DWORD len)
+   ProcessXGSysEx(uint8_t *bufpos, DWORD len)
 {
    if (len >= 5 && (bufpos[4] == 0x00 || bufpos[4] == 0x30))
    {
@@ -2576,10 +2502,9 @@ static void
       dst[i] = (msn << 4) | lsn;
    }
 }
-
-void
+void 
    OPLSynth::
-   ProcessMaliceXSysEx(const Bit8u *bufpos, DWORD len)
+   ProcessMaliceXSysEx(const uint8_t * bufpos, DWORD len)
 {
    // Check the message is for our device ID
    if (bufpos[2] != m_bSysexDeviceId)
@@ -2754,10 +2679,7 @@ inline void
    Opl3_ChipWrite(WORD idx, BYTE val)
 {
 #ifdef DISABLE_HW_SUPPORT
-   // Write to software chip
-   //m_Miniport.adlib_write(idx,val);
-   //opl_writereg(m_Miniport,idx,val);
-	OPL3_WriteReg(m_Miniport, idx, val);
+   m_Miniport->Opl3_ChipWrite(0,idx, val);
 #else
 
    // Write to hardware

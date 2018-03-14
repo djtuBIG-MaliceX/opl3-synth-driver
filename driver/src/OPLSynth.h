@@ -4,13 +4,11 @@
 //
 // ==============================================================================
 #include "stdafx.h"
+#include "oplchip_interface.h"
+
 #ifndef OPL3SYNTH_H
 #define OPL3SYNTH_H
 
-#include "opl3.h"
-#ifndef DISABLE_HW_SUPPORT
-#include "opl_hw.h"
-#endif //DISABLE_HW_SUPPORT
 #ifndef DISABLE_VGM_LOGGING
 #include "vgm_logging.h"
 #endif //DISABLE_VGM_LOGGING
@@ -134,7 +132,7 @@ typedef struct _voiceStruct
    BYTE    bVelocity;              /* velocity */
    DWORD   dwTime;                 /* time that was turned on/off;
                                    0 time indicates that its not in use */
-   //DWORD   dwOrigPitch[2];         /* original pitch, for pitch bend */
+   
    BYTE    bBlock[2];              /* value sent to the block */
    BYTE    bSusHeld;               /* turned off, but held on by sustain */
 
@@ -146,12 +144,10 @@ typedef struct _voiceStruct
    // for portamento
    BYTE   bPrevNote;
    DWORD dwPortaSampTime;
-   //BYTE   bPortaSampCnt;
    DWORD dwPortaSampCnt;
 
    short wCoarseTune;
    short wFineTune;
-   //double dfPortaRatio;
    
 } voiceStruct;
 
@@ -256,8 +252,7 @@ static DWORD gdwPitch[12] =
 class OPLSynth
 {
 private:
-   //OPL     m_Miniport;
-   opl3_chip *m_Miniport;
+   OPLChipInterface *m_Miniport;
 
    bool    bIsLogging;
 
@@ -353,10 +348,10 @@ private:
    void Opl3_BoardReset(void);
    bool Opl3_IsPatchEmpty(BYTE bPatch);
    void Opl3_LFOUpdate(BYTE bVoice);
-   void ProcessGSSysEx(Bit8u *bufpos, DWORD len);
-   void ProcessXGSysEx(Bit8u *bufpos, DWORD len);
+   void ProcessGSSysEx(uint8_t *bufpos, DWORD len);
+   void ProcessXGSysEx(uint8_t *bufpos, DWORD len);
    void ProcessMaliceXSysEx(const Bit8u *bufpos, DWORD len);
-   patchStruct& Opl3_GetPatch(BYTE bBankMSB, BYTE bBankLSB, BYTE bPatch);
+   //patchStruct& Opl3_GetPatch(BYTE bBankMSB, BYTE bBankLSB, BYTE bPatch);
 
 
 #ifdef _DEBUG
@@ -379,7 +374,7 @@ public:
    void WriteMidiData(DWORD dwData);
    bool Init(void);
    void GetSample(short *samplem, int len);
-   void PlaySysex(Bit8u *bufpos, DWORD len);
+   void PlaySysex(uint8_t *bufpos, DWORD len);
    inline void Opl3_ChipWrite(WORD idx, BYTE val);
    virtual ~OPLSynth();  // some stupid f***ing reason this breaks playback just for beign in existence
    void close();

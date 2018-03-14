@@ -8,10 +8,10 @@
 
 #include "opl_hw.h"
 
-BYTE OPL_MODE = 0x03;
-BYTE OPL_CHIPS = 0x01;
-INT64 HWusTime;
-WORD FMPort = 0x388;
+uint8_t OPL_MODE = 0x03;
+uint8_t OPL_CHIPS = 0x01;
+__int64 HWusTime;
+uint16_t FMPort = 0x388;
 
 void OPL_Hardware_Detection(void)
 {
@@ -244,7 +244,7 @@ inline UINT8 OPL_HW_GetStatus(void)
 }
 
 
-inline void OPL_HW_WaitDelay(INT64 StartTime, float Delay)
+inline void OPL_HW_WaitDelay(__int64 StartTime, float Delay)
 {
 #ifndef DISABLE_HW_SUPPORT
 	LARGE_INTEGER CurTime;

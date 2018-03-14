@@ -26,17 +26,20 @@ extern "C" {
 
 #include <iostream>
 #include <cmath>
+#ifndef _USE_MATH_DEFINES
+#define _USE_MATH_DEFINES
+#endif
 #include <vector>
 #include <algorithm>
 #include <cstdlib>
 #include <cstring>
 #include <thread>
-//#include <mutex>
 
 #include "OPLSynth.h"
 #include "MidiSynth.h"
 
 #ifdef _DEBUG
+//#include <mutex>
 #endif
 
 #endif /*STDAFX_H*/
