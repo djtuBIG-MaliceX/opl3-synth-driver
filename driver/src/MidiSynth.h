@@ -15,6 +15,9 @@
  */
 
 #include "stdafx.h"
+#include <mmsystem.h>
+#include <mmreg.h>
+#include <process.h>
 #include "OPLSynth.h"
 
 #ifndef OPL3EMU_MIDISYNTH_H

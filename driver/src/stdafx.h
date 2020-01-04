@@ -9,9 +9,7 @@
 // Windows Header Files:
 #include <windows.h>
 #include <tchar.h>
-#include <mmsystem.h>
-#include <mmreg.h>
-#include <process.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */

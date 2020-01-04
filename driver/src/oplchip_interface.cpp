@@ -19,8 +19,8 @@ void OPLChipInterface::Init(uint8_t numChips)
       OPL3_Reset(nukeChips[i].get(), (Bit32u)FSAMP);
 
       // DOSBox AdlibEmu
-      adlibEmuChips[i] = std::make_unique<OPL>();
-      adlibEmuChips[i].get()->adlib_init();
+      /*adlibEmuChips[i] = std::make_unique<OPL>();
+      adlibEmuChips[i].get()->adlib_init();*/
    }
 }
 
@@ -31,8 +31,8 @@ void OPLChipInterface::Opl3_ChipWrite(int chipNo, uint16_t idx, uint8_t val)
    OPL3_WriteReg(chip, idx, val);
 
    // DOSBox AdlibEmu
-   OPL *dosboxChip = adlibEmuChips[chipNo].get();
-   dosboxChip->adlib_write(idx, val);
+   /*OPL *dosboxChip = adlibEmuChips[chipNo].get();
+   dosboxChip->adlib_write(idx, val);*/
 
 #ifndef DISABLE_HW_SUPPORT
    OPL_HW_WriteReg(idx, val);

@@ -137,11 +137,20 @@ namespace OPL3Emu
             callbackType = CALLBACK_EVENT;
          }
 
-         PCMWAVEFORMAT wFormat = {WAVE_FORMAT_PCM, 2, sampleRate, sampleRate * 4, 4, 16};
+         WAVEFORMATEX wFormat;
+         wFormat.nChannels = 2;
+         wFormat.nSamplesPerSec = sampleRate;
+         wFormat.wFormatTag = WAVE_FORMAT_PCM;
+         wFormat.wBitsPerSample = 16;
+         wFormat.nBlockAlign = wFormat.nChannels * wFormat.wBitsPerSample / 8;
+         wFormat.nAvgBytesPerSec = wFormat.nBlockAlign * wFormat.nSamplesPerSec;
+         wFormat.cbSize = 0;
+
+         /*PCMWAVEFORMAT wFormat = {WAVE_FORMAT_PCM, 2, sampleRate, sampleRate * 4, 4, 16};*/
 
          // Open waveout device
          int wResult = waveOutOpen(&hWaveOut, WAVE_MAPPER,
-            (LPWAVEFORMATEX)&wFormat, callback, (DWORD_PTR)&midiSynth, callbackType);
+            (LPCWAVEFORMATEX)&wFormat, callback, (DWORD_PTR)&midiSynth, callbackType);
          if (wResult != MMSYSERR_NOERROR)
          {
             MessageBox(NULL, L"Failed to open waveform output device", L"OPL3", MB_OK | MB_ICONEXCLAMATION);
@@ -421,7 +430,7 @@ namespace OPL3Emu
    }
 
    void MidiSynth::LoadSettings() {
-      sampleRate = 44100;
+      sampleRate = 49716;
       bufferSize = MillisToFrames(100);
       chunkSize = MillisToFrames(10);
       midiLatency = MillisToFrames(0);
