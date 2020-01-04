@@ -15,7 +15,7 @@
    //[7] - Retrigger delay
    //[8-15] - reserved (for later)
 
-patchMapStruct gbMelMap[128] =
+patchMapStruct gbDefaultMelMap[128] =
 {
    {  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, },
    {  1,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0,  0, },
@@ -159,7 +159,7 @@ patchMapStruct gbMelMap[128] =
    //[7] Second operator pair relative transpose (coarse tune) (2x2op only)
    //[8-15] reserved
 
-BYTE gbPercMap[128][3] =
+percMapStruct gbDefaultPercMap[128] =
 {
    {  0,  0, 0 },   {  1,  0, 0 },   {  2,  0, 0 },   {  3,  0, 0 },   {  4,  0, 0 },   {  5,  0, 0 },   {  6,  0, 0 },   {  7,  0, 0 },   {  8,  0, 0 },   {  9,  0, 0 },   { 10,  0, 0 },   { 11,  0, 0 },
    { 12,  0, 0 },   { 13,  0, 0 },   { 14,  0, 0 },   { 15,  0, 0 },   { 16,  0, 0 },   { 17,  0, 0 },   { 18,  0, 0 },   { 19,  0, 0 },   { 20,  0, 0 },   { 21,  0, 0 },   { 22,  0, 0 },   { 23,  0, 0 },
@@ -177,7 +177,7 @@ BYTE gbPercMap[128][3] =
 bool IsRhythmMode = false;
 
 // Operator voices
-patchStruct glpPatch[] = 
+patchStruct glpDefaultPatch[] = 
 {
    // Melodic voices (0 - 127)
    { 0x01,0x8f,0xf2,0xf4,0x00,0x01,0x06,0xf2,0xf7,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x10,0x00,0x38,0x00,0x02,0x00 },

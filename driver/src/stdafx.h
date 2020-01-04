@@ -19,6 +19,9 @@ extern "C" {
 #ifdef __cplusplus
 }
 #endif  /* __cplusplus */
+#define ntohs(x) _byteswap_ushort(x)  // little endian assumed
+#else //WIN32
+#include <arpa/inet.h>  // ntohs
 #endif //WIN32
 
 #include <iostream>

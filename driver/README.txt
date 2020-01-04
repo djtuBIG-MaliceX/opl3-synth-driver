@@ -6,7 +6,7 @@ Additions (C) 2013-2017 dj.tuBIG/MaliceX (http://www.codingchords.com)
 Distributed under LGPL
 
 
-Git Repository: https://bitbucket.org/djtubig-malicex/opl3-synth-driver
+Git Repository: https://github.com/djtuBIG-MaliceX/opl3-synth-driver/
 
 
 Changelog

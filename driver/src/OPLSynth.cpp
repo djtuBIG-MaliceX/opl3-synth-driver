@@ -38,8 +38,8 @@ void
          {
             //if(bNote>=35 && bNote<88)
             {
-               //Opl3_NoteOn((BYTE)(gbPercMap[bNote - 35][0]+35+128),gbPercMap[bNote - 35][1],bChannel,bVelocity,m_iBend[bChannel]);
-               Opl3_NoteOn((BYTE)(gbPercMap[bNote][0]+128),gbPercMap[bNote][1],bChannel,bVelocity,m_iBend[bChannel]);
+               //Opl3_NoteOn((BYTE)(gbPercMap[bNote - 35].bPreset+35+128),gbPercMap[bNote - 35].bBaseNote,bChannel,bVelocity,m_iBend[bChannel]);
+               Opl3_NoteOn((BYTE)(gbPercMap[bNote].bPreset+128),gbPercMap[bNote].bBaseNote,bChannel,bVelocity,m_iBend[bChannel]);
             }
          }
          else
@@ -58,8 +58,8 @@ void
       {
          //if(bNote>=35 && bNote<88)
          {
-            //Opl3_NoteOff((BYTE)(gbPercMap[bNote - 35][0]+35+128),gbPercMap[bNote - 35][1], bChannel, 0);
-            Opl3_NoteOff((BYTE)(gbPercMap[bNote][0]+128),gbPercMap[bNote][1], bChannel, 0);
+            //Opl3_NoteOff((BYTE)(gbPercMap[bNote - 35].bPreset+35+128),gbPercMap[bNote - 35].bBaseNote, bChannel, 0);
+            Opl3_NoteOff((BYTE)(gbPercMap[bNote].bPreset+128),gbPercMap[bNote].bBaseNote, bChannel, 0);
          }
       }
       else
@@ -317,10 +317,13 @@ void
       break;
 
    case 0xe0:  // pitch bend
+   {
+      LONG iBend;
       dwTemp = ((WORD)bNote << 0) | ((WORD)bVelocity << 7);
-		dwTemp -= 0x2000;
-      Opl3_PitchBend(bChannel, (long)dwTemp);
+      iBend = (LONG)dwTemp - 0x2000;
+      Opl3_PitchBend(bChannel, iBend);
       break;
+   }
    };
    return;
 }
@@ -1221,8 +1224,8 @@ void
    OPLSynth::
    Opl3_ProcessDataEntry(BYTE bChannel)
 {
-   WORD rpn  = (WORD)(m_RPN[bChannel][0])|(m_RPN[bChannel][1] << 8) & (WORD)(0x7F7F),
-        nrpn = (WORD)(m_NRPN[bChannel][0])|(m_NRPN[bChannel][1] << 8) & (WORD)(0x7F7F);
+   WORD rpn  = ((WORD)(m_RPN[bChannel][0])|(m_RPN[bChannel][1] << 8)) & (WORD)(0x7F7F),
+        nrpn = ((WORD)(m_NRPN[bChannel][0])|(m_NRPN[bChannel][1] << 8)) & (WORD)(0x7F7F);
    //DWORD dwTemp;
    BYTE val = m_bDataEnt[bChannel][1];  // TODO repurpose?
 
@@ -2115,6 +2118,11 @@ bool
    this->m_dwMasterTune = 0;
 
    this->m_MIDIMode = MIDIMODE_XG;
+   this->m_bSysexDeviceId = 0x10;
+
+   memcpy(this->glpPatch, glpDefaultPatch, 256 * sizeof(patchStruct));
+   memcpy(this->gbMelMap, gbDefaultMelMap, 128 * sizeof(patchMapStruct));
+   memcpy(this->gbPercMap, gbDefaultPercMap, 128 * sizeof(percMapStruct));
 
    if (this->m_noteHistory == nullptr)
 	   this->m_noteHistory = new std::vector<BYTE>[NUMMIDICHN];
@@ -2188,13 +2196,12 @@ void
       newLFOVal = (long)floor(0.5 + (m_bModWheel[m_Voice[bVoice].bChannel]*32)*sin(timeLapse));
 
    // Linear envelope generator hack  (TODO: improve)
-   if ((m_wDrumMode & (1<<m_Voice[bVoice].bChannel)) > 0 &&
-       (m_Voice[bVoice].bOn || m_Voice[bVoice].bSusHeld)) {   // only continue it if the note is held
-       wTemp = gbPercMap[m_Voice[bVoice].bPatch-128][2] & 0xFF;
-       if (wTemp > 0)
-       {
-           newDetuneEG = (long)((signed char)wTemp * 0.25 * (timeDiff));
-       }
+   if ((m_wDrumMode & (1<<m_Voice[bVoice].bChannel)) > 0
+      && (m_Voice[bVoice].bOn || m_Voice[bVoice].bSusHeld))   // only continue it if the note is held
+   {
+      wTemp = gbPercMap[m_Voice[bVoice].bPatch-128].bPitchEGAmt & 0xFF;
+      if (wTemp > 0)
+         newDetuneEG = (long)((signed char)wTemp * 0.25 * (timeDiff));
    }
 
    if (newLFOVal == m_Voice[bVoice].dwLFOVal && newDetuneEG == m_Voice[bVoice].dwDetuneEG 
@@ -2308,7 +2315,7 @@ void
    //XG               F0 43 10 4C 00 00 7E 00 F7 
 
    // Ignore Sysex Continued or non-standard sysex events
-   if (bufpos[0] != 0xF0 || bufpos[len-1] != 0xF7)
+   if (len < 4 || bufpos[0] != 0xF0 || bufpos[len-1] != 0xF7)
       return;
 
    // Check reset
@@ -2384,6 +2391,9 @@ void
             ProcessXGSysEx(bufpos, len);
             break;
 
+         case 0x7D:  // Non commercial
+            ProcessMaliceXSysEx(bufpos, len);
+            break;
       }
    }
 }
@@ -2400,9 +2410,9 @@ void
    OPLSynth::
    ProcessXGSysEx(Bit8u *bufpos, DWORD len)
 {
-   if (bufpos[4] == 0x00 || bufpos[4] == 0x30)
+   if (len >= 5 && (bufpos[4] == 0x00 || bufpos[4] == 0x30))
    {
-      switch(bufpos[6])
+      switch((len >= 7) ? bufpos[6] : 0xff)
       {
          case 0x00:
             // Master Tuning  (aaH = 1000H + bbH x 0100H + ccH * 0010H + ddH * 0001H)-0400H (in 0.1 cent units)
@@ -2423,13 +2433,15 @@ void
          // Master Transpose (melodic notes only, non-realtime)
          //F0 43 1n 4c 00 00 06 xx F7 (40=default)
          case 0x06:
+            if (len < 8)
+               break;
             m_bMasterCoarseTune = bufpos[7] - 0x40;
             // do not update?
             break;
 
          // Master Volume
          //F0 43 1n 4C 00 00 04 xx F7 (default=7F, from 00 to 7F)
-         case 0x04:   
+         case 0x04:
             break;
 
          // Master Attenuator
@@ -2437,12 +2449,12 @@ void
          case 0x05:
             break;
 
-         
+
       }
    }
 
    // Multipart data, nn=channel (00 to 0F)
-   else if (bufpos[4] == 0x08)
+   else if (len >= 8 && (bufpos[4] == 0x08))
    {
       BYTE bChannel = bufpos[5] & 0xF,
            bVal     = bufpos[7] & 0x7F;
@@ -2460,7 +2472,7 @@ void
          case 0x02:
             Opl3_UpdateBankSelect(0, bChannel, bVal);
             break;
-            
+
          // Program Change
          //F0 43 1n 4C 08 nn 03 xx F7
          case 0x03:
@@ -2563,7 +2575,139 @@ void
       // Drum Note Pitch File (not supported)
       //F0 43 1n 4C 3n rr 01 xx F7 (default=40, from 00 to 7F)
    }
+}
 
+static void
+   MemCopy2x4To8(BYTE *dst, const BYTE *src, DWORD dstlen)
+{
+   // Combine consecutive nibble pairs into bytes
+   //(to decode sysex payload which can only use 7 bits of each byte)
+   for (DWORD i = 0; i < dstlen; ++i)
+   {
+      DWORD lsn = src[2*i+0] & 0xf;
+      DWORD msn = src[2*i+1] & 0xf;
+      dst[i] = (msn << 4) | lsn;
+   }
+}
+
+void
+   OPLSynth::
+   ProcessMaliceXSysEx(const Bit8u *bufpos, DWORD len)
+{
+   // Check the message is for our device ID
+   if (bufpos[2] != m_bSysexDeviceId)
+       return;
+
+   switch ((len >= 7) ? bufpos[4] : 0xff)
+   {
+   case 0x01:
+      // Request
+      //F0 7D [device-id] 00 01 [data...] [checksum] F7
+      bufpos += 5; len -= 7;
+
+      if (len < 8 || memcmp(bufpos, gbMaliceXIdentifier, 8))
+         break;
+      bufpos += 8; len -= 8;
+
+      // TODO maybe handle at some point
+      (void)bufpos; (void)len;
+      break;
+   case 0x02:
+      // Send
+      //F0 7D [device-id] 00 02 [data...] [checksum] F7
+      bufpos += 5; len -= 7;
+
+      if (len < 8 || memcmp(bufpos, gbMaliceXIdentifier, 8))
+         break;
+      bufpos += 8; len -= 8;
+
+      const char *tag = (const char *)bufpos;
+      if (len < 8)
+         break;
+      bufpos += 8; len -= 8;
+
+      if (!memcmp(tag, "OP3PATCH", 8))
+      {
+         if (len < 4)
+             break;
+         BYTE insno;
+         BYTE patchlen;
+         MemCopy2x4To8(&insno, bufpos, 1);
+         bufpos += 2; len -= 2;
+         MemCopy2x4To8(&patchlen, bufpos, 1);
+         bufpos += 2; len -= 2;
+
+         if (patchlen < 28 || len/2 < patchlen)
+             break;
+         patchStruct patch = {};
+         if (patchlen > sizeof(patchStruct))
+            patchlen = sizeof(patchStruct);
+         MemCopy2x4To8((BYTE *)&patch, bufpos, patchlen);
+
+         // Check validity
+         if (patch.bOp > PATCH_1_2OP)
+             break;
+
+         // Set the patch
+         glpPatch[insno] = patch;
+      }
+      else if (!memcmp(tag, "OP3MLMAP", 8))
+      {
+          if (len < 3)
+             break;
+         BYTE insno = *bufpos & 0x7f;
+         bufpos += 1; len -= 1;
+         BYTE maplen;
+         MemCopy2x4To8(&maplen, bufpos, 1);
+         bufpos += 2; len -= 2;
+
+         if (len/2 < maplen)
+            break;
+         patchMapStruct map = {};
+         if (maplen > sizeof(patchMapStruct))
+            maplen = sizeof(patchMapStruct);
+         MemCopy2x4To8((BYTE *)&map, bufpos, maplen);
+
+         // Byte swap fields, file to native
+         map.wBaseTranspose = ntohs(map.wBaseTranspose);
+         map.wSecondTranspose = ntohs(map.wSecondTranspose);
+         map.wPitchEGAmt = ntohs(map.wPitchEGAmt);
+         map.wPitchEGTime = ntohs(map.wPitchEGTime);
+         map.wBaseFineTune = ntohs(map.wBaseFineTune);
+         map.wSecondFineTune = ntohs(map.wSecondFineTune);
+
+         // Check validity
+         /**/
+
+         // Set it
+         gbMelMap[insno] = map;
+      }
+      else if (!memcmp(tag, "OP3PCMAP", 8))
+      {
+         if (len < 3)
+            break;
+         BYTE insno = *bufpos & 0x7f;
+         bufpos += 1; len -= 1;
+         BYTE maplen;
+         MemCopy2x4To8(&maplen, bufpos, 1);
+         bufpos += 2; len -= 2;
+
+         if (len/2 < maplen)
+            break;
+         percMapStruct map = {};
+         if (maplen > sizeof(percMapStruct))
+            maplen = sizeof(percMapStruct);
+         MemCopy2x4To8((BYTE *)&map, bufpos, maplen);
+
+         // Check validity
+         if (map.bBaseNote >= 128)
+             break;
+
+         // Set it
+         gbPercMap[insno] = map;
+      }
+      break;
+   }
 }
 
 void
