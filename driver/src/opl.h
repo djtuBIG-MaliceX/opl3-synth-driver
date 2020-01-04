@@ -27,6 +27,7 @@
 #ifndef OPL_H
 #define OPL_H
 
+#include "stdafx.h"
 #include "typedef_sizes.h"
 
 #ifdef __MINGW32__
