@@ -1,11 +1,13 @@
 /*
  * Just a helper class to abstract the hardware calls to any opl chip core, including hardware.
  */
-#include "stdafx.h"
-#include "opl3.h"
 
 #ifndef OPLCHIP_INTERFACE_H
 #define OPLCHIP_INTERFACE_H
+
+#include "stdafx.h"
+#include "opl.h"
+#include "opl3.h"
 
 #ifndef DISABLE_HW_SUPPORT
 #include "opl_hw.h"
@@ -14,7 +16,8 @@
 class OPLChipInterface {
 
 public:
-   OPLChipInterface(uint8_t numChips);
+   OPLChipInterface();
+   void Init(uint8_t numChips=1);
    void Opl3_ChipWrite(int chipNo, uint16_t idx, uint8_t val);
    void Opl3_GetSample(short *sample, int len);
 
@@ -28,7 +31,9 @@ private:
    //OPL *dosboxChips;
 
    // Nuked OPL3
-   std::vector<opl3_chip*> *nukeChips;
+   std::vector<std::unique_ptr<opl3_chip>> nukeChips;
+   std::vector<std::unique_ptr<OPL>> adlibEmuChips;
+   //opl3_chip* CreateNukedOPL3();
 
 #ifndef DISABLE_HW_SUPPORT
    // Hardware OPL

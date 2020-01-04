@@ -25,15 +25,23 @@ extern "C" {
 #endif //WIN32
 
 #include <iostream>
-#include <cmath>
 #ifndef _USE_MATH_DEFINES
 #define _USE_MATH_DEFINES
 #endif
+#include <cmath>
+#ifndef M_PI // because VS2019 does not define this unless it's compiled in C style (ie: #include <math.h>)
+#define M_PI 3.14159265358979323846 // pi
+#endif
+
 #include <vector>
 #include <algorithm>
 #include <cstdlib>
 #include <cstring>
 #include <thread>
+#include <memory>
+
+#include <cinttypes>
+#include "typedef_sizes.h"
 
 #include "OPLSynth.h"
 #include "MidiSynth.h"

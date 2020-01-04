@@ -1,11 +1,11 @@
-// ==============================================================================
-//
-// Copyright (c) 1996-2000 Microsoft Corporation.  All rights reserved.
-//
-// Extensions (C) 2013 James Alan Nguyen
-// http://www.codingchords.com
-//
-// ==============================================================================
+/*
+ * OPL3 MIDI Synth driver (based on NukeYKT's adaption of the MS-LPL-derived driver sample)
+ *
+ * 2013-2020 James Alan Nguyen
+ * http://www.codingchords.com
+ *
+ * Distributed under LGPL.
+ */
 
 #include "OPLSynth.h"
 
@@ -2033,9 +2033,7 @@ void
    m_Voice[ bVoice ].bSusHeld = false ;
 }
 
-bool
-   OPLSynth::
-   Init()
+bool OPLSynth::Init()
 {
    // init some members
    this->bIsLogging = false;
@@ -2072,13 +2070,7 @@ bool
    }
 
 #ifdef DISABLE_HW_SUPPORT
-   //if (m_Miniport == nullptr) m_Miniport = new OPL();
-   //m_Miniport.adlib_init();
-   //if (m_Miniport == nullptr) m_Miniport = opl_init();
-   if (m_Miniport == nullptr)
-   {
-      m_Miniport = new OPLChipInterface((BYTE)1);
-   }
+   m_Miniport.Init(1);
 #else
    OPL_Hardware_Detection();
    OPL_HW_Init(); // start hardware
@@ -2187,7 +2179,7 @@ void
 
    m_dwCurSample += len;
 
-   this->m_Miniport->Opl3_GetSample(sample, len);
+   m_Miniport.Opl3_GetSample(sample, len);
 #ifndef DISABLE_VGM_LOGGING
    // Increment logger sample history
    if (bIsLogging)
@@ -2692,7 +2684,7 @@ inline void
    Opl3_ChipWrite(WORD idx, BYTE val)
 {
 #ifdef DISABLE_HW_SUPPORT
-   m_Miniport->Opl3_ChipWrite(0,idx, val);
+   m_Miniport.Opl3_ChipWrite(0,idx, val);
 #else
 
    // Write to hardware
@@ -2912,11 +2904,11 @@ void
    
 #endif //_DEBUG
 
-OPLSynth::OPLSynth()
+OPLSynth::OPLSynth() : 
+	m_Miniport(OPLChipInterface()),
+	m_noteHistory(nullptr),
+	m_sostenutoBuffer(nullptr)
 {
-   m_Miniport = nullptr;
-   m_noteHistory = nullptr;
-   m_sostenutoBuffer = nullptr;
 }
 
 OPLSynth::~OPLSynth()

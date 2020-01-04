@@ -27,21 +27,10 @@
 #ifndef OPL_OPL3_H
 #define OPL_OPL3_H
 
-#include <inttypes.h>
+#include "typedef_sizes.h"
 
 #define OPL_WRITEBUF_SIZE   1024
 #define OPL_WRITEBUF_DELAY  2
-
-typedef uintptr_t       Bitu;
-typedef intptr_t        Bits;
-typedef uint64_t        Bit64u;
-typedef int64_t         Bit64s;
-typedef uint32_t        Bit32u;
-typedef int32_t         Bit32s;
-typedef uint16_t        Bit16u;
-typedef int16_t         Bit16s;
-typedef uint8_t         Bit8u;
-typedef int8_t          Bit8s;
 
 typedef struct _opl3_slot opl3_slot;
 typedef struct _opl3_channel opl3_channel;

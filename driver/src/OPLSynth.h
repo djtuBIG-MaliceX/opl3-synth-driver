@@ -1,8 +1,3 @@
-// ==============================================================================
-//
-// Copyright (c) 1996-2000 Microsoft Corporation.  All rights reserved.
-//
-// ==============================================================================
 #include "stdafx.h"
 #include "oplchip_interface.h"
 
@@ -58,9 +53,6 @@ typedef signed long		LONG;
 #define AD_WAVE                         (0x0e0)
 #define AD_WAVE2                        (0x1e0)
 
-/* transformation of linear velocity value to
-logarithmic attenuation */
-
 /* typedefs for MIDI patches */
 #define PATCH_1_4OP  (0)        /* use 4-operator patch */
 #define PATCH_2_2OP  (1)        /* use two 2-operator patches */
@@ -113,12 +105,6 @@ typedef struct _percMapStruct
    BYTE bPitchEGAmt;
 } percMapStruct;
 
-//typedef struct _patchStruct
-//{
-//   noteStruct note;            /* note. This is all in the structure at the moment */
-//} patchStruct;
-
-
 /* MIDI */
 
 typedef struct _voiceStruct 
@@ -138,16 +124,16 @@ typedef struct _voiceStruct
 
    // for EG/LFO
    DWORD  dwStartTime;
-   long   dwLFOVal;
-   long   dwDetuneEG;
+   LONG   dwLFOVal;
+   LONG   dwDetuneEG;
 
    // for portamento
    BYTE   bPrevNote;
    DWORD dwPortaSampTime;
    DWORD dwPortaSampCnt;
 
-   short wCoarseTune;
-   short wFineTune;
+   int16_t wCoarseTune;
+   int16_t wFineTune;
    
 } voiceStruct;
 
@@ -252,9 +238,9 @@ static DWORD gdwPitch[12] =
 class OPLSynth
 {
 private:
-   OPLChipInterface *m_Miniport;
+   OPLChipInterface m_Miniport;
 
-   bool    bIsLogging;
+   bool bIsLogging;
 
    // midi stuff
    voiceStruct m_Voice[NUM2VOICES];  /* info on what voice is where */
