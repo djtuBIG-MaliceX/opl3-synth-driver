@@ -14,7 +14,7 @@
 *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
 
-#include "stdafx.h"
+#include "MidiSynth.h"
 
 namespace OPL3Emu 
 {
@@ -421,7 +421,7 @@ namespace OPL3Emu
    }
 
    void MidiSynth::LoadSettings() {
-      sampleRate = 49716;
+      sampleRate = 44100;
       bufferSize = MillisToFrames(100);
       chunkSize = MillisToFrames(10);
       midiLatency = MillisToFrames(0);

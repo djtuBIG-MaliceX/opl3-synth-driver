@@ -29,7 +29,13 @@
     <ClCompile Include="src\vgm_logging.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="src\oplchip_interface.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
     <ClCompile Include="src\opl3.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="src\opl.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -74,6 +80,15 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\mmddk.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\oplchip_interface.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\opl.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="src\typedef_sizes.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

@@ -39,12 +39,7 @@ extern "C" {
 #include <cstring>
 #include <thread>
 #include <memory>
-
 #include <cinttypes>
-#include "typedef_sizes.h"
-
-#include "OPLSynth.h"
-#include "MidiSynth.h"
 
 #ifdef _DEBUG
 //#include <mutex>

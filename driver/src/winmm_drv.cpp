@@ -16,6 +16,7 @@
  */
 
 #include "stdafx.h"
+#include "MidiSynth.h"
 
 #define MAX_DRIVERS 1
 #define MAX_CLIENTS 1 // Per driver

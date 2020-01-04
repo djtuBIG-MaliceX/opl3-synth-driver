@@ -15,6 +15,7 @@
  */
 
 #include "stdafx.h"
+#include "OPLSynth.h"
 
 #ifndef OPL3EMU_MIDISYNTH_H
 #define OPL3EMU_MIDISYNTH_H

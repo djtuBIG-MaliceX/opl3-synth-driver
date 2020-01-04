@@ -9,6 +9,8 @@
 #include "opl.h"
 #include "opl3.h"
 
+#define FSAMP                           (49716) //(3579545.0 / 72.0
+
 #ifndef DISABLE_HW_SUPPORT
 #include "opl_hw.h"
 #endif //DISABLE_HW_SUPPORT

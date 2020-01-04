@@ -19,7 +19,7 @@ void OPLChipInterface::Init(uint8_t numChips)
       OPL3_Reset(nukeChips[i].get(), (Bit32u)FSAMP);
 
       // DOSBox AdlibEmu
-      adlibEmuChips[i] = std::make_unique<OPL>(new OPL());
+      adlibEmuChips[i] = std::make_unique<OPL>();
       adlibEmuChips[i].get()->adlib_init();
    }
 }
@@ -42,10 +42,10 @@ void OPLChipInterface::Opl3_ChipWrite(int chipNo, uint16_t idx, uint8_t val)
 void OPLChipInterface::Opl3_GetSample(short *sample, int len)
 {
    // Nuked OPL3
-   //opl3_chip *chip = nukeChips[0].get(); // TODO sum all chips
-   //OPL3_GenerateStream(chip, sample, len);
+   opl3_chip *chip = nukeChips[0].get(); // TODO sum all chips
+   OPL3_GenerateStream(chip, sample, len);
 
    // DOSBox AdlibEmu
-   OPL* dosboxChip = adlibEmuChips[0].get();
-   dosboxChip->adlib_getsample(sample, len);
+   //OPL* dosboxChip = adlibEmuChips[0].get();
+   //dosboxChip->adlib_getsample(sample, len);
 }

@@ -51,7 +51,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <OutDir>$(SolutionDir)$(Configuration)\</OutDir>
     <IntDir>$(Configuration)\</IntDir>
-    <LinkIncremental>true</LinkIncremental>
+    <LinkIncremental>false</LinkIncremental>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <ClCompile>
@@ -94,10 +94,13 @@
       <PrecompiledHeaderFile>
       </PrecompiledHeaderFile>
       <WarningLevel>Level3</WarningLevel>
-      <DebugInformationFormat>None</DebugInformationFormat>
+      <DebugInformationFormat>EditAndContinue</DebugInformationFormat>
       <InlineFunctionExpansion>AnySuitable</InlineFunctionExpansion>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <StrictAliasing>true</StrictAliasing>
+      <RemoveUnreferencedCodeData>false</RemoveUnreferencedCodeData>
+      <SupportJustMyCode>true</SupportJustMyCode>
+      <WholeProgramOptimization>false</WholeProgramOptimization>
     </ClCompile>
     <Link>
       <AdditionalDependencies>winmm.lib;%(AdditionalDependencies)</AdditionalDependencies>
@@ -110,12 +113,15 @@
       <OptimizeReferences>true</OptimizeReferences>
       <EnableCOMDATFolding>true</EnableCOMDATFolding>
       <LinkTimeCodeGeneration>Default</LinkTimeCodeGeneration>
+      <AssemblyDebug>true</AssemblyDebug>
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="src\InpOut32Helper.cpp" />
     <ClCompile Include="src\MidiSynth.cpp" />
+    <ClCompile Include="src\opl.cpp" />
     <ClCompile Include="src\opl3.cpp" />
+    <ClCompile Include="src\oplchip_interface.cpp" />
     <ClCompile Include="src\OPLSynth.cpp" />
     <ClCompile Include="src\opl_hw.cpp" />
     <ClCompile Include="src\vgm_logging.cpp" />
@@ -127,13 +133,16 @@
     <ClInclude Include="src\fmsynthpatch.h" />
     <ClInclude Include="src\InpOut32Helper.h" />
     <ClInclude Include="src\mmddk.h" />
+    <ClInclude Include="src\opl.h" />
     <ClInclude Include="src\opl3.h" />
+    <ClInclude Include="src\oplchip_interface.h" />
     <ClInclude Include="src\opl_hw.h" />
     <ClInclude Include="src\mauipatch.h" />
     <ClInclude Include="src\MidiSynth.h" />
     <ClInclude Include="src\OPLSynth.h" />
     <ClInclude Include="src\patch.h" />
     <ClInclude Include="src\stdafx.h" />
+    <ClInclude Include="src\typedef_sizes.h" />
     <ClInclude Include="src\VGMFile.h" />
     <ClInclude Include="src\vgm_logging.h" />
   </ItemGroup>
