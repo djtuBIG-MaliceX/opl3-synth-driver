@@ -411,7 +411,9 @@ void
             wTemp2 = (lpPS->bOp == PATCH_2_2OP) ?
                Opl3_FindSecondVoice((BYTE)wTemp, m_Voice[wTemp].bVoiceID) :
                wTemp + 3;
-            if (wTemp2 != (WORD)~0) 
+            wTemp2 = (wTemp2 < NUM2VOICES) ? wTemp2 : (WORD)~0;
+
+            if (wTemp2 != (WORD)~0)
                m_Voice[wTemp2].bSusHeld = 1;
          }
          return;
@@ -422,6 +424,7 @@ void
       {
          case PATCH_1_4OP: // note cut on second voice is not necessary but need to be verified.
             wTemp2 = (wTemp+3);
+            wTemp2 = (wTemp2 < NUM2VOICES) ? wTemp2 : (WORD)~0;
 
             if ((m_wMonoMode & (1<<bChannel)) > 0 &&
                 m_noteHistory[bChannel].size() > 0)
@@ -435,13 +438,16 @@ void
             {
                Opl3_CutVoice((BYTE)wTemp, false);
 
-               /*if (wTemp2 != (WORD)~0 && (lpPS->note.bAtC0[1] & 0x1))
-                  Opl3_CutVoice((BYTE)wTemp2, false);
-               else*/
+               if (wTemp2 != (WORD)~0)
                {
-                  m_Voice[wTemp2].bOn = false;
-                  m_Voice[wTemp2].bSusHeld = false;
-                  m_Voice[wTemp2].dwTime = m_dwCurTime;
+                  /*if ((lpPS->note.bAtC0[1] & 0x1))
+                     Opl3_CutVoice((BYTE)wTemp2, false);
+                  else*/
+                  {
+                     m_Voice[wTemp2].bOn = false;
+                     m_Voice[wTemp2].bSusHeld = false;
+                     m_Voice[wTemp2].dwTime = m_dwCurTime;
+                  }
                }
             }
             break;
@@ -616,7 +622,7 @@ void
    WORD            i ;
    WORD            wOffset ;
    operStruct      *lpOS ;
-   BYTE            b4Op = (BYTE)(lpSN->bOp != PATCH_1_2OP);
+   BYTE            b4Op = (BYTE)((lpSN->bOp != PATCH_1_2OP) && wNote2 != (WORD)~0);
 
    // Do not send note off to allow for mono mode legato
    if ( !(m_wMonoMode & (1<<bChannel)) || (m_wDrumMode & (1<<bChannel) || bChannel == DRUMCHANNEL))
@@ -947,9 +953,11 @@ void
                ~0;
             wTemp2 = (wTemp2 != (WORD)~0) ? wTemp2 : Opl3_FindEmptySlot( bPatch, bChannel );
             Opl3_Set4OpFlag((BYTE)wTemp, false, PATCH_2_2OP);
+
+            if (wTemp2 == (WORD)~0)
+                break;
             Opl3_Set4OpFlag((BYTE)wTemp2, false, PATCH_2_2OP);
 
-            
             //if ((m_wMonoMode & (1<<bChannel)) > 0)
             //{
             //   // If percussion voice not ended, kill it
@@ -1009,39 +1017,44 @@ void
             }*/
       }
 
-      // Remove note from queue if held
-      if (m_Voice[ wTemp2 ].bOn && !bIsMonoMode)
-      {
-         Opl3_NoteOff (
-            m_Voice[ wTemp2 ].bPatch,
-            m_Voice[ wTemp2 ].bNote,
-            m_Voice[ wTemp2 ].bChannel,
-            (BYTE)0
-         );
-      }
+      b4Op = wTemp2 != (WORD)~0;
 
-      m_Voice[ wTemp2 ].bNote = bNote ;
-      m_Voice[ wTemp2 ].bChannel = bChannel ;
-      m_Voice[ wTemp2 ].bPatch = bPatch ;
-      m_Voice[ wTemp2 ].bVelocity = bVelocity ;
-      m_Voice[ wTemp2 ].bOn = true ;
-      //m_Voice[ wTemp2 ].dwOrigPitch[0] = dwPitch[ 0 ] ;  // not including bend
-      //m_Voice[ wTemp2 ].dwOrigPitch[1] = dwPitch[ 1 ] ;  // not including bend
-      m_Voice[ wTemp2 ].bBlock[0] = NS.bAtB0[ 0 ] ;
-      m_Voice[ wTemp2 ].bBlock[1] = NS.bAtB0[ 1 ] ;
-      m_Voice[ wTemp2 ].bSusHeld = 0;
-      m_Voice[ wTemp2 ].dwTime = ++m_dwCurTime ;
-      m_Voice[ wTemp2 ].dwLFOVal = 0;
-      m_Voice[ wTemp2 ].dwDetuneEG = 0;
-      m_Voice[ wTemp2 ].wCoarseTune = wSecondCoarseTune;
-      m_Voice[ wTemp2 ].wFineTune = wSecondFineTune;
-      if (((m_wMonoMode & (1<<bChannel)) > 0 && m_noteHistory[bChannel].size() == 0 || (m_wDrumMode & (1<<bChannel) || bChannel == DRUMCHANNEL)) 
-       || !(m_wMonoMode & (1<<bChannel)))
-         m_Voice[ wTemp2 ].dwStartTime = m_dwCurSample;
+      if (b4Op)
+      {
+         // Remove note from queue if held
+         if (m_Voice[ wTemp2 ].bOn && !bIsMonoMode)
+         {
+            Opl3_NoteOff (
+               m_Voice[ wTemp2 ].bPatch,
+               m_Voice[ wTemp2 ].bNote,
+               m_Voice[ wTemp2 ].bChannel,
+               (BYTE)0
+            );
+         }
+
+         m_Voice[ wTemp2 ].bNote = bNote ;
+         m_Voice[ wTemp2 ].bChannel = bChannel ;
+         m_Voice[ wTemp2 ].bPatch = bPatch ;
+         m_Voice[ wTemp2 ].bVelocity = bVelocity ;
+         m_Voice[ wTemp2 ].bOn = true ;
+         //m_Voice[ wTemp2 ].dwOrigPitch[0] = dwPitch[ 0 ] ;  // not including bend
+         //m_Voice[ wTemp2 ].dwOrigPitch[1] = dwPitch[ 1 ] ;  // not including bend
+         m_Voice[ wTemp2 ].bBlock[0] = NS.bAtB0[ 0 ] ;
+         m_Voice[ wTemp2 ].bBlock[1] = NS.bAtB0[ 1 ] ;
+         m_Voice[ wTemp2 ].bSusHeld = 0;
+         m_Voice[ wTemp2 ].dwTime = ++m_dwCurTime ;
+         m_Voice[ wTemp2 ].dwLFOVal = 0;
+         m_Voice[ wTemp2 ].dwDetuneEG = 0;
+         m_Voice[ wTemp2 ].wCoarseTune = wSecondCoarseTune;
+         m_Voice[ wTemp2 ].wFineTune = wSecondFineTune;
+         if (((m_wMonoMode & (1<<bChannel)) > 0 && m_noteHistory[bChannel].size() == 0 || (m_wDrumMode & (1<<bChannel) || bChannel == DRUMCHANNEL))
+          || !(m_wMonoMode & (1<<bChannel)))
+            m_Voice[ wTemp2 ].dwStartTime = m_dwCurSample;
+      }
    }
    else
       Opl3_Set4OpFlag((BYTE)wTemp, false, PATCH_1_2OP);
-   
+
    // Send data
    Opl3_CalcPatchModifiers(&NS, bChannel);
    Opl3_FMNote(wTemp, &NS, bChannel, wTemp2 ) ; // TODO refactor functionality to insert second operator

@@ -1,3 +1,4 @@
+@echo off
 cls
 copy emscripten_wrapper.cpp ..
 cd ..
