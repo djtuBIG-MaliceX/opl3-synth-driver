@@ -2504,7 +2504,7 @@ static void
    {
       DWORD lsn = src[2*i+0] & 0xf;
       DWORD msn = src[2*i+1] & 0xf;
-      dst[i] = (msn << 4) | lsn;
+      dst[i] = static_cast<BYTE>(((msn << 4) | lsn) & 0xFF);
    }
 }
 void 
@@ -2712,10 +2712,6 @@ void
    OPL_HW_Close();
 #endif /*DISABLE_HW_SUPPORT*/
    
-   
-   //free(m_Miniport); // opl3.h
-   //delete m_Miniport; // opl.h
-   //m_Miniport = nullptr;
 #ifdef _DEBUG
    DebugClose();
 #endif /*DEBUG*/

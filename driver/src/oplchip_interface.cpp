@@ -15,6 +15,11 @@ void OPLChipInterface::Init(uint8_t numChips)
    for (uint8_t i = 0; i < numSoftChips && i < 255; ++i)
    {
       // Nuked OPL3
+      if (nukeChips[i] != nullptr)
+      {
+         nukeChips[i].reset();
+         nukeChips[i] = nullptr;
+      }
       nukeChips[i] = std::make_unique<opl3_chip>();
       OPL3_Reset(nukeChips[i].get(), (Bit32u)FSAMP);
 
