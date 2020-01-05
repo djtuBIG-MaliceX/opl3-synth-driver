@@ -10,11 +10,6 @@
 
 //#pragma pack(1)
 
-typedef unsigned char	BYTE;
-typedef unsigned short  WORD;
-typedef unsigned long	DWORD, ULONG;
-typedef signed long		LONG;
-
 #define NUMPATCHES      (256)
 #define DRUMCHANNEL     (9)     //midi channel 10
 

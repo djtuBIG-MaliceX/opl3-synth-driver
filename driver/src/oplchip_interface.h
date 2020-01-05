@@ -30,17 +30,17 @@ private:
    // TODO: add MAME core here
 
    // DosBOX
-   //OPL *dosboxChips;
+   std::vector< std::unique_ptr< OPL > > adlibEmuChips;
 
    // Nuked OPL3
-   std::vector<std::unique_ptr<opl3_chip>> nukeChips;
-   std::vector<std::unique_ptr<OPL>> adlibEmuChips;
+   std::vector< std::unique_ptr< opl3_chip > > nukeChips;
+   
    //opl3_chip* CreateNukedOPL3();
 
 #ifndef DISABLE_HW_SUPPORT
    // Hardware OPL
    opl_hw *hardwareOut;
-#endif //DISABLE_HOW_SUPPORT
+#endif //DISABLE_HW_SUPPORT
 
 #ifndef DISABLE_VGM_LOGGING
    //opl_vgmout *vgmOut;

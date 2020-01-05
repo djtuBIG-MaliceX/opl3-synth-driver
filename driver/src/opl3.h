@@ -29,6 +29,7 @@
 #ifndef OPL_OPL3_H
 #define OPL_OPL3_H
 
+#include "stdafx.h"
 #include "typedef_sizes.h"
 
 #define OPL_WRITEBUF_SIZE   1024

@@ -34,18 +34,10 @@ namespace OPL3Emu {
       bool useRingBuffer;
       bool resetEnabled;
       float outputGain;
-      /*
-      float reverbOutputGain;
-      bool reverbEnabled;
-      bool reverbOverridden;
-      Bit8u reverbMode;
-      Bit8u reverbTime;
-      Bit8u reverbLevel;
-      */
       int16_t *buffer;
       DWORD framesRendered;
 
-      OPLSynth *synth;
+      std::unique_ptr<OPLSynth> synth;
 
       unsigned int MillisToFrames(unsigned int millis);
       void LoadSettings();

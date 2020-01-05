@@ -18,8 +18,6 @@
 
 namespace OPL3Emu 
 {
-
-//#define	DRIVER_MODE
    static MidiSynth &midiSynth = MidiSynth::getInstance();
 
 
@@ -118,14 +116,19 @@ namespace OPL3Emu
       HWAVEOUT	hWaveOut;
       WAVEHDR	*WaveHdr;
       HANDLE	hEvent;
-      DWORD		chunks;
-      DWORD		prevPlayPos;
-      DWORD		getPosWraps;
-      bool		stopProcessing;
+      DWORD	chunks;
+      DWORD	prevPlayPos;
+      DWORD	getPosWraps;
+      bool	stopProcessing;
+      //WAVEFORMATEX wFormat;
 
    public:
-      int Init(Bit16s *buffer, unsigned int bufferSize, unsigned int chunkSize, 
-         bool useRingBuffer, unsigned int sampleRate) 
+      WaveOutWin32()
+      {
+      };
+
+      int Init(Bit16s* buffer, unsigned int bufferSize, unsigned int chunkSize,
+         bool useRingBuffer, unsigned int sampleRate)
       {
          DWORD callbackType = CALLBACK_NULL;
          DWORD_PTR callback = NULL;
@@ -137,16 +140,14 @@ namespace OPL3Emu
             callbackType = CALLBACK_EVENT;
          }
 
-         WAVEFORMATEX wFormat;
+         PCMWAVEFORMAT wFormat = {WAVE_FORMAT_PCM, 2, sampleRate, sampleRate * 4, 4, 16};
+         /*wFormat.wFormatTag = WAVE_FORMAT_PCM;
          wFormat.nChannels = 2;
          wFormat.nSamplesPerSec = sampleRate;
-         wFormat.wFormatTag = WAVE_FORMAT_PCM;
-         wFormat.wBitsPerSample = 16;
-         wFormat.nBlockAlign = wFormat.nChannels * wFormat.wBitsPerSample / 8;
          wFormat.nAvgBytesPerSec = wFormat.nBlockAlign * wFormat.nSamplesPerSec;
-         wFormat.cbSize = 0;
-
-         /*PCMWAVEFORMAT wFormat = {WAVE_FORMAT_PCM, 2, sampleRate, sampleRate * 4, 4, 16};*/
+         wFormat.nBlockAlign = wFormat.nChannels * wFormat.wBitsPerSample / 8;
+         wFormat.wBitsPerSample = 16;
+         wFormat.cbSize = 0;*/
 
          // Open waveout device
          int wResult = waveOutOpen(&hWaveOut, WAVE_MAPPER,
@@ -453,14 +454,17 @@ namespace OPL3Emu
       {
          return 1;
       }
-      synth = new OPLSynth();
-      if (!synth->Init()) 
+
+
+      synth = std::make_unique<OPLSynth>();
+      if (!synth->Init())
       {
          MessageBox(NULL, L"Can't open Synth", L"OPL3", MB_OK | MB_ICONEXCLAMATION);
          return 1;
       }
 
-      UINT wResult = waveOut.Init(buffer, bufferSize, chunkSize, useRingBuffer, sampleRate);
+
+      int wResult = waveOut.Init(buffer, bufferSize, chunkSize, useRingBuffer, sampleRate);
       if (wResult) return wResult;
 
       // Start playing stream
@@ -473,19 +477,20 @@ namespace OPL3Emu
 
    int MidiSynth::Reset()
    {
-//#ifdef DRIVER_MODE
-//
-//      return 0;
-//#endif
-
+#ifndef DISABLE_HW_SUPPORT
+      return 0;
+#endif
+      OPLSynth* synthInst = synth.get();
       UINT wResult = waveOut.Pause();
       if (wResult) return wResult;
 
       synthEvent.Wait();
-      synth->close();  
-      delete synth;
-      synth = new OPLSynth();
-      if (!synth->Init())
+      synthInst->close();  
+      synth.reset();
+      synth = nullptr;
+      synth = std::make_unique<OPLSynth>();
+      synthInst = synth.get();
+      if (!synthInst->Init())
       {
          return 1;
       }
@@ -515,7 +520,8 @@ namespace OPL3Emu
       synth->close();
 
       // Cleanup memory
-      delete synth;
+      synth.reset();
+      synth = nullptr;
       delete buffer;
 
       synthEvent.Close();

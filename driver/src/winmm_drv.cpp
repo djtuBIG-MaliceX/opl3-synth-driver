@@ -1,4 +1,10 @@
-/* Copyright (C) 2003, 2004, 2005 Dean Beeler, Jerome Fisher
+/* 
+ * Win32 WinMM Driver entrypoint for OPL3 MIDI synth driver
+ * 2013-2020 James Alan Nguyen
+ * http://www.codingchords.com
+ *
+ * Based on sources derived from MUNT win32 driver:
+ * Copyright (C) 2003, 2004, 2005 Dean Beeler, Jerome Fisher
  * Copyright (C) 2011, 2012 Dean Beeler, Jerome Fisher, Sergey V. Mikayev
  *
  *  This program is free software: you can redistribute it and/or modify
@@ -22,36 +28,31 @@
 #define MAX_CLIENTS 1 // Per driver
 
 static OPL3Emu::MidiSynth &midiSynth = OPL3Emu::MidiSynth::getInstance();
-//static OPL3Emu::MidiSynth *midiSynth = NULL;
 static bool synthOpened = false;
-//static HWND hwnd = NULL;
 static int driverCount;
 
-//static std::mutex drv_lock;
+typedef struct _Client
+{
+   bool allocated;
+   DWORD_PTR instance;
+   DWORD flags;
+   DWORD_PTR callback;
+   DWORD synth_instance;
+} Client;
 
-struct Driver
+typedef struct _Driver
 {
    bool open;
    int clientCount;
    HDRVR hdrvr;
-   struct Client
-   {
-      bool allocated;
-      DWORD_PTR instance;
-      DWORD flags;
-      DWORD_PTR callback;
-      DWORD synth_instance;
-   } clients[MAX_CLIENTS];
-} drivers[MAX_DRIVERS];
+   Client clients[MAX_CLIENTS];
+} Driver;
+
+static Driver drivers[MAX_DRIVERS];
 
 extern "C" __declspec(dllexport) LONG __stdcall DriverProc(DWORD dwDriverID, HDRVR hdrvr, UINT wMessage,
    LONG dwParam1, LONG dwParam2)
 {
-#ifdef _DEBUG
-   _CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
-   _CrtSetReportMode ( _CRT_ERROR, _CRTDBG_MODE_DEBUG);
-#endif
-
    switch (wMessage)
    {
    case DRV_LOAD:
@@ -199,7 +200,7 @@ HRESULT modGetCaps(PVOID capsPtr, DWORD capsSize)
 
 void DoCallback(int driverNum, DWORD_PTR clientNum, DWORD msg,
    DWORD_PTR param1, DWORD_PTR param2) {
-   Driver::Client *client = &drivers[driverNum].clients[clientNum];
+   Client *client = &drivers[driverNum].clients[clientNum];
    DriverCallback(client->callback, client->flags, drivers[driverNum].hdrvr,
       msg, client->instance, param1, param2);
 }
@@ -208,7 +209,8 @@ LONG OpenDriver(Driver *driver, UINT uDeviceID, UINT uMsg,
    DWORD_PTR dwUser, DWORD_PTR dwParam1, DWORD_PTR dwParam2)
 {
    int clientNum;
-   if (driver->clientCount == 0) {
+   if (driver->clientCount == 0)
+   {
       clientNum = 0;
    }
    else if (driver->clientCount == MAX_CLIENTS)
@@ -251,15 +253,7 @@ LONG CloseDriver(Driver *driver, UINT uDeviceID, UINT uMsg, DWORD_PTR dwUser, DW
    DoCallback(uDeviceID, dwUser, MOM_CLOSE, NULL, NULL);
    return MMSYSERR_NOERROR;
 }
-/*
-bool StartMidiSynth()
-{
-   if (midiSynth == NULL)
-      midiSynth = new OPL3Emu::MidiSynth();
 
-   return (midiSynth != NULL);
-}
-*/
 extern "C" __declspec(dllexport) DWORD __stdcall modMessage(UINT uDeviceID, UINT uMsg, DWORD_PTR dwUser,
    DWORD_PTR dwParam1, DWORD_PTR dwParam2)
 {
@@ -267,46 +261,27 @@ extern "C" __declspec(dllexport) DWORD __stdcall modMessage(UINT uDeviceID, UINT
    Driver *driver = &drivers[uDeviceID];
    DWORD instance;
 
-#ifdef _DEBUG
-   //_ASSERTE(_CrtCheckMemory());
-   _CrtCheckMemory();
-#endif 
    switch (uMsg)
    {
       case MODM_OPEN:
       {
-         //drv_lock.lock();
-
-         //if (StartMidiSynth())
+         if (midiSynth.Init() != 0)
          {
-            if (midiSynth.Init() != 0)
-            {
-               //drv_lock.unlock();
-               return MMSYSERR_ERROR;
-            }
-            synthOpened = true;
+            return MMSYSERR_ERROR;
          }
-         /* else
-          {
-          // failed to allocate memory
-          return MMSYSERR_ERROR;
-          }*/
-
+         synthOpened = true;
+         
          instance = NULL;
          DWORD res;
          res = OpenDriver(driver, uDeviceID, uMsg, dwUser, dwParam1, dwParam2);
          driver->clients[*(LONG *)dwUser].synth_instance = instance;
 
-         //drv_lock.unlock();
          return res;
       }
       case MODM_CLOSE:
       {
-         //drv_lock.lock();
-
          if (driver->clients[dwUser].allocated == false)
          {
-            //drv_lock.unlock();
             return MMSYSERR_ERROR;
          }
 
@@ -319,7 +294,6 @@ extern "C" __declspec(dllexport) DWORD __stdcall modMessage(UINT uDeviceID, UINT
             //delete midiSynth;
             //midiSynth = NULL;
          }
-         //drv_lock.unlock();
          return CloseDriver(driver, uDeviceID, uMsg, dwUser, dwParam1, dwParam2);
 
       case MODM_PREPARE:
@@ -337,9 +311,8 @@ extern "C" __declspec(dllexport) DWORD __stdcall modMessage(UINT uDeviceID, UINT
          {
             return MMSYSERR_ERROR;
          }
-         //drv_lock.lock();
+
          midiSynth.PushMIDI((DWORD)dwParam1);
-         //drv_lock.unlock();
          return MMSYSERR_NOERROR;
       }
       case MODM_LONGDATA:
@@ -347,18 +320,15 @@ extern "C" __declspec(dllexport) DWORD __stdcall modMessage(UINT uDeviceID, UINT
          {
             return MMSYSERR_ERROR;
          }
-         //drv_lock.lock();
          midiHdr = (MIDIHDR *)dwParam1;
          if ((midiHdr->dwFlags & MHDR_PREPARED) == 0)
          {
-            //drv_lock.unlock();
             return MIDIERR_UNPREPARED;
          }
          midiSynth.PlaySysex((unsigned char*)midiHdr->lpData, midiHdr->dwBufferLength);
          midiHdr->dwFlags |= MHDR_DONE;
          midiHdr->dwFlags &= ~MHDR_INQUEUE;
          DoCallback(uDeviceID, dwUser, MOM_DONE, dwParam1, NULL);
-         //drv_lock.unlock();
          return MMSYSERR_NOERROR;
 
       case MODM_GETNUMDEVS: // TODO
