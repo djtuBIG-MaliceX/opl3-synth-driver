@@ -8,6 +8,7 @@
 #include "stdafx.h"
 #include "opl.h"
 #include "opl3.h"
+#include "ymf262.h"
 
 #define FSAMP                           (49716) //(3579545.0 / 72.0
 
@@ -27,7 +28,7 @@ private:
    uint8_t numSoftChips;
 
    // MAME
-   // TODO: add MAME core here
+   std::vector< OPL3* > mameChips;  // TODO modify ymf262.cpp to use unique_ptr
 
    // DosBOX
    std::vector< std::unique_ptr< OPL > > adlibEmuChips;

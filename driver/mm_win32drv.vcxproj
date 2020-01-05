@@ -222,6 +222,7 @@
     <ClCompile Include="src\opl_hw.cpp" />
     <ClCompile Include="src\vgm_logging.cpp" />
     <ClCompile Include="src\winmm_drv.cpp" />
+    <ClCompile Include="src\ymf262.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\2x2patchtest.h" />
@@ -241,6 +242,7 @@
     <ClInclude Include="src\typedef_sizes.h" />
     <ClInclude Include="src\VGMFile.h" />
     <ClInclude Include="src\vgm_logging.h" />
+    <ClInclude Include="src\ymf262.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="src\winmm_drv.def" />

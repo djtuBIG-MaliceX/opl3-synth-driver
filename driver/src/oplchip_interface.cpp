@@ -4,6 +4,7 @@
 OPLChipInterface::OPLChipInterface() :
    nukeChips(255),
    adlibEmuChips(255),
+   mameChips(255),
    numSoftChips(1)
 {
    
@@ -31,6 +32,16 @@ void OPLChipInterface::Init(uint8_t numChips)
       }
       adlibEmuChips[i] = std::make_unique<OPL>();
       adlibEmuChips[i].get()->adlib_init();
+
+      // MAME core
+      if (mameChips[i] != nullptr)
+      {
+         //mameChips[i].reset();
+         delete mameChips[i];
+         mameChips[i] = nullptr;
+      }
+      //mameChips[i] = std::make_unique<OPL3>();
+      mameChips[i] = reinterpret_cast<OPL3*>(ymf262_init(14318180, 49716));
    }
 }
 
@@ -44,6 +55,10 @@ void OPLChipInterface::Opl3_ChipWrite(int chipNo, uint16_t idx, uint8_t val)
    OPL *dosboxChip = adlibEmuChips[chipNo].get();
    dosboxChip->adlib_write(idx, val);
 
+   // MAME
+   OPL3* mameChip = mameChips[chipNo];
+   ymf262_write(mameChip, idx, val);
+
 #ifndef DISABLE_HW_SUPPORT
    OPL_HW_WriteReg(idx, val);
 #endif
@@ -52,10 +67,14 @@ void OPLChipInterface::Opl3_ChipWrite(int chipNo, uint16_t idx, uint8_t val)
 void OPLChipInterface::Opl3_GetSample(short *sample, int len)
 {
    // Nuked OPL3
-   //opl3_chip *chip = nukeChips[0].get(); // TODO sum all chips
-   //OPL3_GenerateStream(chip, sample, len);
+   opl3_chip *chip = nukeChips[0].get(); // TODO sum all chips
+   OPL3_GenerateStream(chip, sample, len);
 
    // DOSBox AdlibEmu
    OPL* dosboxChip = adlibEmuChips[0].get();
    dosboxChip->adlib_getsample(sample, len);
+
+   // MAME
+   //OPL3* mameChip = mameChips[0];
+   //ymf262_update_one(mameChip, sample, len);  // TODO need to harmonise sample buffer types
 }
