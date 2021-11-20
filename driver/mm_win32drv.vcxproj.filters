@@ -38,15 +38,9 @@
     <ClCompile Include="src\opl.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="src\ymf262.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="src\OPLSynth.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\patch.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\stdafx.h">
@@ -59,12 +53,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\2x2patchtest.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\fmsynthpatch.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\ctmidipatch.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\InpOut32Helper.h">
@@ -82,9 +70,6 @@
     <ClInclude Include="src\opl3.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="src\mmddk.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
     <ClInclude Include="src\oplchip_interface.h">
       <Filter>Header Files</Filter>
     </ClInclude>
@@ -92,9 +77,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="src\typedef_sizes.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="src\ymf262.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

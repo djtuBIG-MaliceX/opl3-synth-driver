@@ -21,8 +21,8 @@
  *
  *****************************************************************************
  */
-#ifndef __MMDDK_H
-#define __MMDDK_H
+#ifndef MMDDK_H
+#define MMDDK_H
 
 #include <mmsystem.h>
 #include <winbase.h>
@@ -466,4 +466,4 @@ HANDLE   WINAPI mmGetCurrentTask(void);
 
 #include <poppack.h>
 
-#endif /* __MMDDK_H */
+#endif /* MMDDK_H */

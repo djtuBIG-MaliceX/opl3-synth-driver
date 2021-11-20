@@ -1,8 +1,4 @@
-
-#ifndef STDAFX_H
-#define STDAFX_H
-
-#pragma pack(1)
+#pragma once
 
 #ifdef WIN32
 #define WIN32_LEAN_AND_MEAN   // Exclude rarely-used stuff from Windows headers
@@ -10,13 +6,8 @@
 #include <windows.h>
 #include <tchar.h>
 
-#ifdef __cplusplus
-extern "C" {
-#endif /* __cplusplus */
 #include "mmddk.h"
-#ifdef __cplusplus
-}
-#endif  /* __cplusplus */
+
 #define ntohs(x) _byteswap_ushort(x)  // little endian assumed
 #else //WIN32
 #include <arpa/inet.h>  // ntohs
@@ -42,6 +33,3 @@ extern "C" {
 #ifdef _DEBUG
 //#include <mutex>
 #endif
-
-#endif /*STDAFX_H*/
-

@@ -8,7 +8,7 @@
 #include "vgm_logging.h"
 #endif //DISABLE_VGM_LOGGING
 
-//#pragma pack(1)
+#pragma pack(1)
 
 #define NUMPATCHES      (256)
 #define DRUMCHANNEL     (9)     //midi channel 10
@@ -360,4 +360,5 @@ public:
    virtual ~OPLSynth();  // some stupid f***ing reason this breaks playback just for beign in existence
    void close();
 };
+
 #endif
