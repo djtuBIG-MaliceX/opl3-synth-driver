@@ -70,33 +70,27 @@
 				// webaudio api buffer
 				var channels = 2;
 				//var frameCount = 2048; // lol higher buffer = instant swing quantize lel
-				var scriptNode = context.createScriptProcessor();//(frameCount/2, 1, channels);
+				//var scriptNode = context.createScriptProcessor();//(frameCount/2, 1, channels);
+				var scriptNode = context.createScriptProcessor(2048, 0, channels);
 				var frameCount = scriptNode.bufferSize;
 				// emscripten malloc
-				//var dataBuf = new Int16Array(frameCount);
 				var nDataBytes = frameCount * 2; //dataBuf.length * dataBuf.BYTES_PER_ELEMENT;
 				var dataPtr = Module._malloc(nDataBytes);
-				//var dataPtr2 = Module._malloc(nDataBytes*2);
-				//var dataPtr3 = Module._malloc(nDataBytes*2);
 				var dataHeap = new Int16Array(Module.HEAP16.buffer, dataPtr, nDataBytes);
-				//var dataHeap2 = new Float32Array(Module.HEAPF32.buffer, dataPtr2, nDataBytes*2);
-				//var dataHeap3 = new Float32Array(Module.HEAPF32.buffer, dataPtr3, nDataBytes*2);
-				
-				//var dataHeap = new Uint8Array(Module.HEAPU8.buffer, dataPtr, nDataBytes);
-				//dataHeap.set(new Uint8Array(dataBuf.buffer));
 				
 				// rendering
 				scriptNode.onaudioprocess = function(evt) {
 				   
-				   // shit hack - sample everyting sequentially
-				   // TODO doesn't quite work
-				   //var ptrStart = dataHeap.byteOffset;
-				   //var incr = 512;
-				   //for (var offs = ptrStart; offs < ptrStart+frameCount; offs+=incr)
-				   //   GetSample(offs, incr);
+				   // shit hack - sample everyting sequentially. not sure why i*increment*4 but whatever
+				   var ptrStart = dataHeap.byteOffset;
+				   var incr = 64;
+				   //debugger;
+				   for (let offs = 0, i=0; offs < frameCount; i++, offs+=incr) {
+				      GetSample((dataHeap.byteOffset+(i*incr*4)), incr);
+				   }
 				   
-				   // per frameSize chunk
-				   GetSample(dataHeap.byteOffset, frameCount);
+				   // per frameSize chunk. lots of processing quantization rendering this way however...
+				   //GetSample(dataHeap.byteOffset, frameCount);
 				   
 				   //var result = new Int16Array(dataHeap.buffer, dataHeap.byteOffset, nDataBytes);
 				   var outBuf = evt.outputBuffer;
@@ -116,8 +110,12 @@
 				   }
 				   */
 				   // Interleave method 2 - LRLRLRLR
-				   var chLData = outBuf.getChannelData(0);
-				   var chRData = outBuf.getChannelData(1);
+				   //let chLData = outBuf.getChannelData(0);
+				   //let chRData = outBuf.getChannelData(1);
+				   
+				   // TODO: panning is reversed for some stupid reason so flip it for now.
+				   let chLData = outBuf.getChannelData(1);
+				   let chRData = outBuf.getChannelData(0);
 				   
 				   
 				   for (var i = 0, j = 0; i < dataHeap.length; i++)
