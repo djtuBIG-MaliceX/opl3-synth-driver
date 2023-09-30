@@ -71,7 +71,7 @@
 				var channels = 2;
 				//var frameCount = 2048; // lol higher buffer = instant swing quantize lel
 				//var scriptNode = context.createScriptProcessor();//(frameCount/2, 1, channels);
-				var scriptNode = context.createScriptProcessor(2048, 0, channels);
+				var scriptNode = context.createScriptProcessor(512, 0, channels);
 				var frameCount = scriptNode.bufferSize;
 				// emscripten malloc
 				var nDataBytes = frameCount * 2; //dataBuf.length * dataBuf.BYTES_PER_ELEMENT;
@@ -81,7 +81,7 @@
 				// rendering
 				scriptNode.onaudioprocess = function(evt) {
 				   
-				   // shit hack - sample everyting sequentially. not sure why i*increment*4 but whatever
+				   // sample everyting sequentially i*increment*4 since pointer address refers to 16-bit sample streams per frame
 				   var ptrStart = dataHeap.byteOffset;
 				   var incr = 64;
 				   //debugger;
