@@ -8,6 +8,7 @@
 #include "stdafx.h"
 #include "opl.h"
 #include "opl3.h"
+#include "cqm.h"
 
 #define FSAMP                           (49716) //(3579545.0 / 72.0
 
@@ -31,6 +32,9 @@ private:
 
    // Nuked OPL3
    std::vector< std::unique_ptr< opl3_chip > > nukeChips;
+
+   // Nuked CQM
+   std::vector< std::unique_ptr< cqm_t > > cqmChips;
    
    //opl3_chip* CreateNukedOPL3();
 

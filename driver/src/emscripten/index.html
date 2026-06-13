@@ -62,10 +62,10 @@
          //Module['onRuntimeInitialized'] = function() {
 		 function Fire() {
 			if (context == null) {
-				context = new AudioContext()
+				context = new AudioContext({ sampleRate: 49716 } )
 				// start opl3 synth
 				//ccall('Initialize');
-				Initialize(context.sampleRate);
+				Initialize();
 				
 				// webaudio api buffer
 				var channels = 2;

@@ -853,7 +853,7 @@ void OPL::adlib_write(Bitu idx, Bit8u val) {
    }
 }
 
-static void OPL_INLINE clipit16(Bit32s ival, Bit16s* outval) {
+static inline void clipit16(Bit32s ival, Bit16s* outval) {
    if (ival < 32768) {
       if (ival > -32769) {
          *outval = (Bit16s)ival;

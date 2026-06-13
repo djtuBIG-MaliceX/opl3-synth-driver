@@ -4,6 +4,12 @@
 #ifndef OPL3SYNTH_H
 #define OPL3SYNTH_H
 
+#define BYTE uint8_t
+#define WORD uint16_t
+#define DWORD uint32_t
+#define LONG uint64_t
+#define ULONG uint64_t
+
 #ifndef DISABLE_VGM_LOGGING
 #include "vgm_logging.h"
 #endif //DISABLE_VGM_LOGGING
@@ -134,7 +140,9 @@ typedef struct _voiceStruct
 
 
 /* a bit of tuning information */
-#define FSAMP                           (49716) //(3579545.0 / 72.0
+
+#define FSAMP                           (49802)  // CQM
+//#define FSAMP                           (49716) //(3579545.0 / 72.0
                                         //(50000.0)     /* sampling frequency */
 #define PITCH(x)                        ((DWORD)((x) * (double) (1L << 19) / FSAMP))
 /* x is the desired frequency,

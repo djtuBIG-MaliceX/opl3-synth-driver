@@ -41,7 +41,7 @@
 /*
 	define attribution that inlines/forces inlining of a function (optional)
 */
-#define OPL_INLINE __forceinline
+//#define OPL_INLINE __forceinline
 
 
 #undef NUM_CHANNELS
